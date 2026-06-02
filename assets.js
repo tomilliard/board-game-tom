@@ -4,13 +4,19 @@
 // ─── Assets de rang, par palier de base ───
 // On ne liste que les paliers déjà illustrés. Les autres tombent
 // proprement sur un rendu neutre tant qu'ils n'ont pas leurs images.
-// Pour ajouter un palier, copier le bloc « bois » et changer le nom.
+// Pour ajouter un palier, copier le bloc et changer le nom + les chemins.
 const RANK_ASSETS_DESKTOP = {
   bois: {
     emblem:        'assets/bois_emblem.png',
     banner:        'assets/bois_banner.png',
     player_frame:  'assets/bois_frame.png',
     profile_frame: 'assets/bois_frame.png',
+  },
+  bronze: {
+    emblem:        'assets/bronze_emblem.png',
+    banner:        'assets/bronze_banner.png',
+    player_frame:  'assets/bronze_frame.png',
+    profile_frame: 'assets/bronze_frame.png',
   },
 };
 
@@ -21,6 +27,12 @@ const RANK_ASSETS_MOBILE = {
     player_frame:  'assets/bois_frame.png',
     profile_frame: 'assets/bois_frame.png',
   },
+  bronze: {
+    emblem:        'assets/bronze_emblem.png',
+    banner:        'assets/bronze_banner.png',
+    player_frame:  'assets/bronze_frame.png',
+    profile_frame: 'assets/bronze_frame.png',
+  },
 };
 
 // Fond derrière l'avatar (aucun pour l'instant → fond teinté par défaut).
@@ -28,7 +40,8 @@ const RANK_AVATAR_BG = {};
 
 // Petites icônes de rang (classement, listes, aperçus de points).
 const RANK_EMBLEMS = {
-  bois: 'assets/bois_icon.png',
+  bois:   'assets/bois_icon.png',
+  bronze: 'assets/bronze_icon.png',
 };
 
 // ─── Avatars de profil ───
