@@ -20,6 +20,8 @@ const FRAME_HOLES = {
 };
 
 
+const isMobile = () => window.innerWidth <= 700;
+
 const getRankAssets = (rankKey) => {
   const isMob = window.innerWidth <= 700;
   const rk = RANKS.find(r => r.key === rankKey);
