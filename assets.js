@@ -177,3 +177,12 @@ const RANK_EMBLEMS = {
   'maitre': 'assets/rank_emblems_maitre.png',
   'challenger': 'assets/rank_emblems_challenger.png',
 };
+// ─── Rangs : BOIS (test) ───
+RANK_ASSETS_DESKTOP.bois = {
+  emblem:        'assets/bois_emblem.png',
+  banner:        'assets/bois_banner.png',
+  player_frame:  'assets/bois_frame.png',
+  profile_frame: 'assets/bois_frame.png',
+};
+RANK_ASSETS_MOBILE.bois = RANK_ASSETS_DESKTOP.bois;
+RANK_EMBLEMS.bois = 'assets/bois_icon.png';
