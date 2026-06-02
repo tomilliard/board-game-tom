@@ -1,0 +1,11 @@
+# Dépendances / build
+node_modules/
+.netlify/
+
+# Secrets — ne JAMAIS committer
+.env
+.env.*
+
+# Fichiers système
+.DS_Store
+Thumbs.db

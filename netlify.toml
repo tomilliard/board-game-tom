@@ -1,0 +1,11 @@
+# netlify.toml
+# Déploiement Netlify : site statique + fonctions serverless.
+
+[build]
+  publish    = "."
+  functions  = "netlify/functions"
+
+# Les variables d'environnement BREVO_KEY et BREVO_FROM
+# se définissent dans l'interface Netlify :
+#   Site settings → Environment variables
+# (ne PAS les mettre ici, ce fichier est versionné).
