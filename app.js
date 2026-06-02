@@ -903,19 +903,33 @@ const saveProfileEdit = async () => {
   showLoading(isCreate ? 'Création du compte…' : 'Enregistrement…');
   try {
     if (isCreate && isAdmin) {
-      // ── Créer un nouveau compte joueur ──
+      // ── Créer un joueur (admin) ──
       const email = document.getElementById('pe-email').value.trim();
       const pass  = document.getElementById('pe-pass').value.trim();
-      if (!email) { hideLoading(); toastErr('Email requis.'); return; }
-      if (pass.length < 6) { hideLoading(); toastErr('Mot de passe trop court (6 car. min.).'); return; }
-      const pts = parseInt(document.getElementById('pe-points').value) || 0;
-      // Crée le compte auth
-      const d = await auth.signUp(email, pass);
-      const uid = d.user?.id || d.user_id;
-      // Crée profil + joueur
-      await sb.post('profiles', { id: uid, name, color: selColor, email, avatar: selAvatar });
-      await sb.post('players',  { name, color: selColor, user_id: uid, points: pts, avatar: selAvatar });
-      toast(`Compte créé pour ${name} ✓`);
+      const pts   = parseInt(document.getElementById('pe-points').value) || 0;
+
+      if (!email) {
+        // Email vide → joueur de test SANS compte (ne peut pas se connecter)
+        await sb.post('players', { name, color: selColor, points: pts, avatar: selAvatar });
+        toast(`Joueur de test créé : ${name} ✓`);
+      } else {
+        // Email rempli → compte complet (peut se connecter)
+        if (pass.length < 6) { hideLoading(); toastErr('Mot de passe trop court (6 car. min.).'); return; }
+        const adminToken = authToken;               // mémorise la session admin
+        try {
+          const d = await auth.signUp(email, pass);
+          const uid = d.user?.id || d.user_id || d.id;
+          if (!uid) throw new Error('Création du compte échouée (identifiant introuvable).');
+          // Insère le profil + le joueur EN TANT QUE le nouveau compte,
+          // sinon les règles de sécurité (RLS) bloquent l'insertion.
+          if (d.access_token) authToken = d.access_token;
+          await sb.post('profiles', { id: uid, name, color: selColor, email, avatar: selAvatar });
+          await sb.post('players',  { name, color: selColor, user_id: uid, points: pts, avatar: selAvatar });
+        } finally {
+          authToken = adminToken;                   // restaure la session admin
+        }
+        toast(`Compte créé pour ${name} ✓`);
+      }
 
     } else if (targetId && isAdmin) {
       // ── Modifier un joueur existant (admin) ──
@@ -1974,8 +1988,11 @@ const openCreatePlayerAdmin = () => {
     showPass: true,
     targetId: null,
     isCreate: true,
-    saveLabel:'Créer le compte',
+    saveLabel:'Créer le joueur',
   });
+  // Email facultatif : vide → joueur de test sans compte
+  const emailIn = document.getElementById('pe-email');
+  if (emailIn) emailIn.placeholder = 'Laisser vide = joueur de test sans compte';
 };
 
 const delPlayer = async (id) => {
