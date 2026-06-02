@@ -983,7 +983,7 @@ const updateAdminUI = () => {
   if (nlTab) nlTab.style.display = isAdmin ? 'flex' : 'none';
   updateAddBtn();
   const cpBtn = document.getElementById('admin-create-player-btn');
-  if (cpBtn) cpBtn.style.display = isAdmin ? 'flex' : 'none';
+  if (cpBtn) cpBtn.style.display = 'none';
   if      (curPage === 'games')   renderGames();
   else if (curPage === 'players') renderPlayers();
   else if (curPage === 'history') renderHistory();
@@ -1019,7 +1019,7 @@ const syncMobileNav = (page) => {
 const updateAddBtn = () => {
   const btn = document.getElementById('main-add-btn');
   if (!btn) return;
-  if (curPage === 'social' || curPage === 'events') {
+  if (curPage === 'social' || curPage === 'events' || curPage === 'players') {
     btn.style.display = 'none';
   } else if (curPage === 'games') {
     btn.style.display = isAdmin ? 'flex' : 'none';
@@ -1039,7 +1039,7 @@ const updateAddBtn = () => {
 const updateFab = () => {
   const fab = document.getElementById('fab-btn');
   if (!fab) return;
-  if (curPage === 'social' || curPage === 'events') {
+  if (curPage === 'social' || curPage === 'events' || curPage === 'players') {
     fab.classList.add('fab-hidden');
     return;
   }
@@ -1774,7 +1774,7 @@ const getReco = () => {
 
 const renderPlayers = () => {
   const cpBtn = document.getElementById('admin-create-player-btn');
-  if (cpBtn) cpBtn.style.display = isAdmin ? 'flex' : 'none';
+  if (cpBtn) cpBtn.style.display = 'none';
   renderPlayerStats();
   renderPlayerGrid();
 };
