@@ -3302,35 +3302,36 @@ const openPlayerProfile = (pid) => {
   // Summary
   const ra2 = getRankAssets(rk.key) || {};
   document.getElementById('pp-summary').innerHTML = `
-    <!-- Banner -->
-    <div style="height:80px;border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;
-                ${ra2.banner ? "background-image:url('"+ra2.banner+"');background-size:cover;background-position:center" : 'background:'+bg+'22'}">
-    </div>
-    <!-- Avatar + profile frame -->
-    <div style="display:flex;align-items:flex-end;gap:12px;padding:0 12px 12px;
-                background:var(--surface);border:1px solid var(--border);
-                border-top:none;border-radius:0 0 var(--radius) var(--radius);margin-bottom:4px">
-      <div style="position:relative;width:110px;height:110px;margin-top:-40px;flex-shrink:0">
-        ${(() => {
-          const pAvImg = AVATARS.find(a => a.id === (p.avatar || 1));
-          if (pAvImg) return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;overflow:hidden;z-index:1"><img src="' + pAvImg.src + '" style="width:100%;height:100%;object-fit:cover"></div>';
-          const bgS = RANK_AVATAR_BG[rk.baseKey||rk.key] ? 'background-image:url(' + RANK_AVATAR_BG[rk.baseKey||rk.key] + ');background-size:cover' : 'background:' + bg + '22';
-          return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;' + bgS + ';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:1">' + ini(p.name) + '</div>';
-        })()}
-        ${ra2.profile_frame ? `<img src="${ra2.profile_frame}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:110px;height:110px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
-      </div>
-      <div style="flex:1;padding-top:6px">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-size:15px;font-weight:700;color:var(--text)">${esc(p.name)}</span>
-          ${ra2.emblem ? `<img src="${ra2.emblem}" style="width:22px;height:22px;object-fit:contain">` : ''}
-          <span style="font-size:12px;color:${rk.color};font-weight:500">${rk.name}</span>
+    <div style="position:relative;border-radius:var(--radius);overflow:hidden;
+                border:1px solid var(--border);margin-bottom:4px">
+      <!-- Bannière en fond, pleine hauteur -->
+      <div style="position:absolute;inset:0;${ra2.banner ? "background-image:url('"+ra2.banner+"');background-size:cover;background-position:center" : 'background:'+bg+'22'}"></div>
+      <!-- Voile sombre dégradé (plus dense en bas) pour la lisibilité -->
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.10) 0%,rgba(0,0,0,.30) 45%,rgba(0,0,0,.80) 100%)"></div>
+      <!-- Contenu par-dessus la bannière -->
+      <div style="position:relative;display:flex;align-items:flex-end;gap:12px;padding:64px 14px 14px">
+        <div style="position:relative;width:110px;height:110px;flex-shrink:0">
+          ${(() => {
+            const pAvImg = AVATARS.find(a => a.id === (p.avatar || 1));
+            if (pAvImg) return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;overflow:hidden;z-index:1"><img src="' + pAvImg.src + '" style="width:100%;height:100%;object-fit:cover"></div>';
+            const bgS = RANK_AVATAR_BG[rk.baseKey||rk.key] ? 'background-image:url(' + RANK_AVATAR_BG[rk.baseKey||rk.key] + ');background-size:cover' : 'background:' + bg + '22';
+            return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;' + bgS + ';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:1">' + ini(p.name) + '</div>';
+          })()}
+          ${ra2.profile_frame ? `<img src="${ra2.profile_frame}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:110px;height:110px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
         </div>
-        <div style="display:flex;gap:12px;margin-top:5px;font-size:12px;color:var(--text-muted);flex-wrap:wrap">
-          <span style="color:var(--gold)">⭐ ${p.points || 0} pts</span>
-          <span>🏆 ${s.won}V</span>
-          <span>💔 ${s.lost}D</span>
-          <span>🎮 ${s.played}p</span>
-          <span>📊 ${rate}%</span>
+        <div style="flex:1;padding-bottom:4px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:16px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9)">${esc(p.name)}</span>
+            ${ra2.emblem ? `<img src="${ra2.emblem}" style="width:22px;height:22px;object-fit:contain">` : ''}
+            <span style="font-size:12px;color:${rk.color};font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.9)">${rk.name}</span>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:5px;font-size:12px;color:rgba(255,255,255,.92);flex-wrap:wrap;text-shadow:0 1px 3px rgba(0,0,0,.9)">
+            <span style="color:var(--gold)">⭐ ${p.points || 0} pts</span>
+            <span>🏆 ${s.won}V</span>
+            <span>💔 ${s.lost}D</span>
+            <span>🎮 ${s.played}p</span>
+            <span>📊 ${rate}%</span>
+          </div>
         </div>
       </div>
     </div>`;
