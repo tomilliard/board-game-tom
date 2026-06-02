@@ -186,3 +186,11 @@ RANK_ASSETS_DESKTOP.bois = {
 };
 RANK_ASSETS_MOBILE.bois = RANK_ASSETS_DESKTOP.bois;
 RANK_EMBLEMS.bois = 'assets/bois_icon.png';
+// ─── Nettoyage : entrées de sous-rangs de l'ancien système ───
+// Elles écrasaient les chemins du palier de base → cadres cassés dans la fiche profil.
+['bois','bronze','argent','or','platine','diamant','maitre'].forEach((t) => {
+  for (let i = 1; i <= 5; i++) {
+    delete RANK_ASSETS_DESKTOP[t + '_' + i];
+    delete RANK_ASSETS_MOBILE[t + '_' + i];
+  }
+});
