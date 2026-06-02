@@ -983,7 +983,7 @@ const updateAdminUI = () => {
   if (nlTab) nlTab.style.display = isAdmin ? 'flex' : 'none';
   updateAddBtn();
   const cpBtn = document.getElementById('admin-create-player-btn');
-  if (cpBtn) cpBtn.style.display = 'none';
+  if (cpBtn) cpBtn.style.display = isAdmin ? 'flex' : 'none';
   if      (curPage === 'games')   renderGames();
   else if (curPage === 'players') renderPlayers();
   else if (curPage === 'history') renderHistory();
@@ -1774,7 +1774,7 @@ const getReco = () => {
 
 const renderPlayers = () => {
   const cpBtn = document.getElementById('admin-create-player-btn');
-  if (cpBtn) cpBtn.style.display = 'none';
+  if (cpBtn) cpBtn.style.display = isAdmin ? 'flex' : 'none';
   renderPlayerStats();
   renderPlayerGrid();
 };
