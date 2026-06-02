@@ -9,14 +9,14 @@ const SEED_GAMES = [{"id": 1, "name": "Catan", "status": "own", "price": 39.9, "
 
 // Insets exacts de l'avatar dans chaque cadre (mesurés sur les PNGs 150x150)
 const FRAME_HOLES = {
-  bois:       { top: 31, left: 31, size: 88, top_m: 16, left_m: 16, size_m: 47 },
-  bronze:     { top: 31, left: 31, size: 88, top_m: 16, left_m: 16, size_m: 47 },
-  argent:     { top: 31, left: 31, size: 88, top_m: 16, left_m: 16, size_m: 47 },
-  or:         { top: 31, left: 31, size: 88, top_m: 16, left_m: 16, size_m: 47 },
-  platine:    { top: 31, left: 31, size: 88, top_m: 16, left_m: 16, size_m: 47 },
-  diamant:    { top: 31, left: 31, size: 88, top_m: 16, left_m: 16, size_m: 47 },
-  maitre:     { top: 31, left: 31, size: 88, top_m: 16, left_m: 16, size_m: 47 },
-  challenger: { top: 31, left: 31, size: 88, top_m: 16, left_m: 16, size_m: 47 },
+  bois:       { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  bronze:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  argent:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  or:         { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  platine:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  diamant:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  maitre:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  challenger: { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
 };
 
 
