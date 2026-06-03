@@ -30,6 +30,12 @@ const RANK_ASSETS_DESKTOP = {
     player_frame:  'assets/or_frame.png',
     profile_frame: 'assets/or_frame.png',
   },
+  platine: {
+    emblem:        'assets/platine_emblem.png',
+    banner:        'assets/platine_banner.png',
+    player_frame:  'assets/platine_frame.png',
+    profile_frame: 'assets/platine_frame.png',
+  },
 };
 
 const RANK_ASSETS_MOBILE = {
@@ -57,6 +63,12 @@ const RANK_ASSETS_MOBILE = {
     player_frame:  'assets/or_frame.png',
     profile_frame: 'assets/or_frame.png',
   },
+  platine: {
+    emblem:        'assets/platine_emblem.png',
+    banner:        'assets/platine_banner.png',
+    player_frame:  'assets/platine_frame.png',
+    profile_frame: 'assets/platine_frame.png',
+  },
 };
 
 // Fond derrière l'avatar (aucun pour l'instant → fond teinté par défaut).
@@ -64,10 +76,11 @@ const RANK_AVATAR_BG = {};
 
 // Petites icônes de rang (classement, listes, aperçus de points).
 const RANK_EMBLEMS = {
-  bois:   'assets/bois_icon.png',
-  bronze: 'assets/bronze_icon.png',
-  argent: 'assets/argent_icon.png',
-  or:     'assets/or_icon.png',
+  bois:    'assets/bois_icon.png',
+  bronze:  'assets/bronze_icon.png',
+  argent:  'assets/argent_icon.png',
+  or:      'assets/or_icon.png',
+  platine: 'assets/platine_icon.png',
 };
 
 // ─── Avatars de profil ───
