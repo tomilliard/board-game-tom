@@ -24,6 +24,12 @@ const RANK_ASSETS_DESKTOP = {
     player_frame:  'assets/argent_frame.png',
     profile_frame: 'assets/argent_frame.png',
   },
+  or: {
+    emblem:        'assets/or_emblem.png',
+    banner:        'assets/or_banner.png',
+    player_frame:  'assets/or_frame.png',
+    profile_frame: 'assets/or_frame.png',
+  },
 };
 
 const RANK_ASSETS_MOBILE = {
@@ -45,6 +51,12 @@ const RANK_ASSETS_MOBILE = {
     player_frame:  'assets/argent_frame.png',
     profile_frame: 'assets/argent_frame.png',
   },
+  or: {
+    emblem:        'assets/or_emblem.png',
+    banner:        'assets/or_banner.png',
+    player_frame:  'assets/or_frame.png',
+    profile_frame: 'assets/or_frame.png',
+  },
 };
 
 // Fond derrière l'avatar (aucun pour l'instant → fond teinté par défaut).
@@ -55,6 +67,7 @@ const RANK_EMBLEMS = {
   bois:   'assets/bois_icon.png',
   bronze: 'assets/bronze_icon.png',
   argent: 'assets/argent_icon.png',
+  or:     'assets/or_icon.png',
 };
 
 // ─── Avatars de profil ───
