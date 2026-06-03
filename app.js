@@ -829,6 +829,21 @@ const updateUserUI = () => {
   const loggedIn = !!currentUser;
   document.getElementById('login-btn').style.display  = loggedIn ? 'none' : 'flex';
   document.getElementById('user-chip').style.display  = loggedIn ? 'flex' : 'none';
+
+  // Boutons flottants mobile : profil (connecté) vs connexion (déconnecté)
+  const _mb = document.getElementById('mobile-profile-btn');
+  if (_mb) _mb.style.display = loggedIn ? '' : 'none';
+  let _loginFab = document.getElementById('mobile-login-fab');
+  if (!_loginFab) {
+    _loginFab = document.createElement('button');
+    _loginFab.id = 'mobile-login-fab';
+    _loginFab.className = 'mobile-login-fab';
+    _loginFab.type = 'button';
+    _loginFab.innerHTML = '🔑 Connexion';
+    _loginFab.onclick = showAuthWall;
+    document.body.appendChild(_loginFab);
+  }
+  _loginFab.style.display = loggedIn ? 'none' : '';
   if (loggedIn && currentProfile) {
     const bg  = currentProfile.color || '#4ade80';
     const av  = document.getElementById('user-av');
@@ -847,7 +862,7 @@ const updateUserUI = () => {
     const mobileBtn = document.getElementById('mobile-profile-btn');
     const mobileAv  = document.getElementById('mobile-av');
     if (mobileBtn && loggedIn) {
-      mobileBtn.style.display = 'flex';
+      mobileBtn.style.display = '';
       if (avImg && mobileAv) {
         mobileAv.innerHTML = `<img src="${avImg.src}" style="width:100%;height:100%;object-fit:cover">`;
       } else if (mobileAv) {
@@ -2084,7 +2099,9 @@ const renderPlayerGrid = () => {
       '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">👥</div><p>Aucun joueur.</p></div>';
     return;
   }
-  document.getElementById('pgrid').innerHTML = players.map(buildPlayerCard).join('');
+  const ordered = [...players].sort((a, b) =>
+    (b.points || 0) - (a.points || 0) || (a.name || '').localeCompare(b.name || ''));
+  document.getElementById('pgrid').innerHTML = ordered.map(buildPlayerCard).join('');
 };
 
 const editPlayerAdmin = async (id) => {
@@ -2977,15 +2994,16 @@ const sendNewsletter = async () => {
   const emails  = subscribers.map((s) => s.email).filter(Boolean);
   if (!emails.length) { toastErr('Aucun abonné avec email.'); return; }
   showLoading(`Envoi à ${emails.length} abonné(s)…`);
-  let sent = 0, failed = 0;
+  let sent = 0, failed = 0, lastErr = '';
   for (const email of emails) {
     try { await sendBrevoEmail(email, '', subject, body); sent++; }
-    catch { failed++; }
+    catch (e) { failed++; lastErr = (e && e.message) || lastErr; }
   }
   hideLoading();
   document.getElementById('nl-result').innerHTML =
     `<span style="color:var(--accent)">✓ ${sent} email${sent > 1 ? 's' : ''} envoyé${sent > 1 ? 's' : ''}</span>`
-    + (failed > 0 ? ` · <span style="color:var(--danger)">${failed} échec${failed > 1 ? 's' : ''}</span>` : '');
+    + (failed > 0 ? ` · <span style="color:var(--danger)">${failed} échec${failed > 1 ? 's' : ''}</span>` : '')
+    + (lastErr ? `<div style="color:var(--text-faint);font-size:11px;margin-top:4px;word-break:break-word">Détail : ${esc(String(lastErr)).slice(0, 300)}</div>` : '');
   toast(`Newsletter envoyée à ${sent} abonné(s) ✓`);
 };
 
