@@ -2,9 +2,8 @@
 // Charge AVANT app.js. Variables partagées au scope global du script.
 
 // ─── Assets de rang, par palier de base ───
-// On ne liste que les paliers déjà illustrés. Les autres tombent
-// proprement sur un rendu neutre tant qu'ils n'ont pas leurs images.
-// Pour ajouter un palier, copier un bloc et changer le nom + les chemins.
+// Collection complète : bois → challenger.
+// Pour ajouter/modifier un palier, copier un bloc et changer le nom + les chemins.
 const RANK_ASSETS_DESKTOP = {
   bois: {
     emblem:        'assets/bois_emblem.png',
@@ -47,6 +46,12 @@ const RANK_ASSETS_DESKTOP = {
     banner:        'assets/maitre_banner.png',
     player_frame:  'assets/maitre_frame.png',
     profile_frame: 'assets/maitre_frame.png',
+  },
+  challenger: {
+    emblem:        'assets/challenger_emblem.png',
+    banner:        'assets/challenger_banner.png',
+    player_frame:  'assets/challenger_frame.png',
+    profile_frame: 'assets/challenger_frame.png',
   },
 };
 
@@ -93,6 +98,12 @@ const RANK_ASSETS_MOBILE = {
     player_frame:  'assets/maitre_frame.png',
     profile_frame: 'assets/maitre_frame.png',
   },
+  challenger: {
+    emblem:        'assets/challenger_emblem.png',
+    banner:        'assets/challenger_banner.png',
+    player_frame:  'assets/challenger_frame.png',
+    profile_frame: 'assets/challenger_frame.png',
+  },
 };
 
 // Fond derrière l'avatar (aucun pour l'instant → fond teinté par défaut).
@@ -100,13 +111,14 @@ const RANK_AVATAR_BG = {};
 
 // Petites icônes de rang (classement, listes, aperçus de points).
 const RANK_EMBLEMS = {
-  bois:    'assets/bois_icon.png',
-  bronze:  'assets/bronze_icon.png',
-  argent:  'assets/argent_icon.png',
-  or:      'assets/or_icon.png',
-  platine: 'assets/platine_icon.png',
-  diamant: 'assets/diamant_icon.png',
-  maitre:  'assets/maitre_icon.png',
+  bois:       'assets/bois_icon.png',
+  bronze:     'assets/bronze_icon.png',
+  argent:     'assets/argent_icon.png',
+  or:         'assets/or_icon.png',
+  platine:    'assets/platine_icon.png',
+  diamant:    'assets/diamant_icon.png',
+  maitre:     'assets/maitre_icon.png',
+  challenger: 'assets/challenger_icon.png',
 };
 
 // ─── Avatars de profil ───
