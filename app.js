@@ -1989,7 +1989,7 @@ const buildPlayerCard = (p) => {
 
     <!-- ── DESKTOP avatar wrap 150×150, MOBILE 80×80 ── -->
     <div class="pcard-av-wrap"
-         style="position:relative;width:150px;height:150px;margin:-38px 0 0 18px;flex-shrink:0">
+         style="position:relative;width:150px;height:150px;margin:-38px auto 0;flex-shrink:0">
       ${(() => {
         const h      = FRAME_HOLES[rk.baseKey||rk.key] || { top:32, left:32, size:86, top_m:18, left_m:18, size_m:44 };
         const avImg  = AVATARS.find(a => a.id === (p.avatar || 1));
