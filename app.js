@@ -2258,11 +2258,19 @@ const buildMatchCard = (m) => {
 
 const renderMatchList = () => {
   const el = document.getElementById('hlist');
-  if (!matches.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">🎮</div><p>Aucune partie enregistrée.</p></div>';
+  if (!currentUser) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🔒</div><p>Connecte-toi pour voir tes parties.</p></div>';
     return;
   }
-  el.innerHTML = matches.map(buildMatchCard).join('');
+  const myPlayer = players.find((p) => p.user_id === currentUser.id);
+  const mine = myPlayer
+    ? matches.filter((m) => (m.players || []).some((pp) => pp.id === myPlayer.id))
+    : [];
+  if (!mine.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🎮</div><p>Tu n\'as encore aucune partie enregistrée.</p></div>';
+    return;
+  }
+  el.innerHTML = mine.map(buildMatchCard).join('');
 };
 
 const renderLeaderboard = () => {
@@ -3433,26 +3441,32 @@ const openPlayerProfile = (pid) => {
 
   // Summary
   const ra2 = getRankAssets(rk.key) || {};
+  const big = window.matchMedia('(min-width:701px)').matches;  // PC = plus grand
+  const fb  = big ? 190 : 110;   // taille du cadre
+  const av  = big ? 124 : 72;    // diamètre de l'avatar
+  const ov  = big ? -92 : -52;   // chevauchement sur la bannière
+  const emb = big ? 30  : 22;    // taille de l'emblème
+  const nf  = big ? 22  : 17;    // taille du nom
   document.getElementById('pp-summary').innerHTML = `
     <div style="border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:4px;background:var(--surface)">
       <!-- Bannière affichée en entier (jamais rognée) -->
       ${ra2.banner
         ? `<img src="${ra2.banner}" style="display:block;width:100%;height:auto">`
-        : `<div style="width:100%;height:110px;background:${bg}22"></div>`}
+        : `<div style="width:100%;height:${big ? 180 : 110}px;background:${bg}22"></div>`}
       <!-- Avatar centré qui chevauche le bas de la bannière, infos centrées en dessous -->
       <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 14px 16px">
-        <div style="position:relative;width:110px;height:110px;margin-top:-52px">
+        <div style="position:relative;width:${fb}px;height:${fb}px;margin-top:${ov}px">
           ${(() => {
             const pAvImg = AVATARS.find(a => a.id === (p.avatar || 1));
-            if (pAvImg) return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;overflow:hidden;z-index:1"><img src="' + pAvImg.src + '" style="width:100%;height:100%;object-fit:cover"></div>';
+            if (pAvImg) return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:' + av + 'px;height:' + av + 'px;border-radius:50%;overflow:hidden;z-index:1"><img src="' + pAvImg.src + '" style="width:100%;height:100%;object-fit:cover"></div>';
             const bgS = RANK_AVATAR_BG[rk.baseKey||rk.key] ? 'background-image:url(' + RANK_AVATAR_BG[rk.baseKey||rk.key] + ');background-size:cover' : 'background:' + bg + '22';
-            return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;' + bgS + ';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:1">' + ini(p.name) + '</div>';
+            return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:' + av + 'px;height:' + av + 'px;border-radius:50%;' + bgS + ';display:flex;align-items:center;justify-content:center;font-size:' + (big ? 34 : 22) + 'px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:1">' + ini(p.name) + '</div>';
           })()}
-          ${ra2.profile_frame ? `<img src="${ra2.profile_frame}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:110px;height:110px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
+          ${ra2.profile_frame ? `<img src="${ra2.profile_frame}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${fb}px;height:${fb}px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
         </div>
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px">
-          <span style="font-size:17px;font-weight:700;color:var(--text)">${esc(p.name)}</span>
-          ${ra2.emblem ? `<img src="${ra2.emblem}" style="width:22px;height:22px;object-fit:contain">` : ''}
+          <span style="font-size:${nf}px;font-weight:700;color:var(--text)">${esc(p.name)}</span>
+          ${ra2.emblem ? `<img src="${ra2.emblem}" style="width:${emb}px;height:${emb}px;object-fit:contain">` : ''}
           <span style="font-size:13px;color:${rk.color};font-weight:600">${rk.name}</span>
         </div>
         <div style="display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:12px;color:var(--text-muted);flex-wrap:wrap">
@@ -3463,7 +3477,13 @@ const openPlayerProfile = (pid) => {
           <span>📊 ${rate}%</span>
         </div>
       </div>
-    </div>`;
+    </div>
+    <button onclick="openPlayerHistory(${pid})"
+            style="width:100%;margin-bottom:4px;padding:11px;border-radius:10px;border:1px solid var(--border);
+                   background:var(--bg);color:var(--text);font-family:inherit;font-size:14px;font-weight:600;
+                   cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      🎲 Voir l'historique des parties
+    </button>`;
 
   openModal('modal-player-profile');
 
@@ -3490,6 +3510,32 @@ const openPlayerProfile = (pid) => {
   document.getElementById('pp-achievements').innerHTML =
     unlocked.map((a) => buildAch(a, true)).join('') +
     locked.map((a) => buildAch(a, false)).join('');
+};
+
+// Historique des parties d'un joueur donné (ouvert depuis sa fiche profil)
+const openPlayerHistory = (pid) => {
+  const p = players.find((x) => x.id === pid);
+  if (!p) return;
+  const list = matches.filter((m) => (m.players || []).some((pp) => pp.id === pid));
+  const cards = list.length
+    ? list.map(buildMatchCard).join('')
+    : '<div class="empty"><div class="empty-icon">🎮</div><p>Aucune partie enregistrée.</p></div>';
+
+  document.getElementById('player-history-overlay')?.remove();
+  const ov = document.createElement('div');
+  ov.id = 'player-history-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.65);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 12px';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-lg);max-width:560px;width:100%;margin:auto;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h3 style="margin:0;font-size:17px;color:var(--text)">Parties de ${esc(p.name)}</h3>
+        <button onclick="document.getElementById('player-history-overlay').remove()"
+                style="background:none;border:none;color:var(--text-muted);font-size:24px;cursor:pointer;line-height:1">×</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">${cards}</div>
+    </div>`;
+  document.body.appendChild(ov);
 };
 
 

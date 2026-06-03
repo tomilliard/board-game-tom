@@ -507,3 +507,8 @@ select:focus{border-color:var(--accent);outline:none}
     box-shadow:0 2px 10px rgba(0,0,0,.45)
   }
 }
+
+/* Fiche profil joueur : plus large sur ordinateur (bannière/avatar plus grands) */
+@media(min-width:701px){
+  #modal-player-profile .modal{ max-width:760px }
+}
