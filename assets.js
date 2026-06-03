@@ -42,6 +42,12 @@ const RANK_ASSETS_DESKTOP = {
     player_frame:  'assets/diamant_frame.png',
     profile_frame: 'assets/diamant_frame.png',
   },
+  maitre: {
+    emblem:        'assets/maitre_emblem.png',
+    banner:        'assets/maitre_banner.png',
+    player_frame:  'assets/maitre_frame.png',
+    profile_frame: 'assets/maitre_frame.png',
+  },
 };
 
 const RANK_ASSETS_MOBILE = {
@@ -81,6 +87,12 @@ const RANK_ASSETS_MOBILE = {
     player_frame:  'assets/diamant_frame.png',
     profile_frame: 'assets/diamant_frame.png',
   },
+  maitre: {
+    emblem:        'assets/maitre_emblem.png',
+    banner:        'assets/maitre_banner.png',
+    player_frame:  'assets/maitre_frame.png',
+    profile_frame: 'assets/maitre_frame.png',
+  },
 };
 
 // Fond derrière l'avatar (aucun pour l'instant → fond teinté par défaut).
@@ -94,6 +106,7 @@ const RANK_EMBLEMS = {
   or:      'assets/or_icon.png',
   platine: 'assets/platine_icon.png',
   diamant: 'assets/diamant_icon.png',
+  maitre:  'assets/maitre_icon.png',
 };
 
 // ─── Avatars de profil ───
