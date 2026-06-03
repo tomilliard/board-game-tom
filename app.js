@@ -447,6 +447,108 @@ setInterval(async () => {
   }
 }, 60_000);
 
+// ─── Mot de passe oublié / récupération ──────────────────────
+
+// 1) Envoi de l'e-mail de réinitialisation
+async function doForgotPassword() {
+  const pre   = (document.getElementById('l-email')?.value || '').trim();
+  const email = prompt('Entre ton adresse e-mail pour recevoir un lien de réinitialisation :', pre);
+  if (!email) return;
+  showLoading('Envoi du lien…');
+  try {
+    await fetch(`${SB_URL}/auth/v1/recover?redirect_to=${encodeURIComponent(location.origin)}`, {
+      method: 'POST',
+      headers: { apikey: SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+  } catch (e) { /* on reste discret */ }
+  hideLoading();
+  // Supabase répond 200 même si l'adresse n'existe pas (anti-énumération)
+  toast('Si un compte existe, un e-mail de réinitialisation vient d’être envoyé 📩');
+}
+
+// 2) Au chargement : détecter le retour du lien de récupération (dans le #hash)
+function handleRecoveryRedirect() {
+  const hash = location.hash || '';
+  if (hash.length < 2) return;
+  const p = new URLSearchParams(hash.slice(1));
+  // Lien déjà utilisé / expiré
+  if (p.get('error')) {
+    const desc = (p.get('error_description') || 'Lien invalide ou expiré.').replace(/\+/g, ' ');
+    history.replaceState(null, '', location.pathname + location.search);
+    toast('⚠️ ' + decodeURIComponent(desc), true);
+    return;
+  }
+  // Retour valide d'une demande de réinitialisation
+  if (p.get('type') === 'recovery' && p.get('access_token')) {
+    const sess = {
+      token:     p.get('access_token'),
+      refresh:   p.get('refresh_token') || '',
+      expiresIn: parseInt(p.get('expires_in') || '3600', 10),
+    };
+    history.replaceState(null, '', location.pathname + location.search);
+    openResetPasswordModal(sess);
+  }
+}
+
+// 3) Modal « nouveau mot de passe » (construit en JS, pas besoin d'index.html)
+function openResetPasswordModal(sess) {
+  if (document.getElementById('reset-pw-overlay')) return;
+  const ov = document.createElement('div');
+  ov.id = 'reset-pw-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `
+    <div style="background:var(--surface,#1e293b);border:1px solid var(--border,#334155);border-radius:14px;padding:24px;max-width:380px;width:100%;color:var(--text,#e2e8f0);box-shadow:0 12px 48px rgba(0,0,0,.6)">
+      <h2 style="margin:0 0 6px;font-size:18px">Nouveau mot de passe</h2>
+      <p style="margin:0 0 16px;font-size:13px;color:var(--text-muted,#94a3b8)">Choisis un nouveau mot de passe pour ton compte.</p>
+      <input id="reset-pw-input" type="password" placeholder="Nouveau mot de passe" autocomplete="new-password"
+             style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:9px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:inherit;font-size:14px;margin-bottom:10px">
+      <input id="reset-pw-input2" type="password" placeholder="Confirme le mot de passe" autocomplete="new-password"
+             style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:9px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:inherit;font-size:14px;margin-bottom:6px">
+      <div id="reset-pw-err" style="display:none;color:#f87171;font-size:12px;margin-bottom:8px"></div>
+      <button id="reset-pw-btn" style="width:100%;padding:11px;border:none;border-radius:9px;background:var(--accent,#4ade80);color:#06240f;font-weight:700;font-size:14px;cursor:pointer">Valider</button>
+    </div>`;
+  document.body.appendChild(ov);
+  const errEl = ov.querySelector('#reset-pw-err');
+  ov.querySelector('#reset-pw-btn').onclick = async () => {
+    const p1 = ov.querySelector('#reset-pw-input').value;
+    const p2 = ov.querySelector('#reset-pw-input2').value;
+    if (p1.length < 6) { errEl.textContent = 'Mot de passe trop court (6 caractères min.).'; errEl.style.display = 'block'; return; }
+    if (p1 !== p2)     { errEl.textContent = 'Les deux mots de passe ne correspondent pas.';  errEl.style.display = 'block'; return; }
+    showLoading('Mise à jour…');
+    try {
+      const r = await fetch(`${SB_URL}/auth/v1/user`, {
+        method: 'PUT',
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${sess.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: p1 }),
+      });
+      const d = await r.json().catch(() => ({}));
+      hideLoading();
+      if (!r.ok) { errEl.textContent = d.msg || d.error_description || 'Erreur lors de la mise à jour.'; errEl.style.display = 'block'; return; }
+      // Connecte directement l'utilisateur avec sa nouvelle session
+      saveSession(sess.token, sess.refresh, sess.expiresIn);
+      ov.remove();
+      toast('Mot de passe mis à jour ✅');
+      setTimeout(() => location.reload(), 900);
+    } catch (e) {
+      hideLoading();
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    }
+  };
+}
+
+// 4) Injecte le lien « Mot de passe oublié ? » sous le champ mot de passe de connexion
+function injectForgotLink() {
+  const pass = document.getElementById('l-pass');
+  if (!pass || document.getElementById('forgot-pw-link')) return;
+  const link = document.createElement('div');
+  link.id = 'forgot-pw-link';
+  link.textContent = 'Mot de passe oublié ?';
+  link.style.cssText = 'font-size:12px;color:var(--text-muted,#94a3b8);cursor:pointer;margin-top:8px;text-align:right;text-decoration:underline';
+  link.onclick = doForgotPassword;
+  (pass.parentElement || pass).appendChild(link);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // DATA LOADING
 // ═══════════════════════════════════════════════════════════════
@@ -3515,6 +3617,8 @@ const initDecorations = () => {
 // ═══════════════════════════════════════════════════════════════
 
 const init = async () => {
+  handleRecoveryRedirect();   // détecte un retour de lien « mot de passe oublié »
+  injectForgotLink();         // ajoute le lien sous le formulaire de connexion
   showLoading('Connexion…');
   const savedToken   = localStorage.getItem('gbs_token');
   const savedRefresh = localStorage.getItem('gbs_refresh');
