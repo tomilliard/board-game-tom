@@ -44,7 +44,7 @@ const getRankAssets = (rankKey) => {
 
 const SB_URL    = 'https://cdzufqxojizqdujpupex.supabase.co';
 const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkenVmcXhvaml6cWR1anB1cGV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NzUyMzEsImV4cCI6MjA5NTQ1MTIzMX0.zpSuhOv0R6XwnF4EAWWA5n4hxgQnDm7SVxdHO8TKoJw';
-const ADMIN_PW  = '1410';
+// Mode admin lié au compte (colonne profiles.is_admin) — plus de mot de passe en clair.
 const SITE_URL  = 'https://boardgametom.netlify.app';
 
 // Les avatars 2-10 seront ajoutés au fur et à mesure
@@ -139,6 +139,7 @@ let currentUser   = null;
 let currentProfile = null;
 
 let isAdmin      = false;
+let isOwner      = false;   // vrai uniquement si le compte connecté a profiles.is_admin = true
 let curPage      = 'games';
 let curTab       = 'all';
 let socialTab    = 'suggestions';
@@ -844,6 +845,14 @@ const updateUserUI = () => {
     document.body.appendChild(_loginFab);
   }
   _loginFab.style.display = loggedIn ? 'none' : '';
+
+  // Admin lié au compte : le bouton n'est visible que pour le propriétaire (Tom)
+  isOwner = !!(currentProfile && currentProfile.is_admin);
+  if (!isOwner && isAdmin) isAdmin = false;
+  const _lbl = document.getElementById('admin-btn-label');
+  const _adminBtnEl = _lbl && (_lbl.closest('button') || _lbl.closest('a') || _lbl.parentElement);
+  if (_adminBtnEl) _adminBtnEl.style.display = isOwner ? '' : 'none';
+
   if (loggedIn && currentProfile) {
     const bg  = currentProfile.color || '#4ade80';
     const av  = document.getElementById('user-av');
@@ -1103,32 +1112,14 @@ const saveProfileEdit = async () => {
 // ═══════════════════════════════════════════════════════════════
 
 const toggleAdmin = () => {
-  if (isAdmin) {
-    isAdmin = false;
-    updateAdminUI();
-    toast('Mode admin désactivé');
-    return;
-  }
-  openModal('modal-admin');
-  setTimeout(() => {
-    document.getElementById('admin-pass').value        = '';
-    document.getElementById('admin-err').style.display = 'none';
-    document.getElementById('admin-pass').focus();
-  }, 50);
+  if (!isOwner) return;                 // réservé au propriétaire du compte
+  isAdmin = !isAdmin;
+  updateAdminUI();
+  toast(isAdmin ? 'Mode admin activé ⚡' : 'Mode admin désactivé');
 };
 
-const checkAdmin = () => {
-  const v = document.getElementById('admin-pass').value;
-  if (v === ADMIN_PW) {
-    isAdmin = true;
-    closeModal('modal-admin');
-    updateAdminUI();
-    toast('Mode admin activé ⚡');
-  } else {
-    document.getElementById('admin-err').style.display = 'block';
-    document.getElementById('admin-pass').value = '';
-  }
-};
+// Ancien flux par mot de passe désactivé (conservé pour ne rien casser dans l'index)
+const checkAdmin = () => closeModal('modal-admin');
 
 const updateAdminUI = () => {
   document.getElementById('admin-badge').style.display = isAdmin ? '' : 'none';
