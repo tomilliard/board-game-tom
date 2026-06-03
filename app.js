@@ -3304,12 +3304,14 @@ const openPlayerProfile = (pid) => {
   document.getElementById('pp-summary').innerHTML = `
     <div style="position:relative;border-radius:var(--radius);overflow:hidden;
                 border:1px solid var(--border);margin-bottom:4px">
-      <!-- Bannière en fond, pleine hauteur -->
-      <div style="position:absolute;inset:0;${ra2.banner ? "background-image:url('"+ra2.banner+"');background-size:cover;background-position:center" : 'background:'+bg+'22'}"></div>
-      <!-- Voile sombre dégradé (plus dense en bas) pour la lisibilité -->
-      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.10) 0%,rgba(0,0,0,.30) 45%,rgba(0,0,0,.80) 100%)"></div>
-      <!-- Contenu par-dessus la bannière -->
-      <div style="position:relative;display:flex;align-items:flex-end;gap:12px;padding:64px 14px 14px">
+      <!-- Bannière affichée en entier (jamais rognée) -->
+      ${ra2.banner
+        ? `<img src="${ra2.banner}" style="display:block;width:100%;height:auto">`
+        : `<div style="width:100%;height:150px;background:${bg}22"></div>`}
+      <!-- Voile sombre dégradé en bas pour la lisibilité du texte -->
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.35) 70%,rgba(0,0,0,.82) 100%);pointer-events:none"></div>
+      <!-- Avatar + infos posés en bas, par-dessus la bannière -->
+      <div style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;gap:12px;padding:0 14px 14px">
         <div style="position:relative;width:110px;height:110px;flex-shrink:0">
           ${(() => {
             const pAvImg = AVATARS.find(a => a.id === (p.avatar || 1));
@@ -3319,13 +3321,13 @@ const openPlayerProfile = (pid) => {
           })()}
           ${ra2.profile_frame ? `<img src="${ra2.profile_frame}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:110px;height:110px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
         </div>
-        <div style="flex:1;padding-bottom:4px">
+        <div style="flex:1;padding-bottom:6px">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="font-size:16px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9)">${esc(p.name)}</span>
+            <span style="font-size:16px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.95)">${esc(p.name)}</span>
             ${ra2.emblem ? `<img src="${ra2.emblem}" style="width:22px;height:22px;object-fit:contain">` : ''}
-            <span style="font-size:12px;color:${rk.color};font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.9)">${rk.name}</span>
+            <span style="font-size:12px;color:${rk.color};font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.95)">${rk.name}</span>
           </div>
-          <div style="display:flex;gap:12px;margin-top:5px;font-size:12px;color:rgba(255,255,255,.92);flex-wrap:wrap;text-shadow:0 1px 3px rgba(0,0,0,.9)">
+          <div style="display:flex;gap:12px;margin-top:5px;font-size:12px;color:rgba(255,255,255,.92);flex-wrap:wrap;text-shadow:0 1px 4px rgba(0,0,0,.95)">
             <span style="color:var(--gold)">⭐ ${p.points || 0} pts</span>
             <span>🏆 ${s.won}V</span>
             <span>💔 ${s.lost}D</span>
