@@ -245,10 +245,10 @@ select:focus{border-color:var(--accent);outline:none}
   /* 1 colonne sur mobile — les cartes sont denses */
   .players-grid{grid-template-columns:1fr;margin-top:1rem}
   /* Horizontal layout for player card on mobile */
-  .player-card{flex-direction:row;flex-wrap:wrap;align-items:center;text-align:left;gap:10px;padding:1rem}
+  .player-card{flex-direction:column;align-items:center;text-align:center;gap:7px;padding:1rem}
   .player-avatar{width:44px;height:44px;font-size:16px;flex-shrink:0}
   .player-name{flex:1;font-size:14px;min-width:0}
-  .pstats{gap:14px;width:100%;justify-content:flex-start;border-top:1px solid var(--border);padding-top:8px;margin-top:4px}
+  .pstats{gap:14px;width:100%;justify-content:center;border-top:1px solid var(--border);padding-top:8px;margin-top:4px}
   .pst-val{font-size:16px}
   .wr-bar{display:none} /* hide bar, keep % text */
   .pdet{border-top:1px solid var(--border);padding-top:8px;width:100%}
@@ -458,9 +458,9 @@ select:focus{border-color:var(--accent);outline:none}
   .pcard-frame-desktop   { display:none !important }
   .pcard-frame-mobile    { display:block !important }
   .pcard-emblem-desktop  { display:none !important }
-  .pcard-emblem-mobile   { display:flex !important }
-  .pcard-body            { padding:8px 10px 8px 0 !important;flex:1 }
-  .pcard-resp            { display:flex !important;align-items:center;gap:10px;padding:10px 12px !important }
+  .pcard-emblem-mobile   { display:flex !important;margin:2px auto 0 !important }
+  .pcard-body            { padding:0 12px !important;width:100% !important;text-align:center }
+  .pcard-resp            { display:flex !important;flex-direction:column !important;align-items:center !important;gap:7px;padding:12px !important }
 }
 
 
