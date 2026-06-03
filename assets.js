@@ -123,16 +123,26 @@ const RANK_EMBLEMS = {
 
 // ─── Avatars de profil ───
 const AVATARS = [
-  { id: 1, label: 'Le Stratège', src: 'assets/avatars_src.png' },
-  { id: 2, label: 'La Guerrière', src: 'assets/avatars_src_2.png' },
-  { id: 3, label: 'La Chercheuse', src: 'assets/avatars_src_3.png' },
-  { id: 4, label: "L'Architecte", src: 'assets/avatars_src_4.png' },
-  { id: 5, label: 'La Joueuse', src: 'assets/avatars_src_5.png' },
-  { id: 6, label: 'Le Seigneur des Flammes', src: 'assets/avatars_src_6.png' },
-  { id: 7, label: 'La Nécromancienne', src: 'assets/avatars_src_7.png' },
-  { id: 8, label: 'Le Corsaire', src: 'assets/avatars_src_8.png' },
-  { id: 9, label: 'La Druidesse', src: 'assets/avatars_src_9.png' },
-  { id: 10, label: 'Le Marchand', src: 'assets/avatars_src_10.png' }
+  { id: 1, label: 'Le Gardien Céleste', src: 'assets/avatar1.webp' },
+  { id: 2, label: 'La Reine Pirate', src: 'assets/avatar2.webp' },
+  { id: 3, label: 'Le Paladin', src: 'assets/avatar3.webp' },
+  { id: 4, label: 'La Steampunk', src: 'assets/avatar4.webp' },
+  { id: 5, label: 'Le Mage', src: 'assets/avatar5.webp' },
+  { id: 6, label: 'Le Capitaine de Guilde', src: 'assets/avatar6.webp' },
+  { id: 7, label: 'Le Samouraï', src: 'assets/avatar7.webp' },
+  { id: 8, label: 'Le Viking Berserker', src: 'assets/avatar8.webp' },
+  { id: 9, label: 'La Reine des Neiges', src: 'assets/avatar9.webp' },
+  { id: 10, label: 'L\'Assassin des Ombres', src: 'assets/avatar10.webp' },
+  { id: 11, label: 'La Maîtresse du Jeu', src: 'assets/avatar11.webp' },
+  { id: 12, label: 'Le Roi Dragon', src: 'assets/avatar12.webp' },
+  { id: 13, label: 'L\'Alchimiste', src: 'assets/avatar13.webp' },
+  { id: 14, label: 'L\'Architecte', src: 'assets/avatar14.webp' },
+  { id: 15, label: 'La Nécromancienne', src: 'assets/avatar15.webp' },
+  { id: 16, label: 'Le Pirate', src: 'assets/avatar16.webp' },
+  { id: 17, label: 'La Druidesse', src: 'assets/avatar17.webp' },
+  { id: 18, label: 'Le Marchand', src: 'assets/avatar18.webp' },
+  { id: 19, label: 'La Guerrière', src: 'assets/avatar19.webp' },
+  { id: 20, label: 'Le Grand Stratège', src: 'assets/avatar20.webp' }
 ];
 
 // ─── Images décoratives ───
