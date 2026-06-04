@@ -2308,41 +2308,7 @@ const openActivityFeed = () => {
   openModal('modal-feed');
 };
 
-// ─── Stats avancées d'un joueur (bloc inséré dans la fiche profil) ──
-const advancedStatsHtml = (pid) => {
-  const mine = matches.filter((m) => (m.players || []).some((pp) => pp.id === pid));
-  if (mine.length < 2) return '';
-  // Win rate par nombre de joueurs
-  const order = ['2', '3', '4', '5+'];
-  const buckets = { '2': { p: 0, w: 0 }, '3': { p: 0, w: 0 }, '4': { p: 0, w: 0 }, '5+': { p: 0, w: 0 } };
-  mine.forEach((m) => {
-    const n = (m.players || []).length; const k = n >= 5 ? '5+' : String(Math.max(2, n));
-    if (!buckets[k]) return; buckets[k].p++; if ((m.winners || []).includes(pid)) buckets[k].w++;
-  });
-  const byCount = order.filter((k) => buckets[k].p > 0)
-    .map((k) => `${k}j : ${Math.round(buckets[k].w / buckets[k].p * 100)}%`).join(' · ') || '—';
-  // Meilleur jour (par victoires)
-  const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
-  const dayW = {};
-  mine.forEach((m) => { if (m.date && (m.winners || []).includes(pid)) { const d = new Date(m.date).getDay(); dayW[d] = (dayW[d] || 0) + 1; } });
-  const bd = Object.entries(dayW).sort((a, b) => b[1] - a[1])[0];
-  const bestDay = bd ? `${days[bd[0]]} (${bd[1]} victoire${bd[1] > 1 ? 's' : ''})` : '—';
-  // Nemesis (adversaire qui te bat le plus souvent)
-  const nem = {};
-  mine.forEach((m) => { if ((m.winners || []).includes(pid)) return; (m.winners || []).forEach((wid) => { if (wid !== pid) nem[wid] = (nem[wid] || 0) + 1; }); });
-  const ne = Object.entries(nem).sort((a, b) => b[1] - a[1])[0];
-  const nemesis = ne ? `${(players.find((p) => p.id === parseInt(ne[0])) || {}).name || '?'} (${ne[1]} défaite${ne[1] > 1 ? 's' : ''})` : '—';
-
-  const line = (lbl, val) =>
-    `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:4px 0">
-       <span style="color:var(--text-faint)">${lbl}</span><span style="color:var(--text-muted);text-align:right">${val}</span></div>`;
-  return `<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:4px">
-      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px">📊 Stats avancées</div>
-      ${line('Taux de victoire par taille', byCount)}
-      ${line('Meilleur jour', bestDay)}
-      ${line('Nemesis', nemesis)}
-    </div>`;
-};
+// ─── Recalcule TOUTES les notes Elo de la saison en cours
 // dans l'ordre chronologique (admin). Tout le monde repart de 1000 ; le facteur K
 // reflète l'expérience au moment de chaque partie.
 const recalcAllElo = async () => {
@@ -4212,7 +4178,6 @@ const openPlayerProfile = (pid) => {
         </div>
       </div>
     </div>
-    ${advancedStatsHtml(pid)}
     <button onclick="openPlayerHistory(${pid})"
             style="width:100%;margin-bottom:4px;padding:11px;border-radius:10px;border:1px solid var(--border);
                    background:var(--bg);color:var(--text);font-family:inherit;font-size:14px;font-weight:600;
