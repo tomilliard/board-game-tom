@@ -3751,7 +3751,12 @@ const openPlayerProfile = (pid) => {
   const ra2 = getRankAssets(rk.key) || {};
   const big = window.matchMedia('(min-width:701px)').matches;  // PC = plus grand
   const fb  = big ? 190 : 110;   // taille du cadre
-  const av  = big ? 124 : 72;    // diamètre de l'avatar
+  const _bk = rk.baseKey || rk.key;
+  // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES) pour les rangs aux
+  // cadres refaits ; les autres gardent la taille historique qui leur convient.
+  const av  = (_bk === 'bronze' || _bk === 'argent')
+    ? Math.round(fb * (FRAME_HOLES[_bk].size / 150))
+    : (big ? 124 : 72);          // diamètre de l'avatar
   const ov  = big ? -92 : -52;   // chevauchement sur la bannière
   const emb = big ? 30  : 22;    // taille de l'emblème
   const nf  = big ? 22  : 17;    // taille du nom
