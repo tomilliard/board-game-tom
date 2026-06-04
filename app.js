@@ -17,7 +17,7 @@ const FRAME_HOLES = {
   diamant:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   maitre:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   grandmaitre:{ top: 22, left: 23, size: 104, top_m: 12, left_m: 12, size_m: 55 },
-  challenger: { top: 37, left: 32, size: 86, top_m: 20, left_m: 17, size_m: 46 },
+  challenger: { top: 28, left: 22, size: 104, top_m: 16, left_m: 13, size_m: 55 },
 };
 
 
@@ -2429,8 +2429,8 @@ const buildPlayerCard = (p) => {
   const rd = RANK_ASSETS_DESKTOP[rk.baseKey||rk.key] || {};
   const rm = RANK_ASSETS_MOBILE[rk.baseKey||rk.key]  || {};
 
-  // Le Challenger s'affiche plus grand (déborde du gabarit ; ailes transparentes).
-  const cScale = (rk.baseKey||rk.key) === 'challenger' ? 1.4 : 1;
+  // Cadre à la taille standard (le cercle de l'avatar est déjà grand).
+  const cScale = 1;
   const fSd = Math.round(150 * cScale), offD = Math.round((150 - fSd) / 2);
   const fSm = Math.round(80  * cScale), offM = Math.round((80  - fSm) / 2);
 
@@ -4163,8 +4163,8 @@ const openPlayerProfile = (pid) => {
   const ra2 = getRankAssets(rk.key) || {};
   const big = window.matchMedia('(min-width:701px)').matches;  // PC = plus grand
   const _bk = rk.baseKey || rk.key;
-  // Le Challenger, rang suprême, s'affiche plus grand pour marquer le sommet.
-  const fScale = _bk === 'challenger' ? 1.7 : 1;
+  // Le cercle de l'avatar est désormais grand : plus besoin d'agrandir le cadre.
+  const fScale = 1;
   const fb  = Math.round((big ? 190 : 110) * fScale);   // taille du cadre
   // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES : position ET taille)
   // pour les rangs aux cadres refaits ; les autres gardent la taille historique.
