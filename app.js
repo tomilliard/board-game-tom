@@ -2312,7 +2312,7 @@ const buildPlayerCard = (p) => {
         ${(p.points || 0) > 0
           ? `<span class="points-badge">&#11088; ${p.points} pts</span>`
           : ''}
-        <span class="points-badge" title="Note de niveau (Elo)">&#9876;&#65039; ${getElo(p)} Elo</span>
+        ${isAdmin ? `<span class="points-badge" title="Note de niveau (Elo)">&#9876;&#65039; ${getElo(p)} Elo</span>` : ''}
         ${(p.streak || 0) >= 3
           ? `<span class="streak-badge">&#128293; ${p.streak}</span>`
           : ''}
@@ -2571,7 +2571,7 @@ const renderLeaderboard = () => {
         <div class="lb-sub">
           ${p.won}V · ${p.lost}D · ${p.played}p
           ${(p.points || 0) > 0 ? ` · &#11088;${p.points}pts` : ''}
-          · &#9876;&#65039;${getElo(p)}
+          ${isAdmin ? ` · &#9876;&#65039;${getElo(p)}` : ''}
         </div>
       </div>
       <div class="lb-bar">
