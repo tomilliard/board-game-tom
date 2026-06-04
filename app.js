@@ -32,7 +32,7 @@ const FRAME_BY_DIV = {
   bois_1: 'assets/bois_1_frame.png',  // Wood V
   bois_2: 'assets/bois_2_frame.png',  // Wood IV
   bois_3: 'assets/bois_3_frame.png',  // Wood III
-  bois_4: 'assets/bois_4_frame.png',  // Wood II (arbre-monde)
+  bois_4: 'assets/bois_frame.png',    // Wood II (arbre-monde, fichier déjà présent)
   bois_5: 'assets/bois_5_frame.png',  // Wood I
 };
 
