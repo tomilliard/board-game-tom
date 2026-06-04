@@ -1038,17 +1038,34 @@ const _openProfileModal = (cfg) => {
   // Points
   const ptsRow   = document.getElementById('pe-points-row');
   const ptsInput = document.getElementById('pe-points');
+  const eloRow   = document.getElementById('pe-elo-row');
+  const eloInput = document.getElementById('pe-elo');
   ptsRow.style.display = cfg.showPts ? 'block' : 'none';
+
+  const updatePrev = () => {
+    const pts  = parseInt(ptsInput.value) || 0;
+    const eloV = parseInt(eloInput && eloInput.value) || 0;
+    const rk   = (cfg.showElo && eloV >= GM_ELO_THRESHOLD)
+      ? { ...GM_RANK, idx: CHALLENGER_IDX }
+      : getRank(pts);
+    document.getElementById('pe-rank-preview').innerHTML =
+      `Rang : <span style="color:${rk.color};font-weight:500">${rankImg(rk,14)} ${rk.name}</span>`;
+  };
+
   if (cfg.showPts) {
     ptsInput.value = cfg.points ?? 0;
-    const updatePrev = () => {
-      const rk = getRank(parseInt(ptsInput.value) || 0);
-      document.getElementById('pe-rank-preview').innerHTML =
-        `Rang : <span style="color:${rk.color};font-weight:500">${rankImg(rk,14)} ${rk.name}</span>`;
-    };
     ptsInput.oninput = updatePrev;
-    updatePrev();
   }
+
+  // Elo (admin uniquement)
+  if (eloRow) {
+    eloRow.style.display = cfg.showElo ? 'block' : 'none';
+    if (cfg.showElo && eloInput) {
+      eloInput.value = cfg.elo ?? 1000;
+      eloInput.oninput = updatePrev;
+    }
+  }
+  if (cfg.showPts) updatePrev();
 
   // Email + mot de passe (création)
   document.getElementById('pe-email-row').style.display = cfg.showEmail ? 'block' : 'none';
@@ -1165,6 +1182,12 @@ const saveProfileEdit = async () => {
   const targetId = modal.dataset.targetPlayer;
   const isCreate = modal.dataset.isCreate === '1';
 
+  // Elo (présent uniquement dans les formulaires admin)
+  const eloRow = document.getElementById('pe-elo-row');
+  const hasElo = eloRow && eloRow.style.display !== 'none';
+  const eloVal = hasElo ? (parseInt(document.getElementById('pe-elo').value) || 1000) : null;
+  const eloPart = hasElo ? { elo: eloVal } : {};
+
   showLoading(isCreate ? 'Création du compte…' : 'Enregistrement…');
   try {
     if (isCreate && isAdmin) {
@@ -1175,7 +1198,7 @@ const saveProfileEdit = async () => {
 
       if (!email) {
         // Email vide → joueur de test SANS compte (ne peut pas se connecter)
-        await sb.post('players', { name, color: selColor, points: pts, avatar: selAvatar });
+        await sb.post('players', { name, color: selColor, points: pts, avatar: selAvatar, ...eloPart });
         toast(`Joueur de test créé : ${name} ✓`);
       } else {
         // Email rempli → compte complet (peut se connecter)
@@ -1189,7 +1212,7 @@ const saveProfileEdit = async () => {
           // sinon les règles de sécurité (RLS) bloquent l'insertion.
           if (d.access_token) authToken = d.access_token;
           await sb.post('profiles', { id: uid, name, color: selColor, email, avatar: selAvatar });
-          await sb.post('players',  { name, color: selColor, user_id: uid, points: pts, avatar: selAvatar });
+          await sb.post('players',  { name, color: selColor, user_id: uid, points: pts, avatar: selAvatar, ...eloPart });
         } finally {
           authToken = adminToken;                   // restaure la session admin
         }
@@ -1199,7 +1222,7 @@ const saveProfileEdit = async () => {
     } else if (targetId && isAdmin) {
       // ── Modifier un joueur existant (admin) ──
       const pts = parseInt(document.getElementById('pe-points').value) || 0;
-      await sb.patch('players', { name, color: selColor, points: pts, avatar: selAvatar }, { id: parseInt(targetId) });
+      await sb.patch('players', { name, color: selColor, points: pts, avatar: selAvatar, ...eloPart }, { id: parseInt(targetId) });
       const pl = players.find((x) => x.id === parseInt(targetId));
       if (pl?.user_id) await sb.patch('profiles', { name, color: selColor, avatar: selAvatar }, { id: pl.user_id });
       toast(`${name} mis à jour — ${getRank(pts).name}`);
@@ -2426,6 +2449,8 @@ const editPlayerAdmin = async (id) => {
     avatar:   p.avatar || 1,
     points:   p.points || 0,
     showPts:  true,
+    elo:      p.elo ?? 1000,
+    showElo:  true,
     showEmail:false,
     showPass: false,
     targetId: id,
@@ -2443,6 +2468,8 @@ const openCreatePlayerAdmin = () => {
     avatar:   1,
     points:   0,
     showPts:  true,
+    elo:      1000,
+    showElo:  true,
     showEmail:true,
     showPass: true,
     targetId: null,
