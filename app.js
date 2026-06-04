@@ -17,6 +17,12 @@ const FRAME_HOLES = {
   bois_4:     { top: 31, left: 25, size: 100, top_m: 17, left_m: 14, size_m: 53 },  // Wood II (arbre-monde)
   bois_5:     { top: 21, left: 21, size: 108, top_m: 11, left_m: 11, size_m: 58 },  // Wood I
   bronze:     { top: 19, left: 19, size: 112, top_m: 10, left_m: 10, size_m: 60 },
+  // Bronze : un cadre par division (V→I).
+  bronze_1:   { top: 21, left: 19, size: 112, top_m: 11, left_m: 10, size_m: 60 },  // Bronze V
+  bronze_2:   { top: 26, left: 25, size: 100, top_m: 15, left_m: 14, size_m: 53 },  // Bronze IV
+  bronze_3:   { top: 17, left: 17, size: 116, top_m: 9,  left_m: 9,  size_m: 62 },  // Bronze III
+  bronze_4:   { top: 20, left: 20, size: 110, top_m: 11, left_m: 11, size_m: 59 },  // Bronze II
+  bronze_5:   { top: 20, left: 20, size: 110, top_m: 11, left_m: 11, size_m: 59 },  // Bronze I
   argent:     { top: 21, left: 20, size: 110, top_m: 11, left_m: 11, size_m: 59 },
   or:         { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   platine:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
@@ -34,6 +40,11 @@ const FRAME_BY_DIV = {
   bois_3: 'assets/bois_3_frame.png',  // Wood III
   bois_4: 'assets/bois_frame.png',    // Wood II (arbre-monde, fichier déjà présent)
   bois_5: 'assets/bois_5_frame.png',  // Wood I
+  bronze_1: 'assets/bronze_1_frame.png',  // Bronze V
+  bronze_2: 'assets/bronze_2_frame.png',  // Bronze IV
+  bronze_3: 'assets/bronze_3_frame.png',  // Bronze III
+  bronze_4: 'assets/bronze_4_frame.png',  // Bronze II
+  bronze_5: 'assets/bronze_5_frame.png',  // Bronze I
 };
 
 
