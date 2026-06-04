@@ -56,6 +56,11 @@ const FRAME_BY_DIV = {
   argent_3: 'assets/argent_3_frame.png',  // Argent III
   argent_4: 'assets/argent_4_frame.png',  // Argent II
   argent_5: 'assets/argent_5_frame.png',  // Argent I
+  or_1: 'assets/or_1_frame.png',  // Or V
+  or_2: 'assets/or_2_frame.png',  // Or IV
+  or_3: 'assets/or_3_frame.png',  // Or III
+  or_4: 'assets/or_4_frame.png',  // Or II
+  or_5: 'assets/or_5_frame.png',  // Or I
 };
 
 
