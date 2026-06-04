@@ -217,6 +217,48 @@ const calcLoss = (pts, placement, totalPlayers) => {
   return 0;
 };
 
+// ─── Note Elo (niveau relatif) ───────────────────────────────
+// Contrairement aux points (cumulés, récompensent le volume), l'Elo mesure
+// le NIVEAU : battre plus fort que soi rapporte beaucoup, perdre contre plus
+// faible coûte cher. La somme des variations d'une partie est ~nulle.
+const ELO_BASE = 1000;
+
+const getElo = (p) => Math.round((p && p.elo != null) ? p.elo : ELO_BASE);
+
+// Expérience du joueur (sert au facteur K) — comptée sur l'historique en mémoire.
+const eloGamesPlayed = (pid) =>
+  matches.filter((m) => m.players?.some((pp) => pp.id === pid)).length;
+
+// Facteur K : fort tant que le joueur est "provisoire", plus stable ensuite.
+const eloK = (rating, games) => {
+  if (games < 10)     return 40;   // provisoire : la note converge vite
+  if (rating >= 2000) return 16;   // élite : on bouge peu
+  return 24;                       // régime établi
+};
+
+// Elo multijoueur par comparaisons par paires : chaque joueur est confronté
+// à tous les autres en "1v1 virtuel" selon le classement de la partie.
+// placeOf(pid) renvoie le classement (1 = meilleur) ; égalité de place = nul.
+const eloDeltas = (ids, placeOf) => {
+  const out = {};
+  const n = ids.length;
+  if (n < 2) return out;
+  const R = {};
+  ids.forEach((id) => { R[id] = getElo(players.find((x) => x.id === id)); });
+  ids.forEach((i) => {
+    let expected = 0, actual = 0;
+    ids.forEach((j) => {
+      if (i === j) return;
+      expected += 1 / (1 + Math.pow(10, (R[j] - R[i]) / 400));
+      const pi = placeOf(i), pj = placeOf(j);
+      actual  += pi < pj ? 1 : pi > pj ? 0 : 0.5;
+    });
+    const k = eloK(R[i], eloGamesPlayed(i));
+    out[i] = Math.round(k * (actual - expected) / (n - 1));
+  });
+  return out;
+};
+
 // ─── Rating helpers ──────────────────────────────────────────
 
 const avgRating = (g) => {
@@ -2049,6 +2091,7 @@ const buildPlayerCard = (p) => {
         ${(p.points || 0) > 0
           ? `<span class="points-badge">&#11088; ${p.points} pts</span>`
           : ''}
+        <span class="points-badge" title="Note de niveau (Elo)">&#9876;&#65039; ${getElo(p)} Elo</span>
         ${(p.streak || 0) >= 3
           ? `<span class="streak-badge">&#128293; ${p.streak}</span>`
           : ''}
@@ -2302,6 +2345,7 @@ const renderLeaderboard = () => {
         <div class="lb-sub">
           ${p.won}V · ${p.lost}D · ${p.played}p
           ${(p.points || 0) > 0 ? ` · &#11088;${p.points}pts` : ''}
+          · &#9876;&#65039;${getElo(p)}
         </div>
       </div>
       <div class="lb-bar">
@@ -2452,6 +2496,9 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
     ? 1
     : winnerIds.length + 1 + losers.indexOf(pid);
 
+  // Variations Elo : calculées en une passe sur tous les joueurs de la partie.
+  const eloDelta = eloDeltas(allPlayerIds, place);
+
   for (const pid of allPlayerIds) {
     const p = players.find((x) => x.id === pid);
     if (!p) continue;
@@ -2467,9 +2514,19 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
     const net     = gain - loss - streakPenalty;
     const newPts  = Math.max(0, curPts + net);
     showPtsGain(net >= 0 ? '+' + net : net);
+
+    const newElo  = getElo(p) + (eloDelta[pid] || 0);
+    const body    = { points: newPts, streak: newStreak };
+    if (eloDelta[pid] !== undefined) body.elo = newElo;
     try {
-      await sb.patch('players', { points: newPts, streak: newStreak }, { id: pid });
-    } catch (e) { console.warn('Points error:', e); }
+      await sb.patch('players', body, { id: pid });
+    } catch (e) {
+      // Si la colonne `elo` n'existe pas encore, on réessaie sans elo
+      // pour ne pas perdre la mise à jour des points.
+      console.warn('Patch joueur échoué, nouvel essai sans elo :', e);
+      try { await sb.patch('players', { points: newPts, streak: newStreak }, { id: pid }); }
+      catch (e2) { console.warn('Points error:', e2); }
+    }
   }
   await loadAll();
 };
