@@ -2429,6 +2429,11 @@ const buildPlayerCard = (p) => {
   const rd = RANK_ASSETS_DESKTOP[rk.baseKey||rk.key] || {};
   const rm = RANK_ASSETS_MOBILE[rk.baseKey||rk.key]  || {};
 
+  // Le Challenger s'affiche plus grand (déborde du gabarit ; ailes transparentes).
+  const cScale = (rk.baseKey||rk.key) === 'challenger' ? 1.4 : 1;
+  const fSd = Math.round(150 * cScale), offD = Math.round((150 - fSd) / 2);
+  const fSm = Math.round(80  * cScale), offM = Math.round((80  - fSm) / 2);
+
   const adminFoot = isAdmin
     ? `<div class="p-card-foot">
          <button class="btn-icon" onclick="editPlayerAdmin(${p.id})">${SVG_EDIT} Modifier</button>
@@ -2463,20 +2468,20 @@ const buildPlayerCard = (p) => {
         const inner  = avImg
           ? '<img src="' + avImg.src + '" style="width:100%;height:100%;object-fit:cover;display:block">'
           : '<div style="width:100%;height:100%;' + bgStyle + ';display:flex;align-items:center;justify-content:center;font-size:' + Math.round(h.size*0.35) + 'px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8)">' + ini(p.name) + '</div>';
-        // Desktop : positionné via h.top/left/size (CSS override sur mobile via pcard-av-hole-m)
-        return '<div class="pcard-av-hole-d" style="position:absolute;top:' + h.top + 'px;left:' + h.left + 'px;width:' + h.size + 'px;height:' + h.size + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>'
-             + '<div class="pcard-av-hole-m" style="display:none;position:absolute;top:' + h.top_m + 'px;left:' + h.left_m + 'px;width:' + h.size_m + 'px;height:' + h.size_m + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>';
+        // Desktop : positionné via h.top/left/size, mis à l'échelle pour le Challenger
+        return '<div class="pcard-av-hole-d" style="position:absolute;top:' + (offD + h.top * cScale) + 'px;left:' + (offD + h.left * cScale) + 'px;width:' + (h.size * cScale) + 'px;height:' + (h.size * cScale) + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>'
+             + '<div class="pcard-av-hole-m" style="display:none;position:absolute;top:' + (offM + h.top_m * cScale) + 'px;left:' + (offM + h.left_m * cScale) + 'px;width:' + (h.size_m * cScale) + 'px;height:' + (h.size_m * cScale) + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>';
       })()}
       <!-- Frame desktop -->
       ${rd.player_frame
         ? `<img class="pcard-frame-desktop" src="${rd.player_frame}"
-               style="position:absolute;inset:0;width:150px;height:150px;
+               style="position:absolute;top:${offD}px;left:${offD}px;width:${fSd}px;height:${fSd}px;
                       object-fit:contain;pointer-events:none;z-index:2">`
         : ''}
       <!-- Frame mobile (caché par défaut, affiché via CSS ≤700px) -->
       ${rm.player_frame
         ? `<img class="pcard-frame-mobile" src="${rm.player_frame}"
-               style="display:none;position:absolute;inset:0;width:80px;height:80px;
+               style="display:none;position:absolute;top:${offM}px;left:${offM}px;width:${fSm}px;height:${fSm}px;
                       object-fit:contain;pointer-events:none;z-index:2">`
         : ''}
     </div>
@@ -4159,7 +4164,7 @@ const openPlayerProfile = (pid) => {
   const big = window.matchMedia('(min-width:701px)').matches;  // PC = plus grand
   const _bk = rk.baseKey || rk.key;
   // Le Challenger, rang suprême, s'affiche plus grand pour marquer le sommet.
-  const fScale = _bk === 'challenger' ? 1.35 : 1;
+  const fScale = _bk === 'challenger' ? 1.7 : 1;
   const fb  = Math.round((big ? 190 : 110) * fScale);   // taille du cadre
   // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES : position ET taille)
   // pour les rangs aux cadres refaits ; les autres gardent la taille historique.
