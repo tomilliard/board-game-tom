@@ -16,6 +16,7 @@ const FRAME_HOLES = {
   platine:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   diamant:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   maitre:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  grandmaitre:{ top: 22, left: 23, size: 104, top_m: 12, left_m: 12, size_m: 55 },
   challenger: { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
 };
 
@@ -3754,7 +3755,7 @@ const openPlayerProfile = (pid) => {
   const _bk = rk.baseKey || rk.key;
   // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES) pour les rangs aux
   // cadres refaits ; les autres gardent la taille historique qui leur convient.
-  const av  = (_bk === 'bronze' || _bk === 'argent')
+  const av  = (_bk === 'bronze' || _bk === 'argent' || _bk === 'grandmaitre')
     ? Math.round(fb * (FRAME_HOLES[_bk].size / 150))
     : (big ? 124 : 72);          // diamètre de l'avatar
   const ov  = big ? -92 : -52;   // chevauchement sur la bannière
