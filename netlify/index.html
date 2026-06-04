@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Board Game Tom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     AUTH WALL
+═══════════════════════════════════════════════════════════════ -->
+<div class="auth-wall" id="auth-wall">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+      </div>
+      <span class="auth-logo-text">Board Game Tom</span>
+    </div>
+
+    <!-- Step 1 : login / register tabs -->
+    <div id="auth-step-1">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login', this)">Connexion</button>
+        <button class="auth-tab"        onclick="switchAuthTab('register', this)">Inscription</button>
+      </div>
+      <div id="auth-err" class="auth-err"></div>
+      <div id="auth-ok"  class="auth-ok"></div>
+
+      <div id="tab-login">
+        <div class="form-row">
+          <label>Email</label>
+          <input class="finput" type="email" id="l-email" placeholder="votre@email.com" autocomplete="email">
+        </div>
+        <div class="form-row">
+          <label>Mot de passe</label>
+          <input class="finput" type="password" id="l-pass" placeholder="••••••••"
+                 autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="btn-save-m" style="width:100%;margin-top:4px" onclick="doLogin()">
+          Se connecter
+        </button>
+        <p style="text-align:center;font-size:12px;color:var(--text-faint);margin-top:12px">
+          Pas encore de compte ?
+          <button onclick="switchAuthTab('register',document.querySelectorAll('.auth-tab')[1])"
+                  style="background:none;border:none;color:var(--accent);cursor:pointer;font-family:inherit;font-size:12px">
+            S'inscrire
+          </button>
+        </p>
+      </div>
+
+      <div id="tab-register" style="display:none">
+        <div class="form-row">
+          <label>Email</label>
+          <input class="finput" type="email" id="r-email" placeholder="votre@email.com" autocomplete="email">
+        </div>
+        <div class="form-row">
+          <label>Mot de passe <span style="color:var(--text-faint);font-size:11px">(6 car. min.)</span></label>
+          <input class="finput" type="password" id="r-pass" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="form-row">
+          <label>Confirmer le mot de passe</label>
+          <input class="finput" type="password" id="r-pass2" placeholder="••••••••"
+                 autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter')doRegisterStep1()">
+        </div>
+        <button class="btn-save-m" style="width:100%;margin-top:4px" onclick="doRegisterStep1()">
+          Continuer →
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2 : choose name + colour -->
+    <div id="auth-step-2" style="display:none">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem">
+        Choisissez votre pseudo et votre couleur.
+      </p>
+      <div id="auth-err2" class="auth-err"></div>
+      <div class="form-row">
+        <label>Pseudo <span class="req">*</span></label>
+        <input class="finput" type="text" id="r-name" placeholder="Votre prénom" maxlength="32">
+      </div>
+      <div class="form-row">
+        <label>Couleur</label>
+        <div class="color-pick-row" id="auth-cpicker"></div>
+      </div>
+      <button class="btn-save-m" style="width:100%;margin-top:1rem" onclick="doRegisterStep2()">
+        Créer mon compte
+      </button>
+      <button class="btn-cancel-m" style="width:100%;margin-top:8px" onclick="backToStep1()">
+        ← Retour
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     LOADING OVERLAY
+═══════════════════════════════════════════════════════════════ -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Chargement…</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+      </div>
+      Board Game Tom
+    </a>
+
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="showPage('games',this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        Collection
+      </button>
+      <button class="nav-tab" onclick="showPage('players',this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        Joueurs
+      </button>
+      <button class="nav-tab" onclick="showPage('history',this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Parties
+      </button>
+      <button class="nav-tab" onclick="showPage('social',this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Social <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+      </button>
+      <button class="nav-tab" onclick="showPage('events',this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8"  y1="2" x2="8"  y2="6"/>
+          <line x1="3"  y1="10" x2="21" y2="10"/>
+        </svg>
+        Événements
+      </button>
+    </nav>
+
+    <div class="header-right" style="position:relative">
+      <div class="sync-dot" title="Connecté"></div>
+      <span class="admin-badge" id="admin-badge" style="display:none">⚡ Admin</span>
+      <button class="btn-sec" id="admin-btn" onclick="toggleAdmin()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span id="admin-btn-label">Admin</span>
+      </button>
+      <button class="user-chip" id="user-chip" style="display:none" onclick="toggleUserMenu()">
+        <div class="user-av" id="user-av"></div>
+        <span class="user-name" id="user-name-chip"></span>
+      </button>
+      <button class="btn-add" id="login-btn" onclick="showAuthWall()"
+              style="background:var(--surface);color:var(--text-muted);border:1px solid var(--border)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+          <polyline points="10 17 15 12 10 7"/>
+          <line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+        Connexion
+      </button>
+      <button class="btn-add" id="main-add-btn" onclick="handleAddBtn()" style="display:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5"  y1="12" x2="19" y2="12"/>
+        </svg>
+        <span id="add-btn-label">Ajouter</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- User dropdown -->
+<div class="user-menu" id="user-menu">
+  <div style="padding:8px 10px 6px;border-bottom:1px solid var(--border);margin-bottom:4px">
+    <div style="font-size:13px;font-weight:500;color:var(--text)" id="um-name"></div>
+    <div style="font-size:11px;color:var(--text-faint)" id="um-email"></div>
+  </div>
+  <button class="user-menu-item" onclick="openProfileEdit()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+    Modifier mon profil
+  </button>
+  <div class="user-menu-sep"></div>
+  <button class="user-menu-item danger" onclick="doLogout()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+    Se déconnecter
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MOBILE BOTTOM NAV
+═══════════════════════════════════════════════════════════════ -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <button class="mobile-nav-tab active" id="mnav-games"
+            onclick="showPage('games',this);syncMobileNav('games')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+      Collection
+    </button>
+    <button class="mobile-nav-tab" id="mnav-players"
+            onclick="showPage('players',this);syncMobileNav('players')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Joueurs
+    </button>
+    <button class="mobile-nav-tab" id="mnav-history"
+            onclick="showPage('history',this);syncMobileNav('history')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      Parties
+    </button>
+    <button class="mobile-nav-tab" id="mnav-social"
+            onclick="showPage('social',this);syncMobileNav('social')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      Social
+    </button>
+    <button class="mobile-nav-tab" id="mnav-events"
+            onclick="showPage('events',this);syncMobileNav('events')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8"  y1="2" x2="8"  y2="6"/>
+        <line x1="3"  y1="10" x2="21" y2="10"/>
+      </svg>
+      Events
+    </button>
+  </div>
+</nav>
+
+<button class="mobile-profile-btn" id="mobile-profile-btn" style="display:none" onclick="openProfileEdit()" title="Mon profil">
+  <div id="mobile-av" style="width:32px;height:32px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600"></div>
+</button>
+<button class="fab" id="fab-btn" onclick="handleFab()" title="Ajouter">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2.5" stroke-linecap="round">
+    <line x1="12" y1="5"  x2="12" y2="19"/>
+    <line x1="5"  y1="12" x2="19" y2="12"/>
+  </svg>
+</button>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGES
+═══════════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- COLLECTION -->
+  <div class="page active" id="page-games">
+    <div class="stats-grid sg6" id="stats"></div>
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="search-input" type="text" id="search" placeholder="Rechercher…">
+      </div>
+      <select id="fp">
+        <option value="">Tous les joueurs</option>
+        <option value="1">Solo</option>
+        <option value="2">2 joueurs</option>
+        <option value="3">3 joueurs</option>
+        <option value="4">4+ joueurs</option>
+      </select>
+      <select id="fd">
+        <option value="">Toute durée</option>
+        <option value="court">Court</option>
+        <option value="moyen">Moyen</option>
+        <option value="long">Long</option>
+      </select>
+      <select id="fsort">
+        <option value="name">A → Z</option>
+        <option value="rating">Mieux notés</option>
+        <option value="played">Plus joués</option>
+        <option value="price-asc">Prix ↑</option>
+        <option value="price-desc">Prix ↓</option>
+      </select>
+      <button class="btn-sec" onclick="openRecoModal()">🎲 Ce soir ?</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('all',this)">Tous</button>
+      <button class="tab" onclick="setTab('own',this)">✓ Possédés</button>
+      <button class="tab" onclick="setTab('wish',this)">♡ Souhaits</button>
+    </div>
+    <div class="sort-row">
+      <span class="results-count" id="count"></span>
+    </div>
+    <div class="games-grid" id="grid"></div>
+  </div>
+
+  <!-- JOUEURS -->
+  <div class="page" id="page-players">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+    <div class="stats-grid sg3" id="pstats" style="flex:1"></div>
+    <button id="admin-create-player-btn" style="display:none" class="btn-add" onclick="openCreatePlayerAdmin()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Créer un joueur
+    </button>
+  </div>
+    <div class="players-grid" id="pgrid"></div>
+  </div>
+
+  <!-- PARTIES -->
+  <div class="page" id="page-history">
+    <div class="stats-grid sg4" id="hstats"></div>
+    <div class="hist-layout">
+      <div>
+        <h2 class="section-title">Parties jouées</h2>
+        <div class="hist-list" id="hlist"></div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <h2 class="section-title" style="margin-bottom:0">Classement</h2>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onclick="openActivityFeed()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">📰 Actu</button>
+            <button onclick="openClubRecords()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">📖 Records</button>
+            <button onclick="openSeasonsHistory()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">🏆 Palmarès</button>
+          </div>
+        </div>
+        <div class="lboard" id="lboard" style="margin-top:1rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOCIAL -->
+  <div class="page" id="page-social">
+    <div style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;
+                align-items:center;justify-content:space-between">
+      <div class="tabs" style="margin-bottom:0">
+        <button class="tab active" onclick="setSocialTab('suggestions',this)">💡 Suggestions</button>
+        <button class="tab" onclick="setSocialTab('challenges',this)">⚔️ Défis</button>
+        <button class="tab" onclick="setSocialTab('h2h',this)">📊 Head-to-Head</button>
+        <button class="tab" id="tab-newsletter" style="display:none"
+                onclick="setSocialTab('newsletter',this)">📧 Newsletter</button>
+      </div>
+      <button class="btn-add" id="social-add-btn" onclick="handleSocialAdd()" style="display:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span id="social-add-label">Suggérer un jeu</span>
+      </button>
+    </div>
+
+    <div id="social-suggestions">
+      <div class="suggestions-grid" id="suggestions-grid"></div>
+    </div>
+    <div id="social-challenges" style="display:none">
+      <div class="challenges-layout" id="challenges-grid"></div>
+    </div>
+    <div id="social-h2h" style="display:none">
+      <div class="h2h-select-row">
+        <select class="fselect" id="h2h-p1" onchange="renderH2H()" style="flex:1;min-width:120px">
+          <option value="">Joueur 1</option>
+        </select>
+        <span class="h2h-vs">VS</span>
+        <select class="fselect" id="h2h-p2" onchange="renderH2H()" style="flex:1;min-width:120px">
+          <option value="">Joueur 2</option>
+        </select>
+      </div>
+      <div id="h2h-result"></div>
+    </div>
+    <div id="social-newsletter" style="display:none">
+      <div class="newsletter-form">
+        <h2 class="section-title" style="margin-bottom:1rem">Envoyer une newsletter</h2>
+        <div class="form-row">
+          <label>Objet</label>
+          <input class="finput" type="text" id="nl-subject" placeholder="Ex : Soirée jeux ce vendredi !">
+        </div>
+        <div class="form-row">
+          <label>Message</label>
+          <textarea class="ftextarea" id="nl-body"
+                    placeholder="Votre message…" style="height:150px"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:1rem">
+          <button class="btn-save-m" style="flex:1" onclick="sendNewsletter()">
+            📧 Envoyer à tous les membres
+          </button>
+          <button class="btn-sec" onclick="previewNewsletter()">👁 Aperçu</button>
+        </div>
+        <div id="nl-result" style="margin-top:1rem;font-size:13px;color:var(--text-muted)"></div>
+      </div>
+      <div class="subscribers-list">
+        <h2 class="section-title" style="margin-bottom:.75rem;margin-top:1.5rem">
+          Abonnés <span id="sub-count" style="font-size:14px;color:var(--text-muted)"></span>
+        </h2>
+        <div id="subscribers-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉVÉNEMENTS -->
+  <div class="page" id="page-events">
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                margin-bottom:1.5rem;flex-wrap:wrap;gap:10px">
+      <h2 class="section-title" style="margin-bottom:0">Événements à venir</h2>
+      <button class="btn-add" id="event-add-btn" onclick="openModal('modal-event')"
+              style="display:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Créer un événement
+      </button>
+    </div>
+    <div class="events-list" id="events-list"></div>
+  </div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════════════════════════ -->
+
+<!-- Admin password -->
+<div class="modal-overlay" id="modal-admin" onclick="bgClose(event,'modal-admin')">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h2 class="modal-title">🔐 Mode Admin</h2>
+      <button class="btn-close" onclick="closeModal('modal-admin')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="form-row">
+      <label>Mot de passe</label>
+      <input class="finput" type="password" id="admin-pass" placeholder="••••"
+             onkeydown="if(event.key==='Enter')checkAdmin()">
+    </div>
+    <div id="admin-err" style="font-size:12px;color:var(--danger);margin-bottom:8px;display:none">
+      Mot de passe incorrect.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-admin')">Annuler</button>
+      <button class="btn-save-m"   onclick="checkAdmin()">Connexion</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile / player edit -->
+<div class="modal-overlay" id="modal-profile" onclick="bgClose(event,'modal-profile')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-profile-title">Mon profil</h2>
+      <button class="btn-close" onclick="closeModal('modal-profile')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Preview avatar -->
+    <div style="display:flex;align-items:center;gap:16px;padding:12px 0 16px;border-bottom:1px solid var(--border);margin-bottom:16px">
+      <div id="pe-avatar-preview-wrap" style="position:relative;width:72px;height:72px;flex-shrink:0">
+        <div id="pe-avatar-preview" style="position:absolute;inset:0;border-radius:50%;overflow:hidden;border:2px solid var(--border)"></div>
+        <div id="pe-frame-preview" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:88px;height:88px;pointer-events:none;z-index:2;display:none"><img id="pe-frame-img" style="width:100%;height:100%;object-fit:contain"></div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;color:var(--text)" id="pe-name-preview">Votre nom</div>
+        <div style="font-size:11px;color:var(--text-faint);margin-top:2px">Cliquez sur une illustration ci-dessous</div>
+      </div>
+    </div>
+
+    <!-- Choix illustration -->
+    <div class="form-row">
+      <label>Illustration de profil</label>
+      <div id="pe-avatar-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px"></div>
+    </div>
+
+    <!-- Pseudo -->
+    <div class="form-row">
+      <label>Pseudo</label>
+      <input class="finput" type="text" id="pe-name" placeholder="Votre prénom"
+             oninput="document.getElementById('pe-name-preview').textContent=this.value||'Votre nom'">
+    </div>
+
+    <!-- Couleur (bordure) -->
+    <div class="form-row">
+      <label>Couleur du cadre</label>
+      <div class="color-pick-row" id="pe-cpicker"></div>
+    </div>
+
+    <!-- Points admin -->
+    <div class="form-row" id="pe-points-row" style="display:none">
+      <label>Points <span style="font-size:11px;color:var(--text-faint)">(admin)</span></label>
+      <input class="finput" type="number" id="pe-points" min="0" placeholder="0">
+      <div id="pe-rank-preview" style="font-size:12px;color:var(--text-faint);margin-top:4px"></div>
+    </div>
+
+    <div class="form-row" id="pe-elo-row" style="display:none">
+      <label>Elo <span style="font-size:11px;color:var(--text-faint)">(admin — niveau ; ≥ 100000 = Grand Maître)</span></label>
+      <input class="finput" type="number" id="pe-elo" min="0" placeholder="1000">
+    </div>
+
+    <!-- Email (admin seulement — création de compte) -->
+    <div class="form-row" id="pe-email-row" style="display:none">
+      <label>Email <span style="font-size:11px;color:var(--text-faint)">(admin)</span></label>
+      <input class="finput" type="email" id="pe-email" placeholder="joueur@email.com">
+    </div>
+    <!-- Mot de passe (admin seulement — création de compte) -->
+    <div class="form-row" id="pe-pass-row" style="display:none">
+      <label>Mot de passe temporaire <span style="font-size:11px;color:var(--text-faint)">(admin)</span></label>
+      <input class="finput" type="text" id="pe-pass" placeholder="6 caractères min.">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-profile')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveProfileEdit()" id="pe-save-btn">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / edit game -->
+<div class="modal-overlay" id="modal-game" onclick="bgClose(event,'modal-game')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="mg-title">Ajouter un jeu</h2>
+      <button class="btn-close" onclick="closeModal('modal-game')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="form-row">
+      <label>Nom <span class="req">*</span></label>
+      <input class="finput" type="text" id="fg-name" placeholder="Ex : Catan…">
+    </div>
+    <div class="f2">
+      <div class="form-row">
+        <label>Statut</label>
+        <select class="fselect" id="fg-status">
+          <option value="own">Possédé</option>
+          <option value="wish">Souhait d'achat</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Prix (€)</label>
+        <input class="finput" type="number" id="fg-price" placeholder="39.90" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="f2">
+      <div class="form-row">
+        <label>Joueurs min</label>
+        <input class="finput" type="number" id="fg-pmin" min="1" max="20" placeholder="1">
+      </div>
+      <div class="form-row">
+        <label>Joueurs max</label>
+        <input class="finput" type="number" id="fg-pmax" min="1" max="20" placeholder="4">
+      </div>
+    </div>
+    <div class="f2">
+      <div class="form-row">
+        <label>Durée</label>
+        <select class="fselect" id="fg-dur">
+          <option value="court">Court (&lt;30 min)</option>
+          <option value="moyen">Moyen (30-90 min)</option>
+          <option value="long">Long (&gt;90 min)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Lien boutique</label>
+        <input class="finput" type="url" id="fg-link" placeholder="https://…">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Image du jeu</label>
+      <div style="display:flex;gap:8px">
+        <input class="finput" type="url" id="fg-image"
+               placeholder="URL ou uploadez →" style="flex:1">
+        <label class="btn-sec"
+               style="cursor:pointer;height:38px;padding:0 12px;font-size:13px;
+                      white-space:nowrap;display:flex;align-items:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload
+          <input type="file" id="fg-image-file" accept="image/*"
+                 style="display:none" onchange="uploadGameImage(this)">
+        </label>
+      </div>
+      <div id="fg-image-preview" style="margin-top:8px;display:none;align-items:center;gap:10px">
+        <img id="fg-image-img" src=""
+             style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+        <div>
+          <div id="fg-upload-progress" style="font-size:12px;color:var(--text-muted);display:none">
+            ⏳ Upload en cours…
+          </div>
+          <button onclick="clearImage()"
+                  style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:12px">
+            ✕ Retirer
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Notes</label>
+      <textarea class="ftextarea" id="fg-notes" placeholder="Thème, complexité…"></textarea>
+    </div>
+    <div class="form-row">
+      <label>Extensions</label>
+      <div class="modal-ext-list" id="mg-ext-list"></div>
+      <div class="modal-ext-add">
+        <input type="text" id="mg-ext-name" placeholder="Nom de l'extension">
+        <input type="number" id="mg-ext-price" placeholder="Prix €"
+               min="0" step="0.01" style="max-width:75px">
+        <select id="mg-ext-status"
+                style="height:32px;padding:0 24px 0 8px;border:1px solid var(--border);
+                       border-radius:7px;background:var(--border);font-family:inherit;
+                       font-size:12px;color:var(--text);outline:none;cursor:pointer;
+                       appearance:none;flex-shrink:0">
+          <option value="own">Possédée</option>
+          <option value="wish">Souhait</option>
+        </select>
+        <button class="btn-ext-modal-add" onclick="modalAddExt()">+ Ajouter</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-game')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveGame()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Record a match -->
+<div class="modal-overlay" id="modal-match" onclick="bgClose(event,'modal-match')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Enregistrer une partie</h2>
+      <button class="btn-close" onclick="closeModal('modal-match')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="f2">
+      <div class="form-row">
+        <label>Jeu <span class="req">*</span></label>
+        <div style="position:relative">
+          <input class="finput" type="text" id="fm-game-search"
+                 placeholder="Rechercher un jeu…" autocomplete="off"
+                 oninput="filterGameSearch()" onfocus="showGameDropdown()"
+                 style="font-size:16px">
+          <input type="hidden" id="fm-game" value="">
+          <div id="fm-game-dropdown"
+               style="display:none;position:absolute;top:100%;left:0;right:0;
+                      background:var(--surface);border:1px solid var(--border);
+                      border-radius:var(--radius);max-height:200px;overflow-y:auto;
+                      z-index:100;box-shadow:var(--shadow-md)"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Date</label>
+        <input class="finput" type="date" id="fm-date">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Joueurs — ⭐ vainqueur · score optionnel</label>
+      <div class="player-checks" id="fm-players"></div>
+    </div>
+    <div class="form-row">
+      <label>Notes</label>
+      <textarea class="ftextarea" id="fm-notes" placeholder="Anecdotes…" style="height:50px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-match')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveMatch()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Random game suggestion -->
+<div class="modal-overlay" id="modal-reco" onclick="bgClose(event,'modal-reco')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 class="modal-title">🎲 On joue à quoi ce soir ?</h2>
+      <button class="btn-close" onclick="closeModal('modal-reco')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="f2">
+      <div class="form-row">
+        <label>Nb joueurs</label>
+        <input class="finput" type="number" id="rp" min="1" max="20" placeholder="Ex : 4">
+      </div>
+      <div class="form-row">
+        <label>Durée</label>
+        <select class="fselect" id="rd">
+          <option value="">Peu importe</option>
+          <option value="court">Court</option>
+          <option value="moyen">Moyen</option>
+          <option value="long">Long</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-save-m" style="width:100%" onclick="getReco()">Trouver !</button>
+    <div class="reco-box" id="reco-box">
+      <div style="font-size:28px;margin-bottom:6px">🎯</div>
+      <div class="reco-gname" id="reco-name"></div>
+      <div class="reco-meta"  id="reco-meta"></div>
+      <button style="margin-top:10px;padding:5px 14px;font-size:13px;
+                     background:var(--accent-light);color:var(--accent-text);
+                     border:1px solid #2d5a3d;border-radius:8px;cursor:pointer;
+                     font-family:inherit"
+              onclick="getReco()">Autre suggestion</button>
+    </div>
+    <div class="reco-none" id="reco-none">Aucun jeu ne correspond.</div>
+  </div>
+</div>
+
+<!-- Suggest a game -->
+<div class="modal-overlay" id="modal-suggestion" onclick="bgClose(event,'modal-suggestion')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 class="modal-title">💡 Suggérer un jeu</h2>
+      <button class="btn-close" onclick="closeModal('modal-suggestion')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="form-row">
+      <label>Nom du jeu <span class="req">*</span></label>
+      <input class="finput" type="text" id="sg-name" placeholder="Ex : Terraforming Mars…">
+    </div>
+    <div class="form-row">
+      <label>Pourquoi tu le recommandes ?</label>
+      <textarea class="ftextarea" id="sg-reason"
+                placeholder="Décris le jeu…" style="height:80px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-suggestion')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveSuggestion()">Envoyer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Challenge -->
+<div class="modal-overlay" id="modal-challenge" onclick="bgClose(event,'modal-challenge')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h2 class="modal-title">⚔️ Lancer un défi</h2>
+      <button class="btn-close" onclick="closeModal('modal-challenge')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="form-row">
+      <label>
+        Défier <span class="req">*</span>
+        <span style="font-size:11px;color:var(--text-faint)">(plusieurs possibles)</span>
+      </label>
+      <div id="ch-players-list" class="player-checks" style="max-height:180px"></div>
+    </div>
+    <div class="form-row">
+      <label>Jeu <span class="req">*</span></label>
+      <select class="fselect" id="ch-game"></select>
+    </div>
+    <div class="form-row">
+      <label>Message (optionnel)</label>
+      <input class="finput" type="text" id="ch-msg" placeholder="Ex : Je vais tous vous écraser !">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-challenge')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveChallenge()">Envoyer le défi ⚔️</button>
+    </div>
+  </div>
+</div>
+
+<!-- Challenge result -->
+<div class="modal-overlay" id="modal-challenge-result" onclick="bgClose(event,'modal-challenge-result')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h2 class="modal-title">🏆 Résultat du défi</h2>
+      <button class="btn-close" onclick="closeModal('modal-challenge-result')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem">
+      Sélectionnez le(s) gagnant(s). +5 pts bonus pour un défi remporté !
+    </p>
+    <div class="form-row">
+      <label>Gagnant(s) <span class="req">*</span></label>
+      <div id="cr-players-list" class="player-checks" style="max-height:200px"></div>
+    </div>
+    <div class="form-row">
+      <label>Notes</label>
+      <textarea class="ftextarea" id="cr-notes"
+                placeholder="Score, anecdotes…" style="height:54px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-challenge-result')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveChallengeResult()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Palmarès -->
+<div class="modal-overlay" id="modal-palmares" onclick="bgClose(event,'modal-palmares')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="palmares-title">🏆 Palmarès</h2>
+      <button class="btn-close" onclick="closeModal('modal-palmares')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="palmares-modal-content" id="palmares-content"></div>
+  </div>
+</div>
+
+<!-- Palmarès des saisons -->
+<div class="modal-overlay" id="modal-seasons" onclick="bgClose(event,'modal-seasons')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 class="modal-title">🏆 Palmarès des saisons</h2>
+      <button class="btn-close" onclick="closeModal('modal-seasons')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="palmares-modal-content" id="seasons-content"></div>
+  </div>
+</div>
+
+<!-- Records du club -->
+<div class="modal-overlay" id="modal-records" onclick="bgClose(event,'modal-records')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 class="modal-title">📖 Records du club</h2>
+      <button class="btn-close" onclick="closeModal('modal-records')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="palmares-modal-content" id="records-content"></div>
+  </div>
+</div>
+
+<!-- Fil d'actu -->
+<div class="modal-overlay" id="modal-feed" onclick="bgClose(event,'modal-feed')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 class="modal-title">📰 Actu du club</h2>
+      <button class="btn-close" onclick="closeModal('modal-feed')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="palmares-modal-content" id="feed-content"></div>
+  </div>
+</div>
+
+<!-- Comments -->
+<div class="modal-overlay" id="modal-comments" onclick="bgClose(event,'modal-comments')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="comments-modal-title">Avis</h2>
+      <button class="btn-close" onclick="closeModal('modal-comments')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div id="comments-modal-list" style="max-height:300px;overflow-y:auto;margin-bottom:1rem"></div>
+    <div id="comments-modal-form"></div>
+  </div>
+</div>
+
+<!-- Event -->
+<div class="modal-overlay" id="modal-event" onclick="bgClose(event,'modal-event')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h2 class="modal-title">📅 Créer un événement</h2>
+      <button class="btn-close" onclick="closeModal('modal-event')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="form-row">
+      <label>Titre <span class="req">*</span></label>
+      <input class="finput" type="text" id="ev-name" placeholder="Ex : Soirée Catan !">
+    </div>
+    <div class="f2">
+      <div class="form-row">
+        <label>Date et heure <span class="req">*</span></label>
+        <input class="finput" type="datetime-local" id="ev-date">
+      </div>
+      <div class="form-row">
+        <label>Lieu</label>
+        <input class="finput" type="text" id="ev-location" placeholder="Adresse ou lieu">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Description</label>
+      <textarea class="ftextarea" id="ev-desc"
+                placeholder="Infos supplémentaires…" style="height:80px"></textarea>
+    </div>
+    <div class="form-row"
+         style="background:var(--accent-light);border-radius:var(--radius);padding:10px 12px">
+      <label style="color:var(--accent-text)">📧 Notifier tous les membres</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <input type="checkbox" id="ev-notify" checked
+               style="accent-color:var(--accent);width:16px;height:16px">
+        <span style="font-size:13px;color:var(--text-muted)">
+          Envoyer un email d'invitation
+        </span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-event')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveEvent()">Créer l'événement</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PLAYER PROFILE -->
+<div class="modal-overlay" id="modal-player-profile" onclick="bgClose(event,'modal-player-profile')">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="pp-title">Profil joueur</h2>
+      <button class="btn-close" onclick="closeModal('modal-player-profile')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Rank + stats summary -->
+    <div id="pp-summary"></div>
+    <!-- Progression chart -->
+    <div style="margin:1.25rem 0 .5rem">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+        📈 Progression des points
+      </div>
+      <div style="position:relative;height:140px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden">
+        <canvas id="pp-chart" style="width:100%;height:120px"></canvas>
+        <div data-tooltip="1"
+             style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);
+                    font-size:11px;color:var(--gold);background:rgba(0,0,0,.6);
+                    padding:2px 8px;border-radius:8px;pointer-events:none;white-space:nowrap">
+        </div>
+        <div id="pp-chart-empty"
+             style="display:none;position:absolute;inset:0;align-items:center;
+                    justify-content:center;font-size:13px;color:var(--text-faint)">
+          Pas encore de parties
+        </div>
+      </div>
+    </div>
+    <!-- Achievements -->
+    <div style="margin-top:1.25rem">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">
+        🏅 Succès <span id="pp-ach-count" style="color:var(--text-faint);font-size:11px"></span>
+      </div>
+      <div id="pp-achievements" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="assets.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
