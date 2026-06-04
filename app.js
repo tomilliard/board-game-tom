@@ -17,7 +17,7 @@ const FRAME_HOLES = {
   diamant:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   maitre:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   grandmaitre:{ top: 22, left: 23, size: 104, top_m: 12, left_m: 12, size_m: 55 },
-  challenger: { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  challenger: { top: 37, left: 32, size: 86, top_m: 20, left_m: 17, size_m: 46 },
 };
 
 
@@ -781,7 +781,7 @@ document.addEventListener('keydown', (e) => {
     'modal-game', 'modal-match', 'modal-reco', 'modal-admin',
     'modal-profile', 'modal-challenge', 'modal-challenge-result',
     'modal-comments', 'modal-palmares', 'modal-suggestion', 'modal-event', 'modal-player-profile',
-    'modal-seasons',
+    'modal-seasons', 'modal-records', 'modal-feed',
   ].forEach(closeModal);
 });
 
@@ -2137,10 +2137,14 @@ const closeSeason = async () => {
 
     // 2) Figer le titre d'honneur + RESET de chaque joueur.
     for (const p of players) {
+      const isChampion = champ && p.id === champ.id;
+      const champSeasons = Array.isArray(p.champion_seasons) ? p.champion_seasons.slice() : [];
+      if (isChampion && !champSeasons.includes(currentSeason.number)) champSeasons.push(currentSeason.number);
       const body = {
         honor_title:  seasonHonorTitle(p),
         honor_elo:    Math.round(p.peak_elo != null ? p.peak_elo : getElo(p)),
         honor_season: currentSeason.number,
+        champion_seasons: champSeasons,   // permanent (ne se réinitialise pas)
         points: 0, elo: ELO_BASE, streak: 0,
         peak_points: 0, peak_elo: ELO_BASE, was_challenger: false,
       };
@@ -2220,7 +2224,124 @@ const openSeasonsHistory = () => {
   openModal('modal-seasons');
 };
 
-// Recalcule TOUTES les notes Elo de la saison en cours en rejouant son historique
+// ─── Records du club ─────────────────────────────────────────
+const clubRecords = () => {
+  const chrono = [...matches].sort((a, b) => {
+    const da = String(a.date || ''), db = String(b.date || '');
+    if (da !== db) return da < db ? -1 : 1;
+    return (a.id || 0) - (b.id || 0);
+  });
+  const cur = {}, best = {};
+  chrono.forEach((m) => {
+    (m.players || []).forEach((pp) => {
+      const id = pp.id;
+      if ((m.winners || []).includes(id)) { cur[id] = (cur[id] || 0) + 1; if (cur[id] > (best[id] || 0)) best[id] = cur[id]; }
+      else cur[id] = 0;
+    });
+  });
+  let streak = { val: 0, pid: null };
+  Object.entries(best).forEach(([id, v]) => { if (v > streak.val) streak = { val: v, pid: parseInt(id) }; });
+
+  let gap = { val: null, m: null };
+  matches.forEach((m) => {
+    const sc = m.scores ? Object.values(m.scores).map(Number).filter((v) => !isNaN(v)) : [];
+    if (sc.length >= 2) { const d = Math.max(...sc) - Math.min(...sc); if (gap.val == null || d > gap.val) gap = { val: d, m }; }
+  });
+
+  const byDate = {};
+  matches.forEach((m) => { if (m.date) byDate[m.date] = (byDate[m.date] || 0) + 1; });
+  let night = { date: null, n: 0 };
+  Object.entries(byDate).forEach(([d, n]) => { if (n > night.n) night = { date: d, n }; });
+
+  let active = { pid: null, n: 0 };
+  players.forEach((p) => { const n = matches.filter((m) => (m.players || []).some((pp) => pp.id === p.id)).length; if (n > active.n) active = { pid: p.id, n }; });
+
+  return { streak, gap, night, active };
+};
+
+const openClubRecords = () => {
+  const el = document.getElementById('records-content');
+  const nameOf = (id) => { const p = players.find((x) => x.id === id); return p ? esc(p.name) : '?'; };
+  const gOf    = (id) => { const g = games.find((x) => x.id === id); return g ? esc(g.name) : '?'; };
+  if (!matches.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text-faint);text-align:center;padding:1.5rem">Pas encore de parties enregistrées.</p>';
+    openModal('modal-records'); return;
+  }
+  const r = clubRecords();
+  const row = (icon, label, val) =>
+    `<div class="palmares-row"><div class="palmares-rank">${icon}</div>
+       <div class="palmares-info"><div class="palmares-name">${label}</div>
+       <div class="palmares-sub">${val}</div></div></div>`;
+  el.innerHTML =
+    row('🔥', 'Plus longue série',          r.streak.pid ? `${nameOf(r.streak.pid)} — ${r.streak.val} victoires d'affilée` : '—') +
+    row('💥', 'Plus gros écart de score',   r.gap.m      ? `${r.gap.val} pts · ${gOf(r.gap.m.game_id)}` : '—') +
+    row('🌙', 'Soirée la plus prolifique',  r.night.date ? `${fmtDate(r.night.date)} — ${r.night.n} parties` : '—') +
+    row('🎮', 'Joueur le plus actif',       r.active.pid ? `${nameOf(r.active.pid)} — ${r.active.n} parties` : '—');
+  openModal('modal-records');
+};
+
+// ─── Fil d'actu du club ──────────────────────────────────────
+const openActivityFeed = () => {
+  const el = document.getElementById('feed-content');
+  const recent = [...matches].sort((a, b) => {
+    const da = String(a.date || ''), db = String(b.date || '');
+    if (da !== db) return da < db ? 1 : -1;
+    return (b.id || 0) - (a.id || 0);
+  }).slice(0, 30);
+  if (!recent.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text-faint);text-align:center;padding:1.5rem">Aucune activité récente.</p>';
+    openModal('modal-feed'); return;
+  }
+  const nameOf = (id) => { const p = players.find((x) => x.id === id); return p ? esc(p.name) : '?'; };
+  el.innerHTML = recent.map((m) => {
+    const g = games.find((x) => x.id === m.game_id);
+    const winners = (m.winners || []).map(nameOf);
+    const others  = (m.players || []).map((pp) => pp.id).filter((id) => !(m.winners || []).includes(id)).map(nameOf);
+    const txt = winners.length
+      ? `<strong>${winners.join(', ')}</strong> ${winners.length > 1 ? 'gagnent' : 'gagne'} à ${g ? esc(g.name) : '?'}${others.length ? ` contre ${others.join(', ')}` : ''}`
+      : `Partie de ${g ? esc(g.name) : '?'} entre ${(m.players || []).map((pp) => nameOf(pp.id)).join(', ')}`;
+    return `<div class="palmares-row"><div class="palmares-rank">🎮</div>
+       <div class="palmares-info"><div class="palmares-name" style="font-weight:500">${txt}</div>
+       <div class="palmares-sub">${m.date ? fmtDate(m.date) : ''}</div></div></div>`;
+  }).join('');
+  openModal('modal-feed');
+};
+
+// ─── Stats avancées d'un joueur (bloc inséré dans la fiche profil) ──
+const advancedStatsHtml = (pid) => {
+  const mine = matches.filter((m) => (m.players || []).some((pp) => pp.id === pid));
+  if (mine.length < 2) return '';
+  // Win rate par nombre de joueurs
+  const order = ['2', '3', '4', '5+'];
+  const buckets = { '2': { p: 0, w: 0 }, '3': { p: 0, w: 0 }, '4': { p: 0, w: 0 }, '5+': { p: 0, w: 0 } };
+  mine.forEach((m) => {
+    const n = (m.players || []).length; const k = n >= 5 ? '5+' : String(Math.max(2, n));
+    if (!buckets[k]) return; buckets[k].p++; if ((m.winners || []).includes(pid)) buckets[k].w++;
+  });
+  const byCount = order.filter((k) => buckets[k].p > 0)
+    .map((k) => `${k}j : ${Math.round(buckets[k].w / buckets[k].p * 100)}%`).join(' · ') || '—';
+  // Meilleur jour (par victoires)
+  const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  const dayW = {};
+  mine.forEach((m) => { if (m.date && (m.winners || []).includes(pid)) { const d = new Date(m.date).getDay(); dayW[d] = (dayW[d] || 0) + 1; } });
+  const bd = Object.entries(dayW).sort((a, b) => b[1] - a[1])[0];
+  const bestDay = bd ? `${days[bd[0]]} (${bd[1]} victoire${bd[1] > 1 ? 's' : ''})` : '—';
+  // Nemesis (adversaire qui te bat le plus souvent)
+  const nem = {};
+  mine.forEach((m) => { if ((m.winners || []).includes(pid)) return; (m.winners || []).forEach((wid) => { if (wid !== pid) nem[wid] = (nem[wid] || 0) + 1; }); });
+  const ne = Object.entries(nem).sort((a, b) => b[1] - a[1])[0];
+  const nemesis = ne ? `${(players.find((p) => p.id === parseInt(ne[0])) || {}).name || '?'} (${ne[1]} défaite${ne[1] > 1 ? 's' : ''})` : '—';
+
+  const line = (lbl, val) =>
+    `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:4px 0">
+       <span style="color:var(--text-faint)">${lbl}</span><span style="color:var(--text-muted);text-align:right">${val}</span></div>`;
+  return `<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:4px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px">📊 Stats avancées</div>
+      ${line('Taux de victoire par taille', byCount)}
+      ${line('Meilleur jour', bestDay)}
+      ${line('Nemesis', nemesis)}
+    </div>`;
+};
 // dans l'ordre chronologique (admin). Tout le monde repart de 1000 ; le facteur K
 // reflète l'expérience au moment de chaque partie.
 const recalcAllElo = async () => {
@@ -2399,6 +2520,11 @@ const buildPlayerCard = (p) => {
       ${p.honor_title
         ? `<div style="text-align:center;font-size:10px;color:var(--text-faint);margin:-2px 0 8px">
              &#127942; Saison ${p.honor_season || '?'} : <strong style="color:var(--text-muted)">${esc(p.honor_title)}</strong>${p.honor_elo ? ` · Elo max ${p.honor_elo}` : ''}
+           </div>`
+        : ''}
+      ${Array.isArray(p.champion_seasons) && p.champion_seasons.length
+        ? `<div style="text-align:center;font-size:11px;color:var(--gold);margin:-2px 0 8px;font-weight:600">
+             &#127941; Champion ${p.champion_seasons.sort((a,b)=>a-b).map((n) => 'S' + n).join(', ')}
            </div>`
         : ''}
 
@@ -2671,6 +2797,27 @@ const renderMatchList = () => {
   el.innerHTML = pendingHtml + confirmedHtml;
 };
 
+const seasonBannerHtml = () => {
+  if (!currentSeason) return '';
+  const start = new Date(currentSeason.started_at);
+  const end   = new Date(start); end.setMonth(end.getMonth() + 6);
+  const days  = Math.max(0, Math.ceil((end - new Date()) / 86400000));
+  const champ = throneId != null ? players.find((p) => p.id === throneId) : null;
+  const byPts = [...players].sort((a, b) => (b.points || 0) - (a.points || 0));
+  const gap   = (byPts[0] && byPts[1]) ? (byPts[0].points || 0) - (byPts[1].points || 0) : null;
+  const throneLine = champ
+    ? `👑 <strong>${esc(champ.name)}</strong> tient le trône${gap != null ? ` · +${gap} pts sur le 2ᵉ` : ''}`
+    : `👑 Trône vacant — premier à atteindre Maître le prend`;
+  return `<div style="background:linear-gradient(135deg,var(--surface),var(--bg));border:1px solid var(--gold);
+                      border-radius:12px;padding:12px 14px;margin-bottom:14px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+        <span style="font-weight:700;font-size:14px;color:var(--text)">Saison ${currentSeason.number}</span>
+        <span style="font-size:12px;color:var(--gold);font-weight:600">${days} jour${days > 1 ? 's' : ''} restant${days > 1 ? 's' : ''}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:5px">${throneLine}</div>
+    </div>`;
+};
+
 const renderLeaderboard = () => {
   const el = document.getElementById('lboard');
   if (!players.length) {
@@ -2682,7 +2829,7 @@ const renderLeaderboard = () => {
     .sort((a, b) => b.rate - a.rate || b.won - a.won);
   const mx = ranked[0]?.rate || 1;
 
-  el.innerHTML = ranked.map((p, i) => {
+  el.innerHTML = seasonBannerHtml() + ranked.map((p, i) => {
     const rc  = i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '';
     const md  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
     const bg  = p.color || '#4ade80';
@@ -4007,11 +4154,12 @@ const openPlayerProfile = (pid) => {
   const big = window.matchMedia('(min-width:701px)').matches;  // PC = plus grand
   const fb  = big ? 190 : 110;   // taille du cadre
   const _bk = rk.baseKey || rk.key;
-  // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES) pour les rangs aux
-  // cadres refaits ; les autres gardent la taille historique qui leur convient.
-  const av  = (_bk === 'bronze' || _bk === 'argent' || _bk === 'grandmaitre')
-    ? Math.round(fb * (FRAME_HOLES[_bk].size / 150))
-    : (big ? 124 : 72);          // diamètre de l'avatar
+  // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES : position ET taille)
+  // pour les rangs aux cadres refaits ; les autres gardent la taille historique.
+  const _h  = ['bronze', 'argent', 'grandmaitre', 'challenger'].includes(_bk) ? FRAME_HOLES[_bk] : null;
+  const av  = _h ? Math.round(fb * (_h.size / 150)) : (big ? 124 : 72);  // diamètre
+  const avX = _h ? Math.round(fb * ((_h.left + _h.size / 2) / 150)) : Math.round(fb / 2);
+  const avY = _h ? Math.round(fb * ((_h.top  + _h.size / 2) / 150)) : Math.round(fb / 2);
   const ov  = big ? -92 : -52;   // chevauchement sur la bannière
   const emb = big ? 30  : 22;    // taille de l'emblème
   const nf  = big ? 22  : 17;    // taille du nom
@@ -4026,9 +4174,9 @@ const openPlayerProfile = (pid) => {
         <div style="position:relative;width:${fb}px;height:${fb}px;margin-top:${ov}px">
           ${(() => {
             const pAvImg = AVATARS.find(a => a.id === (p.avatar || 1));
-            if (pAvImg) return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:' + av + 'px;height:' + av + 'px;border-radius:50%;overflow:hidden;z-index:1"><img src="' + pAvImg.src + '" style="width:100%;height:100%;object-fit:cover"></div>';
+            if (pAvImg) return '<div style="position:absolute;top:' + avY + 'px;left:' + avX + 'px;transform:translate(-50%,-50%);width:' + av + 'px;height:' + av + 'px;border-radius:50%;overflow:hidden;z-index:1"><img src="' + pAvImg.src + '" style="width:100%;height:100%;object-fit:cover"></div>';
             const bgS = RANK_AVATAR_BG[rk.baseKey||rk.key] ? 'background-image:url(' + RANK_AVATAR_BG[rk.baseKey||rk.key] + ');background-size:cover' : 'background:' + bg + '22';
-            return '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:' + av + 'px;height:' + av + 'px;border-radius:50%;' + bgS + ';display:flex;align-items:center;justify-content:center;font-size:' + (big ? 34 : 22) + 'px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:1">' + ini(p.name) + '</div>';
+            return '<div style="position:absolute;top:' + avY + 'px;left:' + avX + 'px;transform:translate(-50%,-50%);width:' + av + 'px;height:' + av + 'px;border-radius:50%;' + bgS + ';display:flex;align-items:center;justify-content:center;font-size:' + (big ? 34 : 22) + 'px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:1">' + ini(p.name) + '</div>';
           })()}
           ${ra2.profile_frame ? `<img src="${ra2.profile_frame}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${fb}px;height:${fb}px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
         </div>
@@ -4046,6 +4194,7 @@ const openPlayerProfile = (pid) => {
         </div>
       </div>
     </div>
+    ${advancedStatsHtml(pid)}
     <button onclick="openPlayerHistory(${pid})"
             style="width:100%;margin-bottom:4px;padding:11px;border-radius:10px;border:1px solid var(--border);
                    background:var(--bg);color:var(--text);font-family:inherit;font-size:14px;font-weight:600;
