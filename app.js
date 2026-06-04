@@ -24,6 +24,12 @@ const FRAME_HOLES = {
   bronze_4:   { top: 20, left: 20, size: 110, top_m: 11, left_m: 11, size_m: 59 },  // Bronze II
   bronze_5:   { top: 20, left: 20, size: 110, top_m: 11, left_m: 11, size_m: 59 },  // Bronze I
   argent:     { top: 21, left: 20, size: 110, top_m: 11, left_m: 11, size_m: 59 },
+  // Argent : un cadre par division (V→I).
+  argent_1:   { top: 24, left: 23, size: 105, top_m: 13, left_m: 12, size_m: 56 },  // Argent V
+  argent_2:   { top: 20, left: 20, size: 110, top_m: 11, left_m: 11, size_m: 59 },  // Argent IV
+  argent_3:   { top: 20, left: 20, size: 111, top_m: 11, left_m: 11, size_m: 59 },  // Argent III
+  argent_4:   { top: 18, left: 18, size: 115, top_m: 10, left_m: 10, size_m: 61 },  // Argent II
+  argent_5:   { top: 15, left: 15, size: 120, top_m: 8,  left_m: 8,  size_m: 64 },  // Argent I
   or:         { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   platine:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   diamant:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
@@ -45,6 +51,11 @@ const FRAME_BY_DIV = {
   bronze_3: 'assets/bronze_3_frame.png',  // Bronze III
   bronze_4: 'assets/bronze_4_frame.png',  // Bronze II
   bronze_5: 'assets/bronze_5_frame.png',  // Bronze I
+  argent_1: 'assets/argent_1_frame.png',  // Argent V
+  argent_2: 'assets/argent_2_frame.png',  // Argent IV
+  argent_3: 'assets/argent_3_frame.png',  // Argent III
+  argent_4: 'assets/argent_4_frame.png',  // Argent II
+  argent_5: 'assets/argent_5_frame.png',  // Argent I
 };
 
 
