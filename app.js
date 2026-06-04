@@ -281,6 +281,7 @@ const GM_RANK = { name: 'Grand Maître', key: 'grandmaitre', baseKey: 'grandmait
 
 // État de la saison courante (rempli par loadAll depuis la table `seasons`).
 let currentSeason = null;          // { id, number, started_at }
+let allSeasons    = [];            // toutes les saisons (pour le palmarès)
 let throneId      = null;          // id du Challenger courant (n°1 qualifié)
 
 // Date de début de saison (pour filtrer matchs/Elo). '0000' = depuis toujours.
@@ -701,6 +702,7 @@ async function loadAll() {
   players = p;
   matches = m;
   // Saison active = la plus récente non clôturée (sinon la plus récente).
+  allSeasons = seasons || [];
   const active = (seasons || []).find((s) => s.status === 'active');
   currentSeason = active || (seasons && seasons[0]) || null;
   recomputeThrone();
@@ -774,6 +776,7 @@ document.addEventListener('keydown', (e) => {
     'modal-game', 'modal-match', 'modal-reco', 'modal-admin',
     'modal-profile', 'modal-challenge', 'modal-challenge-result',
     'modal-comments', 'modal-palmares', 'modal-suggestion', 'modal-event', 'modal-player-profile',
+    'modal-seasons',
   ].forEach(closeModal);
 });
 
@@ -2142,9 +2145,56 @@ const closeSeason = async () => {
   }
 };
 
-// Recalcule TOUTES les notes Elo en rejouant l'historique complet dans l'ordre
-// chronologique (admin). Même logique que le script de backfill : tout le monde
-// repart de 1000, le facteur K reflète l'expérience au moment de chaque partie.
+// Palmarès des saisons passées : lit la table `seasons` (clôturées) et affiche
+// champion + podium de chacune.
+const openSeasonsHistory = () => {
+  const el = document.getElementById('seasons-content');
+  const parsePodium = (p) => {
+    if (Array.isArray(p)) return p;
+    if (typeof p === 'string') { try { return JSON.parse(p); } catch { return []; } }
+    return [];
+  };
+  const closed = (allSeasons || [])
+    .filter((s) => s.status === 'closed')
+    .sort((a, b) => (b.number || 0) - (a.number || 0));
+
+  if (!closed.length) {
+    el.innerHTML = `<p style="font-size:13px;color:var(--text-faint);text-align:center;padding:1.5rem">
+      Aucune saison clôturée pour l'instant.<br>Le palmarès se remplira à la fin de ta première saison. 🏆</p>`;
+    openModal('modal-seasons');
+    return;
+  }
+
+  el.innerHTML = closed.map((s) => {
+    const pod = parsePodium(s.podium);
+    const dateEnd = s.ended_at ? new Date(s.ended_at).toLocaleDateString('fr-FR') : '';
+    const rows = pod.map((r) => {
+      const md = r.place === 1 ? '🥇' : r.place === 2 ? '🥈' : r.place === 3 ? '🥉' : (r.place || '');
+      return `<div class="palmares-row">
+        <div class="palmares-rank">${md}</div>
+        <div class="palmares-info">
+          <div class="palmares-name">${esc(r.name || '?')}</div>
+          <div class="palmares-sub">${r.points != null ? r.points + ' pts' : ''}${r.title ? ' · ' + esc(r.title) : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:20px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+        <span style="font-weight:700;font-size:15px;color:var(--text)">Saison ${s.number}</span>
+        <span style="font-size:11px;color:var(--text-faint)">${dateEnd}</span>
+      </div>
+      ${s.champion_name
+        ? `<div style="font-size:13px;color:var(--gold);margin-bottom:8px">👑 Champion : <strong>${esc(s.champion_name)}</strong></div>`
+        : `<div style="font-size:12px;color:var(--text-faint);margin-bottom:8px">Aucun Challenger couronné</div>`}
+      ${rows}
+    </div>`;
+  }).join('');
+  openModal('modal-seasons');
+};
+
+// Recalcule TOUTES les notes Elo de la saison en cours en rejouant son historique
+// dans l'ordre chronologique (admin). Tout le monde repart de 1000 ; le facteur K
+// reflète l'expérience au moment de chaque partie.
 const recalcAllElo = async () => {
   if (!isAdmin) return;
   const ok = confirm(
