@@ -9,7 +9,13 @@ const SEED_GAMES = [{"id": 1, "name": "Catan", "status": "own", "price": 39.9, "
 
 // Insets exacts de l'avatar dans chaque cadre (mesurés sur les PNGs 150x150)
 const FRAME_HOLES = {
-  bois:       { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  bois:       { top: 31, left: 25, size: 100, top_m: 17, left_m: 14, size_m: 53 },
+  // Bois : un cadre par division (V→I). bois_4 = arbre-monde (trou ovale).
+  bois_1:     { top: 21, left: 21, size: 108, top_m: 11, left_m: 11, size_m: 58 },  // Wood V
+  bois_2:     { top: 21, left: 21, size: 108, top_m: 11, left_m: 11, size_m: 58 },  // Wood IV
+  bois_3:     { top: 21, left: 21, size: 108, top_m: 11, left_m: 11, size_m: 58 },  // Wood III
+  bois_4:     { top: 31, left: 25, size: 100, top_m: 17, left_m: 14, size_m: 53 },  // Wood II (arbre-monde)
+  bois_5:     { top: 21, left: 21, size: 108, top_m: 11, left_m: 11, size_m: 58 },  // Wood I
   bronze:     { top: 19, left: 19, size: 112, top_m: 10, left_m: 10, size_m: 60 },
   argent:     { top: 21, left: 20, size: 110, top_m: 11, left_m: 11, size_m: 59 },
   or:         { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
@@ -18,6 +24,16 @@ const FRAME_HOLES = {
   maitre:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   grandmaitre:{ top: 22, left: 23, size: 104, top_m: 12, left_m: 12, size_m: 55 },
   challenger: { top: 14, left: 16, size: 118, top_m: 8, left_m: 9, size_m: 63 },
+};
+
+// Cadres spécifiques par division (priorité sur le cadre du rang de base).
+// Clé = clé de rang exacte (ex. bois_1 = Bois V).
+const FRAME_BY_DIV = {
+  bois_1: 'assets/bois_1_frame.png',  // Wood V
+  bois_2: 'assets/bois_2_frame.png',  // Wood IV
+  bois_3: 'assets/bois_3_frame.png',  // Wood III
+  bois_4: 'assets/bois_4_frame.png',  // Wood II (arbre-monde)
+  bois_5: 'assets/bois_5_frame.png',  // Wood I
 };
 
 
@@ -2427,7 +2443,7 @@ const buildPlayerCard = (p) => {
     <div class="pcard-av-wrap"
          style="position:relative;width:150px;height:150px;margin:-38px auto 0;flex-shrink:0">
       ${(() => {
-        const h      = FRAME_HOLES[rk.baseKey||rk.key] || { top:32, left:32, size:86, top_m:18, left_m:18, size_m:44 };
+        const h      = FRAME_HOLES[rk.key] || FRAME_HOLES[rk.baseKey||rk.key] || { top:32, left:32, size:86, top_m:18, left_m:18, size_m:44 };
         const avImg  = AVATARS.find(a => a.id === (p.avatar || 1));
         const bgStyle= RANK_AVATAR_BG[rk.baseKey||rk.key]
           ? 'background-image:url(' + RANK_AVATAR_BG[rk.baseKey||rk.key] + ');background-size:cover'
@@ -2443,14 +2459,14 @@ const buildPlayerCard = (p) => {
              + '<div class="pcard-av-hole-m" style="display:none;position:absolute;top:' + (hcyM - aDm / 2) + 'px;left:' + (hcxM - aDm / 2) + 'px;width:' + aDm + 'px;height:' + aDm + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>';
       })()}
       <!-- Frame desktop -->
-      ${rd.player_frame
-        ? `<img class="pcard-frame-desktop" src="${rd.player_frame}"
+      ${(FRAME_BY_DIV[rk.key] || rd.player_frame)
+        ? `<img class="pcard-frame-desktop" src="${FRAME_BY_DIV[rk.key] || rd.player_frame}"
                style="position:absolute;top:${offD}px;left:${offD}px;width:${fSd}px;height:${fSd}px;
                       object-fit:contain;pointer-events:none;z-index:2">`
         : ''}
       <!-- Frame mobile (caché par défaut, affiché via CSS ≤700px) -->
-      ${rm.player_frame
-        ? `<img class="pcard-frame-mobile" src="${rm.player_frame}"
+      ${(FRAME_BY_DIV[rk.key] || rm.player_frame)
+        ? `<img class="pcard-frame-mobile" src="${FRAME_BY_DIV[rk.key] || rm.player_frame}"
                style="display:none;position:absolute;top:${offM}px;left:${offM}px;width:${fSm}px;height:${fSm}px;
                       object-fit:contain;pointer-events:none;z-index:2">`
         : ''}
@@ -4139,7 +4155,7 @@ const openPlayerProfile = (pid) => {
   const fb  = Math.round(fbBase * fScale);   // taille du cadre (agrandie)
   // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES : position ET taille)
   // pour les rangs aux cadres refaits ; les autres gardent la taille historique.
-  const _h  = ['bronze', 'argent', 'grandmaitre', 'challenger'].includes(_bk) ? FRAME_HOLES[_bk] : null;
+  const _h  = FRAME_HOLES[rk.key] || (['bois', 'bronze', 'argent', 'grandmaitre', 'challenger'].includes(_bk) ? FRAME_HOLES[_bk] : null);
   const avShrink = _bk === 'challenger' ? 0.92 : 1;   // avatar Challenger réduit d'un poil
   const av  = _h ? Math.round(fbBase * (_h.size / 150) * avShrink) : (big ? 124 : 72);  // diamètre (taille NORMALE, non agrandie)
   const avX = _h ? Math.round(fb * ((_h.left + _h.size / 2) / 150)) : Math.round(fb / 2);
@@ -4162,7 +4178,7 @@ const openPlayerProfile = (pid) => {
             const bgS = RANK_AVATAR_BG[rk.baseKey||rk.key] ? 'background-image:url(' + RANK_AVATAR_BG[rk.baseKey||rk.key] + ');background-size:cover' : 'background:' + bg + '22';
             return '<div style="position:absolute;top:' + avY + 'px;left:' + avX + 'px;transform:translate(-50%,-50%);width:' + av + 'px;height:' + av + 'px;border-radius:50%;' + bgS + ';display:flex;align-items:center;justify-content:center;font-size:' + (big ? 34 : 22) + 'px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:1">' + ini(p.name) + '</div>';
           })()}
-          ${ra2.profile_frame ? `<img src="${ra2.profile_frame}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${fb}px;height:${fb}px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
+          ${(FRAME_BY_DIV[rk.key] || ra2.profile_frame) ? `<img src="${FRAME_BY_DIV[rk.key] || ra2.profile_frame}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${fb}px;height:${fb}px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
         </div>
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px">
           <span style="font-size:${nf}px;font-weight:700;color:var(--text)">${esc(p.name)}</span>
