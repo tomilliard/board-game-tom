@@ -2162,6 +2162,7 @@ const closeSeason = async () => {
     await sb.post('seasons', {
       number: currentSeason.number + 1,
       started_at: new Date().toISOString(),
+      ends_at: (() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString(); })(),
       status: 'active',
     });
 
@@ -2799,8 +2800,12 @@ const renderMatchList = () => {
 
 const seasonBannerHtml = () => {
   if (!currentSeason) return '';
-  const start = new Date(currentSeason.started_at);
-  const end   = new Date(start); end.setMonth(end.getMonth() + 6);
+  let end;
+  if (currentSeason.ends_at) {
+    end = new Date(currentSeason.ends_at);
+  } else {
+    end = new Date(currentSeason.started_at); end.setMonth(end.getMonth() + 6);
+  }
   const days  = Math.max(0, Math.ceil((end - new Date()) / 86400000));
   const champ = throneId != null ? players.find((p) => p.id === throneId) : null;
   const byPts = [...players].sort((a, b) => (b.points || 0) - (a.points || 0));
@@ -4152,15 +4157,17 @@ const openPlayerProfile = (pid) => {
   // Summary
   const ra2 = getRankAssets(rk.key) || {};
   const big = window.matchMedia('(min-width:701px)').matches;  // PC = plus grand
-  const fb  = big ? 190 : 110;   // taille du cadre
   const _bk = rk.baseKey || rk.key;
+  // Le Challenger, rang suprême, s'affiche plus grand pour marquer le sommet.
+  const fScale = _bk === 'challenger' ? 1.35 : 1;
+  const fb  = Math.round((big ? 190 : 110) * fScale);   // taille du cadre
   // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES : position ET taille)
   // pour les rangs aux cadres refaits ; les autres gardent la taille historique.
   const _h  = ['bronze', 'argent', 'grandmaitre', 'challenger'].includes(_bk) ? FRAME_HOLES[_bk] : null;
   const av  = _h ? Math.round(fb * (_h.size / 150)) : (big ? 124 : 72);  // diamètre
   const avX = _h ? Math.round(fb * ((_h.left + _h.size / 2) / 150)) : Math.round(fb / 2);
   const avY = _h ? Math.round(fb * ((_h.top  + _h.size / 2) / 150)) : Math.round(fb / 2);
-  const ov  = big ? -92 : -52;   // chevauchement sur la bannière
+  const ov  = Math.round((big ? -92 : -52) * fScale);   // chevauchement sur la bannière
   const emb = big ? 30  : 22;    // taille de l'emblème
   const nf  = big ? 22  : 17;    // taille du nom
   document.getElementById('pp-summary').innerHTML = `
