@@ -1987,7 +1987,81 @@ const renderPlayerStats = () => {
       <div class="stat-label">Meilleur joueur</div>
       <div class="stat-value" style="font-size:18px">${best ? esc(best.name) : '—'}</div>
       <div class="stat-sub">${best ? best.rate + '% victoires' : ''}</div>
-    </div>`;
+    </div>
+    ${isAdmin ? `
+    <div class="stat-card" style="justify-content:center;align-items:center;text-align:center">
+      <button id="recalc-elo-btn" class="btn-icon" onclick="recalcAllElo()" style="white-space:nowrap">&#9876;&#65039; Recalculer l'Elo</button>
+      <div class="stat-sub" style="margin-top:6px">rejoue tout l'historique</div>
+    </div>` : ''}`;
+};
+
+// Recalcule TOUTES les notes Elo en rejouant l'historique complet dans l'ordre
+// chronologique (admin). Même logique que le script de backfill : tout le monde
+// repart de 1000, le facteur K reflète l'expérience au moment de chaque partie.
+const recalcAllElo = async () => {
+  if (!isAdmin) return;
+  const ok = confirm(
+    `Recalculer toutes les notes Elo depuis l'historique complet ?\n\n` +
+    `Tout le monde repart de 1000, puis les ${matches.length} parties sont ` +
+    `rejouées dans l'ordre. Les notes Elo actuelles seront écrasées.`
+  );
+  if (!ok) return;
+
+  const btn = document.getElementById('recalc-elo-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Calcul en cours…'; }
+
+  try {
+    // Ordre chronologique : date, puis id pour départager une même journée.
+    const ordered = [...matches].sort((a, b) => {
+      const da = String(a.date || ''), db = String(b.date || '');
+      if (da !== db) return da < db ? -1 : 1;
+      return (a.id || 0) - (b.id || 0);
+    });
+
+    const elo  = {};   // id → note courante
+    const gp   = {};   // id → parties jouées AVANT la partie en cours
+    const seen = new Set();
+    const ratingOf = (id) => (id in elo ? elo[id] : ELO_BASE);
+
+    for (const m of ordered) {
+      const ids = [...new Set((m.players || []).map((p) => p && p.id).filter(Boolean))];
+      if (ids.length < 2) continue;
+      const winnerIds = Array.isArray(m.winners) ? m.winners : [];
+      const losers    = sortedLosers(ids, winnerIds, m.scores || {});
+      const place     = (id) => winnerIds.includes(id) ? 1 : winnerIds.length + 1 + losers.indexOf(id);
+
+      ids.forEach((id) => { if (!(id in elo)) elo[id] = ELO_BASE; seen.add(id); });
+
+      const n = ids.length;
+      const delta = {};
+      ids.forEach((i) => {
+        let expected = 0, actual = 0;
+        ids.forEach((j) => {
+          if (i === j) return;
+          expected += 1 / (1 + Math.pow(10, (ratingOf(j) - ratingOf(i)) / 400));
+          actual   += place(i) < place(j) ? 1 : place(i) > place(j) ? 0 : 0.5;
+        });
+        delta[i] = Math.round(eloK(ratingOf(i), gp[i] || 0) * (actual - expected) / (n - 1));
+      });
+      ids.forEach((id) => { elo[id] = ratingOf(id) + (delta[id] || 0); gp[id] = (gp[id] || 0) + 1; });
+    }
+
+    // Écriture : uniquement les joueurs qui existent encore.
+    let written = 0;
+    for (const id of seen) {
+      if (!players.some((p) => p.id === id)) continue;
+      try { await sb.patch('players', { elo: Math.round(elo[id]) }, { id }); written++; }
+      catch (e) { console.warn('Elo patch error', id, e); }
+    }
+    await loadAll();
+    toast(`Elo recalculé pour ${written} joueur${written > 1 ? 's' : ''} ⚔️`);
+  } catch (e) {
+    console.error('recalcAllElo:', e);
+    toast('Erreur pendant le recalcul Elo', true);
+  } finally {
+    const b = document.getElementById('recalc-elo-btn');
+    if (b) { b.disabled = false; b.innerHTML = '&#9876;&#65039; Recalculer l\'Elo'; }
+  }
 };
 
 const buildPlayerCard = (p) => {
