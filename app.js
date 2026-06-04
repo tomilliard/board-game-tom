@@ -10,8 +10,8 @@ const SEED_GAMES = [{"id": 1, "name": "Catan", "status": "own", "price": 39.9, "
 // Insets exacts de l'avatar dans chaque cadre (mesurés sur les PNGs 150x150)
 const FRAME_HOLES = {
   bois:       { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
-  bronze:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
-  argent:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  bronze:     { top: 19, left: 19, size: 112, top_m: 10, left_m: 10, size_m: 60 },
+  argent:     { top: 21, left: 20, size: 110, top_m: 11, left_m: 11, size_m: 59 },
   or:         { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   platine:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   diamant:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
