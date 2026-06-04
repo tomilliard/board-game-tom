@@ -47,6 +47,12 @@ const RANK_ASSETS_DESKTOP = {
     player_frame:  'assets/maitre_frame.png',
     profile_frame: 'assets/maitre_frame.png',
   },
+  grandmaitre: {
+    emblem:        'assets/grandmaitre_emblem.png',
+    banner:        'assets/grandmaitre_banner.png',
+    player_frame:  'assets/grandmaitre_frame.png',
+    profile_frame: 'assets/grandmaitre_frame.png',
+  },
   challenger: {
     emblem:        'assets/challenger_emblem.png',
     banner:        'assets/challenger_banner.png',
@@ -98,6 +104,12 @@ const RANK_ASSETS_MOBILE = {
     player_frame:  'assets/maitre_frame.png',
     profile_frame: 'assets/maitre_frame.png',
   },
+  grandmaitre: {
+    emblem:        'assets/grandmaitre_emblem.png',
+    banner:        'assets/grandmaitre_banner.png',
+    player_frame:  'assets/grandmaitre_frame.png',
+    profile_frame: 'assets/grandmaitre_frame.png',
+  },
   challenger: {
     emblem:        'assets/challenger_emblem.png',
     banner:        'assets/challenger_banner.png',
@@ -118,6 +130,7 @@ const RANK_EMBLEMS = {
   platine:    'assets/platine_icon.png',
   diamant:    'assets/diamant_icon.png',
   maitre:     'assets/maitre_icon.png',
+  grandmaitre:'assets/grandmaitre_icon.png',
   challenger: 'assets/challenger_icon.png',
 };
 

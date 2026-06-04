@@ -225,9 +225,9 @@ const ELO_BASE = 1000;
 
 const getElo = (p) => Math.round((p && p.elo != null) ? p.elo : ELO_BASE);
 
-// Expérience du joueur (sert au facteur K) — comptée sur l'historique en mémoire.
+// Expérience du joueur (sert au facteur K) — comptée sur la SAISON en cours.
 const eloGamesPlayed = (pid) =>
-  matches.filter((m) => m.players?.some((pp) => pp.id === pid)).length;
+  seasonMatches().filter((m) => m.players?.some((pp) => pp.id === pid)).length;
 
 // Facteur K : fort tant que le joueur est "provisoire", plus stable ensuite.
 const eloK = (rating, games) => {
@@ -258,6 +258,71 @@ const eloDeltas = (ids, placeOf) => {
   });
   return out;
 };
+
+// ─── Saisons & rang d'affichage ──────────────────────────────
+// Le rang AFFICHÉ n'est plus un simple seuil de points. Sommet de l'échelle :
+//   • Challenger    : place UNIQUE = le n°1 aux points de la saison (trône).
+//   • Grand Maître  : club ouvert = tout joueur dont l'Elo dépasse un seuil.
+//   • Maître → Bois : aux points (inchangé), plafonné à Maître pour les autres.
+// Ordre de priorité d'affichage : Challenger > Grand Maître > Maître > …
+
+// ⚠️ SEUIL GRAND MAÎTRE — à CALER après le 1ᵉʳ backfill, une fois qu'on connaît
+// l'étalement réel des Elo (vise le top ~10 %, ex. 1500). Tant que les assets
+// "grandmaitre" ne sont pas en place, on le laisse DÉSACTIVÉ (valeur très haute).
+const GM_ELO_THRESHOLD = 100000;   // ← mettre p.ex. 1500 quand prêt
+
+const MAITRE_MIN     = 2000;                 // points : entrée dans Maître
+const CHALLENGER_IDX = RANKS.length - 1;     // index du palier Challenger
+const MAITRE_TOP_IDX = CHALLENGER_IDX - 1;   // index de Maître I (plafond)
+const CHALLENGER_RANK = RANKS[CHALLENGER_IDX];
+const GM_RANK = { name: 'Grand Maître', key: 'grandmaitre', baseKey: 'grandmaitre',
+                  color: '#22d3ee', min: 0, max: Infinity, sub: null };
+
+// État de la saison courante (rempli par loadAll depuis la table `seasons`).
+let currentSeason = null;          // { id, number, started_at }
+let throneId      = null;          // id du Challenger courant (n°1 qualifié)
+
+// Date de début de saison (pour filtrer matchs/Elo). '0000' = depuis toujours.
+const seasonStartDate = () =>
+  (currentSeason && currentSeason.started_at) ? String(currentSeason.started_at).slice(0, 10) : '0000-00-00';
+
+// Matchs de la saison en cours uniquement (Elo & classement saisonniers).
+const seasonMatches = () => {
+  const start = seasonStartDate();
+  return matches.filter((m) => String(m.date || '') >= start);
+};
+
+// Recalcule qui occupe le trône : le joueur aux plus hauts points, à condition
+// d'avoir atteint le palier Maître. Trône vide tant que personne n'y est.
+const recomputeThrone = () => {
+  let best = null;
+  players.forEach((p) => {
+    if ((p.points || 0) < MAITRE_MIN) return;
+    if (!best
+        || (p.points || 0) > (best.points || 0)
+        || ((p.points || 0) === (best.points || 0) && String(p.id) < String(best.id))) {
+      best = p;
+    }
+  });
+  throneId = best ? best.id : null;
+};
+
+// Rang AFFICHÉ d'un joueur (Challenger / Grand Maître / rang aux points plafonné).
+const displayRank = (p) => {
+  if (p && throneId != null && p.id === throneId)
+    return { ...CHALLENGER_RANK, idx: CHALLENGER_IDX };
+  if (getElo(p) >= GM_ELO_THRESHOLD)
+    return { ...GM_RANK, idx: CHALLENGER_IDX };
+  const rk = getRank(p ? (p.points || 0) : 0);
+  if (rk.idx >= CHALLENGER_IDX)               // points ≥ 3000 mais pas n°1 → plafond Maître
+    return { ...RANKS[MAITRE_TOP_IDX], idx: MAITRE_TOP_IDX };
+  return rk;
+};
+
+// Poids comparatif d'un rang (pour suivre le pic de saison). Challenger > GM > reste.
+const rankWeight = (rk) =>
+  rk.key === 'challenger'  ? 1000 :
+  rk.key === 'grandmaitre' ? 900  : (rk.idx != null ? rk.idx : 0);
 
 // ─── Rating helpers ──────────────────────────────────────────
 
@@ -624,15 +689,20 @@ const safeGet = async (table, opts) => {
 
 async function loadAll() {
   const uid = currentUser?.id;
-  const [g, p, m, r] = await Promise.all([
+  const [g, p, m, r, seasons] = await Promise.all([
     safeGet('games',   { order: 'name.asc' }),
     safeGet('players', { order: 'name.asc' }),
     safeGet('matches', { order: 'date.desc' }),
     safeGet('ratings', { select: 'game_id,score,user_id' }),
+    safeGet('seasons', { order: 'number.desc' }).catch(() => []),
   ]);
   games   = g;
   players = p;
   matches = m;
+  // Saison active = la plus récente non clôturée (sinon la plus récente).
+  const active = (seasons || []).find((s) => s.status === 'active');
+  currentSeason = active || (seasons && seasons[0]) || null;
+  recomputeThrone();
   ratingsCache = {};
   r.forEach((row) => {
     if (!ratingsCache[row.game_id])
@@ -1337,7 +1407,7 @@ const renderGStats = () => {
 
   const top3Html = top3.length
     ? top3.map((p) => {
-        const rk = getRank(p.points || 0);
+        const rk = displayRank(p);
         return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           <span style="font-size:12px;color:var(--text);font-weight:500;flex:1;
                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
@@ -1989,10 +2059,86 @@ const renderPlayerStats = () => {
       <div class="stat-sub">${best ? best.rate + '% victoires' : ''}</div>
     </div>
     ${isAdmin ? `
-    <div class="stat-card" style="justify-content:center;align-items:center;text-align:center">
+    <div class="stat-card" style="justify-content:center;align-items:center;text-align:center;gap:8px">
+      <div class="stat-sub">Saison ${currentSeason ? currentSeason.number : 1} — admin</div>
       <button id="recalc-elo-btn" class="btn-icon" onclick="recalcAllElo()" style="white-space:nowrap">&#9876;&#65039; Recalculer l'Elo</button>
-      <div class="stat-sub" style="margin-top:6px">rejoue tout l'historique</div>
+      <button id="close-season-btn" class="btn-icon danger" onclick="closeSeason()" style="white-space:nowrap">&#127942; Clôturer la saison</button>
     </div>` : ''}`;
+};
+
+// Clôture la saison en cours (admin) : couronne le Challenger, archive le podium,
+// fige le titre d'honneur de chacun (pic de la saison), puis RESET TOTAL
+// (points, elo, streak, pics) et ouvre la saison suivante.
+const seasonHonorTitle = (p) => {
+  if (p.was_challenger) return 'Challenger';
+  if ((p.peak_elo || ELO_BASE) >= GM_ELO_THRESHOLD) return 'Grand Maître';
+  const rk = getRank(p.peak_points || 0);
+  return (rk.idx >= CHALLENGER_IDX ? RANKS[MAITRE_TOP_IDX] : rk).name;
+};
+
+const closeSeason = async () => {
+  if (!isAdmin) return;
+  if (!currentSeason) { toast('Aucune saison active à clôturer', true); return; }
+
+  const champ = throneId != null ? players.find((x) => x.id === throneId) : null;
+  const champMsg = champ
+    ? `Champion couronné : ${champ.name} (Challenger).`
+    : `Aucun Challenger ce saison (personne n'a atteint Maître) — pas de champion.`;
+  const ok = confirm(
+    `Clôturer la SAISON ${currentSeason.number} ?\n\n${champMsg}\n\n` +
+    `⚠️ Action irréversible : tout le monde repart de zéro (points, Elo, série). ` +
+    `Le pic de chacun est figé comme titre d'honneur pour la saison suivante.`
+  );
+  if (!ok) return;
+
+  const btn = document.getElementById('close-season-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Clôture…'; }
+
+  try {
+    // 1) Podium (top 3 aux points) pour les archives.
+    const sorted = [...players].sort((a, b) =>
+      (b.points || 0) - (a.points || 0) || (String(a.id) < String(b.id) ? -1 : 1));
+    const podium = sorted.slice(0, 3).map((p, i) => ({
+      place: i + 1, name: p.name, points: p.points || 0,
+      elo: getElo(p), title: seasonHonorTitle(p),
+    }));
+
+    // 2) Figer le titre d'honneur + RESET de chaque joueur.
+    for (const p of players) {
+      const body = {
+        honor_title:  seasonHonorTitle(p),
+        honor_elo:    Math.round(p.peak_elo != null ? p.peak_elo : getElo(p)),
+        honor_season: currentSeason.number,
+        points: 0, elo: ELO_BASE, streak: 0,
+        peak_points: 0, peak_elo: ELO_BASE, was_challenger: false,
+      };
+      try { await sb.patch('players', body, { id: p.id }); }
+      catch (e) { console.warn('Reset joueur échoué', p.id, e); }
+    }
+
+    // 3) Archiver la saison close + ouvrir la suivante.
+    await sb.patch('seasons', {
+      status: 'closed',
+      ended_at: new Date().toISOString(),
+      champion_name: champ ? champ.name : null,
+      podium,
+    }, { id: currentSeason.id });
+    await sb.post('seasons', {
+      number: currentSeason.number + 1,
+      started_at: new Date().toISOString(),
+      status: 'active',
+    });
+
+    await loadAll();
+    renderPlayers();
+    toast(`Saison ${currentSeason ? currentSeason.number : ''} ouverte — bonne chance ! 🏆`);
+  } catch (e) {
+    console.error('closeSeason:', e);
+    toast('Erreur pendant la clôture de saison', true);
+  } finally {
+    const b = document.getElementById('close-season-btn');
+    if (b) { b.disabled = false; b.innerHTML = '&#127942; Clôturer la saison'; }
+  }
 };
 
 // Recalcule TOUTES les notes Elo en rejouant l'historique complet dans l'ordre
@@ -2002,7 +2148,8 @@ const recalcAllElo = async () => {
   if (!isAdmin) return;
   const ok = confirm(
     `Recalculer toutes les notes Elo depuis l'historique complet ?\n\n` +
-    `Tout le monde repart de 1000, puis les ${matches.length} parties sont ` +
+    `Tout le monde repart de 1000, puis les ${seasonMatches().length} parties de ` +
+    `la saison en cours sont ` +
     `rejouées dans l'ordre. Les notes Elo actuelles seront écrasées.`
   );
   if (!ok) return;
@@ -2012,7 +2159,7 @@ const recalcAllElo = async () => {
 
   try {
     // Ordre chronologique : date, puis id pour départager une même journée.
-    const ordered = [...matches].sort((a, b) => {
+    const ordered = [...seasonMatches()].sort((a, b) => {
       const da = String(a.date || ''), db = String(b.date || '');
       if (da !== db) return da < db ? -1 : 1;
       return (a.id || 0) - (b.id || 0);
@@ -2069,7 +2216,7 @@ const buildPlayerCard = (p) => {
   const rate = s.played > 0 ? Math.round(s.won / s.played * 100) : 0;
   const bg   = p.color || '#4ade80';
   const isMe = currentUser && p.user_id === currentUser.id;
-  const rk   = getRank(p.points || 0);
+  const rk   = displayRank(p);
   const nextRk = RANKS[Math.min(rk.idx + 1, RANKS.length - 1)];
   const prog = rk.idx < RANKS.length - 1
     ? Math.round(((p.points || 0) - rk.min) / (nextRk.min - rk.min) * 100)
@@ -2170,6 +2317,11 @@ const buildPlayerCard = (p) => {
           ? `<span class="streak-badge">&#128293; ${p.streak}</span>`
           : ''}
       </div>
+      ${p.honor_title
+        ? `<div style="text-align:center;font-size:10px;color:var(--text-faint);margin:-2px 0 8px">
+             &#127942; Saison ${p.honor_season || '?'} : <strong style="color:var(--text-muted)">${esc(p.honor_title)}</strong>${p.honor_elo ? ` · Elo max ${p.honor_elo}` : ''}
+           </div>`
+        : ''}
 
       <div class="pstats">
         <div class="pst"><div class="pst-val" style="color:var(--accent)">${s.won}</div><div class="pst-lbl">Victoires</div></div>
@@ -2405,7 +2557,7 @@ const renderLeaderboard = () => {
     const rc  = i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '';
     const md  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
     const bg  = p.color || '#4ade80';
-    const rk  = getRank(p.points || 0);
+    const rk  = displayRank(p);
     return `<div class="lb-row">
       <div class="lb-rank ${rc}">${md}</div>
       <div class="lb-av" style="background:${bg}22;color:${bg}">${ini(p.name)}</div>
@@ -2573,6 +2725,8 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
   // Variations Elo : calculées en une passe sur tous les joueurs de la partie.
   const eloDelta = eloDeltas(allPlayerIds, place);
 
+  // 1) Calculer le nouvel état de chaque joueur (sans encore écrire).
+  const results = [];
   for (const pid of allPlayerIds) {
     const p = players.find((x) => x.id === pid);
     if (!p) continue;
@@ -2587,17 +2741,40 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
     const loss    = calcLoss(curPts, place(pid), n);
     const net     = gain - loss - streakPenalty;
     const newPts  = Math.max(0, curPts + net);
+    const newElo  = getElo(p) + (eloDelta[pid] || 0);
+    results.push({ pid, p, net, newPts, newStreak, newElo });
+  }
+
+  // 2) Trône projeté après la partie (n°1 aux points, ≥ palier Maître).
+  const projPts = {};
+  players.forEach((p) => { projPts[p.id] = p.points || 0; });
+  results.forEach((r) => { projPts[r.pid] = r.newPts; });
+  let thrId = null, thrPts = -1;
+  players.forEach((p) => {
+    const pts = projPts[p.id];
+    if (pts < MAITRE_MIN) return;
+    if (pts > thrPts || (pts === thrPts && (thrId == null || String(p.id) < String(thrId)))) {
+      thrPts = pts; thrId = p.id;
+    }
+  });
+
+  // 3) Écrire chaque joueur (points, streak, elo + pics de saison).
+  for (const r of results) {
+    const { pid, p, net, newPts, newStreak, newElo } = r;
     showPtsGain(net >= 0 ? '+' + net : net);
 
-    const newElo  = getElo(p) + (eloDelta[pid] || 0);
-    const body    = { points: newPts, streak: newStreak };
+    const body = { points: newPts, streak: newStreak };
     if (eloDelta[pid] !== undefined) body.elo = newElo;
+    body.peak_points = Math.max(p.peak_points != null ? p.peak_points : (p.points || 0), newPts);
+    body.peak_elo    = Math.max(p.peak_elo    != null ? p.peak_elo    : getElo(p),       newElo);
+    if (thrId != null && pid === thrId) body.was_challenger = true;
+
     try {
       await sb.patch('players', body, { id: pid });
     } catch (e) {
-      // Si la colonne `elo` n'existe pas encore, on réessaie sans elo
-      // pour ne pas perdre la mise à jour des points.
-      console.warn('Patch joueur échoué, nouvel essai sans elo :', e);
+      // Colonnes saison/elo absentes ? On réessaie avec le minimum pour ne pas
+      // perdre la mise à jour des points.
+      console.warn('Patch joueur échoué, nouvel essai minimal :', e);
       try { await sb.patch('players', { points: newPts, streak: newStreak }, { id: pid }); }
       catch (e2) { console.warn('Points error:', e2); }
     }
@@ -3563,7 +3740,7 @@ const drawProgressionChart = (pid, color) => {
 const openPlayerProfile = (pid) => {
   const p   = players.find((x) => x.id === pid);
   if (!p) return;
-  const rk  = getRank(p.points || 0);
+  const rk  = displayRank(p);
   const s   = playerStats(pid);
   const rate = s.played > 0 ? Math.round(s.won / s.played * 100) : 0;
   const bg  = p.color || '#4ade80';
