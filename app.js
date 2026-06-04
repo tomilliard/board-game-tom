@@ -2431,6 +2431,7 @@ const buildPlayerCard = (p) => {
 
   // Le Challenger est agrandi (déborde du gabarit ; ailes transparentes).
   const cScale = (rk.baseKey||rk.key) === 'challenger' ? 1.6 : 1;
+  const cAvShrink = (rk.baseKey||rk.key) === 'challenger' ? 0.92 : 1;  // avatar réduit d'un poil
   const fSd = Math.round(150 * cScale), offD = Math.round((150 - fSd) / 2);
   const fSm = Math.round(80  * cScale), offM = Math.round((80  - fSm) / 2);
 
@@ -2468,11 +2469,12 @@ const buildPlayerCard = (p) => {
         const inner  = avImg
           ? '<img src="' + avImg.src + '" style="width:100%;height:100%;object-fit:cover;display:block">'
           : '<div style="width:100%;height:100%;' + bgStyle + ';display:flex;align-items:center;justify-content:center;font-size:' + Math.round(h.size*0.35) + 'px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8)">' + ini(p.name) + '</div>';
-        // Cadre agrandi (×cScale) MAIS avatar à sa taille normale, centré sur le trou.
+        // Cadre agrandi (×cScale) MAIS avatar à sa taille normale (réduit d'un poil), centré sur le trou.
         const hcxD = offD + (h.left + h.size / 2) * cScale, hcyD = offD + (h.top + h.size / 2) * cScale;
         const hcxM = offM + (h.left_m + h.size_m / 2) * cScale, hcyM = offM + (h.top_m + h.size_m / 2) * cScale;
-        return '<div class="pcard-av-hole-d" style="position:absolute;top:' + (hcyD - h.size / 2) + 'px;left:' + (hcxD - h.size / 2) + 'px;width:' + h.size + 'px;height:' + h.size + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>'
-             + '<div class="pcard-av-hole-m" style="display:none;position:absolute;top:' + (hcyM - h.size_m / 2) + 'px;left:' + (hcxM - h.size_m / 2) + 'px;width:' + h.size_m + 'px;height:' + h.size_m + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>';
+        const aD = h.size * cAvShrink, aDm = h.size_m * cAvShrink;
+        return '<div class="pcard-av-hole-d" style="position:absolute;top:' + (hcyD - aD / 2) + 'px;left:' + (hcxD - aD / 2) + 'px;width:' + aD + 'px;height:' + aD + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>'
+             + '<div class="pcard-av-hole-m" style="display:none;position:absolute;top:' + (hcyM - aDm / 2) + 'px;left:' + (hcxM - aDm / 2) + 'px;width:' + aDm + 'px;height:' + aDm + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>';
       })()}
       <!-- Frame desktop -->
       ${rd.player_frame
@@ -4172,7 +4174,8 @@ const openPlayerProfile = (pid) => {
   // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES : position ET taille)
   // pour les rangs aux cadres refaits ; les autres gardent la taille historique.
   const _h  = ['bronze', 'argent', 'grandmaitre', 'challenger'].includes(_bk) ? FRAME_HOLES[_bk] : null;
-  const av  = _h ? Math.round(fbBase * (_h.size / 150)) : (big ? 124 : 72);  // diamètre (taille NORMALE, non agrandie)
+  const avShrink = _bk === 'challenger' ? 0.92 : 1;   // avatar Challenger réduit d'un poil
+  const av  = _h ? Math.round(fbBase * (_h.size / 150) * avShrink) : (big ? 124 : 72);  // diamètre (taille NORMALE, non agrandie)
   const avX = _h ? Math.round(fb * ((_h.left + _h.size / 2) / 150)) : Math.round(fb / 2);
   const avY = _h ? Math.round(fb * ((_h.top  + _h.size / 2) / 150)) : Math.round(fb / 2);
   const ov  = Math.round((big ? -92 : -52) * fScale);   // chevauchement sur la bannière
