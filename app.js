@@ -128,6 +128,7 @@ const SVG_CLOSE = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" s
 let games        = [];
 let players      = [];
 let matches      = [];
+let pendingMatches = [];   // parties enregistrées en attente de validation
 let ratingsCache = {};   // { gameId: { sum, count, myScore } }
 let comments     = {};   // { gameId: Comment[] }
 let suggestions  = [];
@@ -700,7 +701,11 @@ async function loadAll() {
   ]);
   games   = g;
   players = p;
-  matches = m;
+  // Les parties "pending" attendent validation : elles ne comptent NI dans les
+  // stats, NI dans l'Elo, NI dans le classement tant qu'elles ne sont pas
+  // confirmées. On les isole dans pendingMatches.
+  matches        = (m || []).filter((x) => x.status !== 'pending');
+  pendingMatches = (m || []).filter((x) => x.status === 'pending');
   // Saison active = la plus récente non clôturée (sinon la plus récente).
   allSeasons = seasons || [];
   const active = (seasons || []).find((s) => s.status === 'active');
@@ -2603,6 +2608,40 @@ const buildMatchCard = (m) => {
   </div>`;
 };
 
+const buildPendingCard = (m) => {
+  const g        = games.find((x) => x.id === m.game_id);
+  const me       = players.find((p) => p.user_id === currentUser?.id);
+  const myPid    = me ? me.id : null;
+  const recorder = players.find((p) => p.id === m.recorded_by);
+  const iRecorded   = m.recorded_by === myPid;
+  const canValidate = isAdmin || ((m.players || []).some((pp) => pp.id === myPid) && !iRecorded);
+
+  const playersHtml = (m.players || []).map((pp) => {
+    const pl = players.find((x) => x.id === pp.id);
+    const iw = m.winners?.includes(pp.id);
+    return `<span class="pr ${iw ? 'win' : 'lose'}">${iw ? '⭐ ' : ''}${pl ? esc(pl.name) : '?'}</span>`;
+  }).join('');
+
+  const actions = canValidate
+    ? `<div style="display:flex;gap:8px;margin-top:10px">
+         <button onclick="confirmMatch(${m.id})" style="flex:1;padding:9px;border-radius:8px;border:none;background:var(--accent);color:#0b0d12;font-weight:700;font-family:inherit;cursor:pointer">✅ Valider</button>
+         <button onclick="rejectMatch(${m.id})" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;cursor:pointer">✗ Contester</button>
+       </div>`
+    : `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px">
+         <span style="font-size:12px;color:var(--text-faint)">⏳ En attente de validation</span>
+         ${iRecorded ? `<button onclick="rejectMatch(${m.id})" style="padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-muted);font-family:inherit;font-size:12px;cursor:pointer">Annuler</button>` : ''}
+       </div>`;
+
+  return `<div class="hist-card" style="border:1px solid var(--gold)">
+    <div class="hist-hdr"><div>
+      <div class="hist-game">${g ? esc(g.name) : 'Jeu inconnu'}</div>
+      <div class="hist-date">${m.date ? fmtDate(m.date) : ''} · par ${recorder ? esc(recorder.name) : '?'}</div>
+    </div></div>
+    <div class="hist-players">${playersHtml}</div>
+    ${actions}
+  </div>`;
+};
+
 const renderMatchList = () => {
   const el = document.getElementById('hlist');
   if (!currentUser) {
@@ -2610,14 +2649,26 @@ const renderMatchList = () => {
     return;
   }
   const myPlayer = players.find((p) => p.user_id === currentUser.id);
+  const myPid    = myPlayer ? myPlayer.id : null;
+
+  // Parties en attente qui me concernent (participant, déclarant, ou admin).
+  const relPending = pendingMatches.filter((m) =>
+    isAdmin || (m.players || []).some((pp) => pp.id === myPid) || m.recorded_by === myPid);
+  const pendingHtml = relPending.length
+    ? `<div style="margin-bottom:16px">
+         <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:8px">⏳ Parties à valider (${relPending.length})</div>
+         ${relPending.map(buildPendingCard).join('')}
+       </div>`
+    : '';
+
   const mine = myPlayer
     ? matches.filter((m) => (m.players || []).some((pp) => pp.id === myPlayer.id))
     : [];
-  if (!mine.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">🎮</div><p>Tu n\'as encore aucune partie enregistrée.</p></div>';
-    return;
-  }
-  el.innerHTML = mine.map(buildMatchCard).join('');
+  const confirmedHtml = mine.length
+    ? mine.map(buildMatchCard).join('')
+    : (pendingHtml ? '' : '<div class="empty"><div class="empty-icon">🎮</div><p>Tu n\'as encore aucune partie enregistrée.</p></div>');
+
+  el.innerHTML = pendingHtml + confirmedHtml;
 };
 
 const renderLeaderboard = () => {
@@ -2714,6 +2765,12 @@ const saveMatch = async () => {
     const mx = Math.max(...e.map(([, v]) => v));
     return e.filter(([, v]) => v === mx).map(([k]) => parseInt(k));
   })();
+  const me     = players.find((p) => p.user_id === currentUser.id);
+  const myPid  = me ? me.id : null;
+  const others = pids.filter((id) => id !== myPid);
+  const token  = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : (Date.now().toString(36) + Math.random().toString(36).slice(2));
   const mdata = {
     game_id: gid,
     date:    document.getElementById('fm-date').value,
@@ -2721,16 +2778,116 @@ const saveMatch = async () => {
     winners: finW,
     scores,
     notes:   document.getElementById('fm-notes').value.trim(),
+    recorded_by:      myPid,
+    validation_token: token,
+    // Partie solo (aucun autre joueur) : personne pour valider → confirmée direct.
+    status:  others.length ? 'pending' : 'confirmed',
   };
   showLoading('Enregistrement…');
   try {
     const mArr    = await sb.post('matches', mdata);
     const matchId = Array.isArray(mArr) ? mArr[0]?.id : mArr?.id;
-    await awardPoints(matchId, finW, pids, false, gid, scores);
+
+    if (!others.length) {
+      // Aucun validateur possible → on confirme et on attribue tout de suite.
+      await sb.patch('matches', { confirmed_at: new Date().toISOString() }, { id: matchId });
+      await awardPoints(matchId, finW, pids, false, gid, scores);
+      await loadAll();
+      closeModal('modal-match');
+      renderHistory();
+      toast('Partie enregistrée ✓');
+    } else {
+      // En attente : pas de points tant qu'un autre joueur n'a pas validé.
+      await loadAll();
+      closeModal('modal-match');
+      renderHistory();
+      toast('Partie enregistrée — en attente de validation par un autre joueur ⏳');
+      notifyValidators(others, matchId, token, gid).catch(() => {});
+    }
+  } catch (e) { toastErr(e.message); }
+  hideLoading();
+};
+
+// Envoie un email de demande de validation aux autres joueurs (lien 1 clic).
+const notifyValidators = async (otherPids, matchId, token, gid) => {
+  const game     = games.find((g) => g.id === gid);
+  const recorder = players.find((p) => p.user_id === currentUser?.id);
+  const link     = `${SITE_URL}/?validate=${matchId}&token=${encodeURIComponent(token)}`;
+  for (const pid of otherPids) {
+    const pl    = players.find((p) => p.id === pid);
+    const email = await getPlayerEmail(pl).catch(() => null);
+    if (!email) continue;
+    const subject = `Valide la partie enregistrée par ${recorder?.name || 'Board Game Tom'}`;
+    const body    =
+      `Salut ${pl?.name || ''} !\n\n` +
+      `${recorder?.name || 'Un joueur'} vient d'enregistrer une partie de "${game?.name || '?'}" ` +
+      `à laquelle tu as participé.\nPour que les points et l'Elo soient comptés, elle doit être ` +
+      `validée par un autre joueur de la partie.\n\n` +
+      `✅ Valider en un clic :\n${link}\n\n` +
+      `Ou connecte-toi sur le site : la partie t'attend dans « À valider ».\n${SITE_URL}`;
+    sendBrevoEmail(email, pl?.name || '', subject, body).catch(() => {});
+  }
+};
+
+// Valide une partie en attente (par un autre joueur de la partie, ou un admin).
+const confirmMatch = async (id) => {
+  const m = pendingMatches.find((x) => x.id === id);
+  if (!m) { toast('Partie introuvable ou déjà validée'); return; }
+  const me    = players.find((p) => p.user_id === currentUser?.id);
+  const myPid = me ? me.id : null;
+  const isParticipant = (m.players || []).some((pp) => pp.id === myPid);
+  if (!(isAdmin || (isParticipant && m.recorded_by !== myPid))) {
+    toast('Seul un autre joueur de la partie peut la valider'); return;
+  }
+  showLoading('Validation…');
+  try {
+    await sb.patch('matches', { status: 'confirmed', confirmed_at: new Date().toISOString() }, { id });
+    const pids = (m.players || []).map((pp) => pp.id);
+    await awardPoints(id, m.winners || [], pids, !!m.is_challenge, m.game_id, m.scores || {});
     await loadAll();
-    closeModal('modal-match');
     renderHistory();
-    toast('Partie enregistrée ✓');
+    toast('Partie validée — points attribués ✨');
+  } catch (e) { toastErr(e.message); }
+  hideLoading();
+};
+
+// Conteste / supprime une partie en attente (validateur, déclarant, ou admin).
+const rejectMatch = async (id) => {
+  const m = pendingMatches.find((x) => x.id === id);
+  if (!m) return;
+  const me    = players.find((p) => p.user_id === currentUser?.id);
+  const myPid = me ? me.id : null;
+  const isParticipant = (m.players || []).some((pp) => pp.id === myPid);
+  if (!(isAdmin || isParticipant || m.recorded_by === myPid)) { toast('Action non autorisée'); return; }
+  if (!confirm('Refuser / supprimer cette partie en attente ?')) return;
+  showLoading('Suppression…');
+  try {
+    await sb.del('matches', { id });
+    await loadAll();
+    renderHistory();
+    toast('Partie en attente supprimée');
+  } catch (e) { toastErr(e.message); }
+  hideLoading();
+};
+
+// Validation via lien email (?validate=<id>&token=<tok>) au chargement.
+const handleValidationLink = async () => {
+  const params = new URLSearchParams(window.location.search);
+  const id     = parseInt(params.get('validate'));
+  const token  = params.get('token');
+  if (!id || !token) return;
+  history.replaceState({}, '', window.location.pathname);   // évite de rejouer au refresh
+  const m = pendingMatches.find((x) => x.id === id);
+  if (!m) { toast('Cette partie est déjà validée ou introuvable.'); return; }
+  if (m.validation_token !== token) { toast('Lien de validation invalide.'); return; }
+  showLoading('Validation…');
+  try {
+    await sb.patch('matches', { status: 'confirmed', confirmed_at: new Date().toISOString() }, { id });
+    const pids = (m.players || []).map((pp) => pp.id);
+    await awardPoints(id, m.winners || [], pids, !!m.is_challenge, m.game_id, m.scores || {});
+    await loadAll();
+    renderHistory();
+    toast('Partie validée — merci ! ✨');
   } catch (e) { toastErr(e.message); }
   hideLoading();
 };
@@ -3148,6 +3305,12 @@ const saveChallengeResult = async () => {
   const toIds  = Array.isArray(ch.to_player_ids) && ch.to_player_ids.length ? ch.to_player_ids : [ch.to_player_id].filter(Boolean);
   const allIds = [ch.from_player_id, ...toIds];
   const notes  = document.getElementById('cr-notes').value.trim();
+  const me     = players.find((p) => p.user_id === currentUser?.id);
+  const myPid  = me ? me.id : null;
+  const others = allIds.filter((id) => id !== myPid);
+  const token  = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : (Date.now().toString(36) + Math.random().toString(36).slice(2));
   showLoading('Enregistrement…');
   try {
     const mdata = {
@@ -3157,15 +3320,29 @@ const saveChallengeResult = async () => {
       winners: winnerIds,
       scores:  {},
       notes:   notes ? notes + ' (Défi)' : 'Défi',
+      recorded_by:      myPid,
+      validation_token: token,
+      is_challenge:     true,
+      status:  others.length ? 'pending' : 'confirmed',
     };
     const mArr    = await sb.post('matches', mdata);
     const matchId = Array.isArray(mArr) ? mArr[0]?.id : mArr?.id;
     await sb.patch('challenges', { status: 'completed', result_reported: true, match_id: matchId }, { id: currentChallengeId });
-    await awardPoints(matchId, winnerIds, allIds, true, ch.game_id, {});
-    await loadSocial();
-    closeModal('modal-challenge-result');
-    renderChallenges();
-    toast('Résultat enregistré ! Points attribués ✨');
+
+    if (!others.length) {
+      await sb.patch('matches', { confirmed_at: new Date().toISOString() }, { id: matchId });
+      await awardPoints(matchId, winnerIds, allIds, true, ch.game_id, {});
+      await loadSocial();
+      closeModal('modal-challenge-result');
+      renderChallenges();
+      toast('Résultat enregistré ! Points attribués ✨');
+    } else {
+      await loadSocial();
+      closeModal('modal-challenge-result');
+      renderChallenges();
+      toast('Résultat enregistré — en attente de validation par l\'adversaire ⏳');
+      notifyValidators(others, matchId, token, ch.game_id).catch(() => {});
+    }
   } catch (e) { toastErr(e.message); }
   hideLoading();
 };
@@ -4132,6 +4309,7 @@ const init = async () => {
   renderGames();
   startRealtime();
   initDecorations();
+  handleValidationLink();     // validation via lien email (?validate=…&token=…)
 };
 
 init();
