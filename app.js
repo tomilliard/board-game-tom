@@ -1204,6 +1204,7 @@ const buildAvatarPicker = () => {
   const _myPlayer = currentUser ? players.find((pp) => pp.user_id === currentUser.id) : null;
   const achS = _myPlayer ? computeAchievementStats(_myPlayer.id) : null;
   const avatarLock = (a) => {
+    if (isAdmin) return null;                          // admin : tout débloqué
     if (!a.reqAch) return null;                        // avatar libre
     const ach = ACHIEVEMENTS.find((x) => x.id === a.reqAch);
     if (ach && achS && ach.check(achS)) return null;   // succès validé → débloqué
@@ -1263,6 +1264,7 @@ const buildFramePicker = () => {
   const _myPlayer = currentUser ? players.find((pp) => pp.user_id === currentUser.id) : null;
   const achS = _myPlayer ? computeAchievementStats(_myPlayer.id) : null;
   const frameLock = (f) => {
+    if (isAdmin) return null;                          // admin : tout débloqué
     if (!f.reqAch) return null;
     const ach = ACHIEVEMENTS.find((x) => x.id === f.reqAch);
     if (ach && achS && ach.check(achS)) return null;
@@ -1291,7 +1293,7 @@ const buildFramePicker = () => {
 };
 
 const selectFrame = (id) => {
-  if (id) {
+  if (id && !isAdmin) {
     const f = FRAMES.find((x) => x.id === id);
     if (f && f.reqAch) {
       const ach = ACHIEVEMENTS.find((x) => x.id === f.reqAch);
@@ -1315,7 +1317,7 @@ const selectFrame = (id) => {
 
 const selectAvatar = (id) => {
   const _a = AVATARS.find((x) => x.id === id);
-  if (_a && _a.reqAch) {
+  if (_a && _a.reqAch && !isAdmin) {
     const _ach = ACHIEVEMENTS.find((x) => x.id === _a.reqAch);
     const _mp = currentUser ? players.find((pp) => pp.user_id === currentUser.id) : null;
     const _s = _mp ? computeAchievementStats(_mp.id) : null;
