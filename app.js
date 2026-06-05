@@ -1194,7 +1194,8 @@ const buildAvatarPicker = () => {
   // Grille auto selon nb d'avatars (max 5 par ligne)
   const cols = Math.min(AVATARS.length, 5);
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  const achS = (currentProfile && currentProfile.id != null) ? computeAchievementStats(currentProfile.id) : null;
+  const _myPlayer = currentUser ? players.find((pp) => pp.user_id === currentUser.id) : null;
+  const achS = _myPlayer ? computeAchievementStats(_myPlayer.id) : null;
   const avatarLock = (a) => {
     if (!a.reqAch) return null;                        // avatar libre
     const ach = ACHIEVEMENTS.find((x) => x.id === a.reqAch);
@@ -1249,7 +1250,8 @@ const selectAvatar = (id) => {
   const _a = AVATARS.find((x) => x.id === id);
   if (_a && _a.reqAch) {
     const _ach = ACHIEVEMENTS.find((x) => x.id === _a.reqAch);
-    const _s = (currentProfile && currentProfile.id != null) ? computeAchievementStats(currentProfile.id) : null;
+    const _mp = currentUser ? players.find((pp) => pp.user_id === currentUser.id) : null;
+    const _s = _mp ? computeAchievementStats(_mp.id) : null;
     if (!(_ach && _s && _ach.check(_s))) return;   // verrouillé → on ignore
   }
   selAvatar = id;
