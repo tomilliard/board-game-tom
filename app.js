@@ -32,18 +32,18 @@ const FRAME_HOLES = {
   argent_5:   { top: 15, left: 15, size: 120, top_m: 8,  left_m: 8,  size_m: 64 },  // Argent I
   or:         { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   // Or : un cadre par division (V→I).
-  or_1:       { top: 23, left: 22, size: 105, top_m: 12, left_m: 12, size_m: 56 },  // Or V
-  or_2:       { top: 24, left: 25, size: 101, top_m: 13, left_m: 13, size_m: 54 },  // Or IV
-  or_3:       { top: 26, left: 28, size: 99,  top_m: 14, left_m: 15, size_m: 53 },  // Or III
-  or_4:       { top: 24, left: 27, size: 101, top_m: 13, left_m: 14, size_m: 54 },  // Or II
-  or_5:       { top: 33, left: 29, size: 90,  top_m: 18, left_m: 16, size_m: 48 },  // Or I
+  or_1:       { top: 19, left: 18, size: 113, top_m: 10, left_m: 10, size_m: 60 },  // Or V
+  or_2:       { top: 22, left: 22, size: 107, top_m: 12, left_m: 12, size_m: 57 },  // Or IV
+  or_3:       { top: 21, left: 22, size: 107, top_m: 11, left_m: 12, size_m: 57 },  // Or III
+  or_4:       { top: 22, left: 22, size: 107, top_m: 12, left_m: 12, size_m: 57 },  // Or II
+  or_5:       { top: 30, left: 29, size: 92,  top_m: 16, left_m: 15, size_m: 49 },  // Or I
   platine:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   // Platine : un cadre par division (V→I).
-  platine_1:  { top: 25, left: 24, size: 100, top_m: 13, left_m: 13, size_m: 54 },  // Platine V
-  platine_2:  { top: 26, left: 21, size: 107, top_m: 14, left_m: 11, size_m: 57 },  // Platine IV
-  platine_3:  { top: 21, left: 20, size: 104, top_m: 12, left_m: 11, size_m: 55 },  // Platine III
-  platine_4:  { top: 20, left: 20, size: 109, top_m: 11, left_m: 11, size_m: 58 },  // Platine II
-  platine_5:  { top: 31, left: 33, size: 95,  top_m: 16, left_m: 17, size_m: 51 },  // Platine I
+  platine_1:  { top: 23, left: 23, size: 104, top_m: 12, left_m: 12, size_m: 56 },  // Platine V
+  platine_2:  { top: 19, left: 18, size: 113, top_m: 10, left_m: 10, size_m: 60 },  // Platine IV
+  platine_3:  { top: 20, left: 21, size: 108, top_m: 11, left_m: 11, size_m: 58 },  // Platine III
+  platine_4:  { top: 21, left: 21, size: 107, top_m: 11, left_m: 11, size_m: 57 },  // Platine II
+  platine_5:  { top: 27, left: 23, size: 104, top_m: 15, left_m: 12, size_m: 55 },  // Platine I
   diamant:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   maitre:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   grandmaitre:{ top: 22, left: 23, size: 104, top_m: 12, left_m: 12, size_m: 55 },
