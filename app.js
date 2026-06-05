@@ -1445,9 +1445,9 @@ const saveProfileEdit = async () => {
     } else if (targetId && isAdmin) {
       // ── Modifier un joueur existant (admin) ──
       const pts = parseInt(document.getElementById('pe-points').value) || 0;
-      await sb.patch('players', { name, color: selColor, points: pts, avatar: selAvatar, ...eloPart }, { id: parseInt(targetId) });
+      await sb.patch('players', { name, color: selColor, points: pts, avatar: selAvatar, frame: selFrame || null, cardbg: selBg || null, ...eloPart }, { id: parseInt(targetId) });
       const pl = players.find((x) => x.id === parseInt(targetId));
-      if (pl?.user_id) await sb.patch('profiles', { name, color: selColor, avatar: selAvatar }, { id: pl.user_id });
+      if (pl?.user_id) await sb.patch('profiles', { name, color: selColor, avatar: selAvatar, frame: selFrame || null, cardbg: selBg || null }, { id: pl.user_id });
       toast(`${name} mis à jour — ${getRank(pts).name}`);
 
     } else if (currentUser) {
@@ -2776,6 +2776,8 @@ const editPlayerAdmin = async (id) => {
     name:     p.name,
     color:    p.color || '#4ade80',
     avatar:   p.avatar || 1,
+    frame:    p.frame || 0,
+    cardbg:   p.cardbg || 0,
     points:   p.points || 0,
     showPts:  true,
     elo:      p.elo ?? 1000,
@@ -4381,6 +4383,7 @@ const openPlayerProfile = (pid) => {
   if (!p) return;
   const rk  = displayRank(p);
   const _cf = cosmeticFrame(p);   // cadre cosmétique choisi (sinon cadre du rang)
+  const _cbg = cosmeticBg(p);     // fond de carte cosmétique (sinon fond uni)
   const s   = playerStats(pid);
   const rate = s.played > 0 ? Math.round(s.won / s.played * 100) : 0;
   const bg  = p.color || '#4ade80';
@@ -4402,15 +4405,15 @@ const openPlayerProfile = (pid) => {
   const av  = _h ? Math.round(fbBase * (_h.size / 150) * avShrink) : (big ? 124 : 72);  // diamètre (taille NORMALE, non agrandie)
   const avX = _h ? Math.round(fb * ((_h.left + _h.size / 2) / 150)) : Math.round(fb / 2);
   const avY = _h ? Math.round(fb * ((_h.top  + _h.size / 2) / 150)) : Math.round(fb / 2);
-  const ov  = Math.round((big ? -92 : -52) * fScale);   // chevauchement sur la bannière
+  const ov  = _cbg ? (big ? 18 : 12) : Math.round((big ? -92 : -52) * fScale);   // chevauchement bannière (ou marge simple si fond cosmétique)
   const emb = big ? 30  : 22;    // taille de l'emblème
   const nf  = big ? 22  : 17;    // taille du nom
   document.getElementById('pp-summary').innerHTML = `
-    <div style="border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:4px;background:var(--surface)">
-      <!-- Bannière affichée en entier (jamais rognée) -->
-      ${ra2.banner
+    <div style="border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:4px;${_cbg ? `background:linear-gradient(180deg,rgba(8,10,16,.5),rgba(8,10,16,.82)),url('${_cbg.src}') center/cover` : 'background:var(--surface)'}">
+      <!-- Bannière affichée en entier (jamais rognée) — masquée si fond cosmétique -->
+      ${_cbg ? '' : (ra2.banner
         ? `<img src="${ra2.banner}" style="display:block;width:100%;height:auto">`
-        : `<div style="width:100%;height:${big ? 180 : 110}px;background:${bg}22"></div>`}
+        : `<div style="width:100%;height:${big ? 180 : 110}px;background:${bg}22"></div>`)}
       <!-- Avatar centré qui chevauche le bas de la bannière, infos centrées en dessous -->
       <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 14px 16px">
         <div style="position:relative;width:${fb}px;height:${fb}px;margin-top:${ov}px">
