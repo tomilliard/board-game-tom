@@ -61,6 +61,11 @@ const FRAME_BY_DIV = {
   or_3: 'assets/or_3_frame.png',  // Or III
   or_4: 'assets/or_4_frame.png',  // Or II
   or_5: 'assets/or_5_frame.png',  // Or I
+  platine_1: 'assets/platine_1_frame.png',  // Platine V
+  platine_2: 'assets/platine_2_frame.png',  // Platine IV
+  platine_3: 'assets/platine_3_frame.png',  // Platine III
+  platine_4: 'assets/platine_4_frame.png',  // Platine II
+  platine_5: 'assets/platine_5_frame.png',  // Platine I
 };
 
 
