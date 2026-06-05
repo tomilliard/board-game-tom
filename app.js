@@ -3943,6 +3943,7 @@ const ACHIEVEMENTS = [
   { id:'rank_or',        icon:'🥇', name:'Rang Or',                  desc:'Atteindre le rang Or',                 check: (s) => s.maxPoints >= 350 },
   { id:'rank_diamant',   icon:'💠', name:'Rang Diamant',             desc:'Atteindre le rang Diamant',            check: (s) => s.maxPoints >= 1200 },
   { id:'rank_diamant_1', icon:'⚡', name:'Diamant I',                desc:'Atteindre le Diamant I',               check: (s) => Math.max(s.peakPoints || 0, s.maxPoints || 0) >= 1836 },
+  { id:'bois_30j',       icon:'🌳', name:'Le Gardien sylvestre',     desc:'Rester 30 jours sans quitter le Bois', check: (s) => (s.peakPoints || 0) < 50 && (s.daysSinceStart || 0) >= 30 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -3981,6 +3982,9 @@ const computeAchievementStats = (pid) => {
   const p = players.find((x) => x.id === pid);
   const maxPoints = p?.points || 0;
   const peakPoints = (p?.peak_points != null ? p.peak_points : (p?.points || 0));
+  // Jours depuis l'arrivée du joueur (création du compte, sinon 1re partie connue)
+  const _startStr = p?.created_at || playerMatches.map((m) => m.date).filter(Boolean).sort()[0] || null;
+  const daysSinceStart = _startStr ? Math.floor((Date.now() - new Date(_startStr).getTime()) / 86400000) : 0;
 
   // Different games
   const diffGames = new Set(playerMatches.map((m) => m.game_id)).size;
@@ -4065,6 +4069,7 @@ const computeAchievementStats = (pid) => {
     bestStreak,
     maxPoints,
     peakPoints,
+    daysSinceStart,
     diffGames,
     sentChallenges,
     wonChallenges,
