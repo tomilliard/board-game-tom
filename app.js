@@ -45,6 +45,12 @@ const FRAME_HOLES = {
   platine_4:  { top: 21, left: 21, size: 107, top_m: 11, left_m: 11, size_m: 57 },  // Platine II
   platine_5:  { top: 27, left: 23, size: 104, top_m: 15, left_m: 12, size_m: 55 },  // Platine I
   diamant:    { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
+  // Diamant : un cadre par division (V→I).
+  diamant_1:  { top: 30, left: 30, size: 88, top_m: 16, left_m: 16, size_m: 47 },  // Diamant V
+  diamant_2:  { top: 36, left: 34, size: 81, top_m: 19, left_m: 18, size_m: 43 },  // Diamant IV
+  diamant_3:  { top: 34, left: 34, size: 81, top_m: 18, left_m: 18, size_m: 43 },  // Diamant III
+  diamant_4:  { top: 35, left: 34, size: 81, top_m: 19, left_m: 18, size_m: 43 },  // Diamant II
+  diamant_5:  { top: 39, left: 36, size: 78, top_m: 21, left_m: 19, size_m: 42 },  // Diamant I
   maitre:     { top: 30, left: 30, size: 90, top_m: 16, left_m: 16, size_m: 48 },
   grandmaitre:{ top: 22, left: 23, size: 104, top_m: 12, left_m: 12, size_m: 55 },
   challenger: { top: 14, left: 16, size: 118, top_m: 8, left_m: 9, size_m: 63 },
@@ -78,6 +84,11 @@ const FRAME_BY_DIV = {
   platine_3: 'assets/platine_3_frame.png',  // Platine III
   platine_4: 'assets/platine_4_frame.png',  // Platine II
   platine_5: 'assets/platine_5_frame.png',  // Platine I
+  diamant_1: 'assets/diamant_1_frame.png',  // Diamant V
+  diamant_2: 'assets/diamant_2_frame.png',  // Diamant IV
+  diamant_3: 'assets/diamant_3_frame.png',  // Diamant III
+  diamant_4: 'assets/diamant_4_frame.png',  // Diamant II
+  diamant_5: 'assets/diamant_5_frame.png',  // Diamant I
 };
 
 
