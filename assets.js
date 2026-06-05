@@ -167,9 +167,6 @@ const AVATARS = [
 // Chaque cadre a son trou (FRAME_HOLES inline) et un succès requis (reqAch).
 // frame = null/0 sur le joueur → cadre du rang par défaut.
 const FRAMES = [
-  { id: 1, label: 'Léviathan des tempêtes', src: 'assets/dragon_frame.png',
-    hole: { top: 31, left: 32, size: 86, top_m: 17, left_m: 17, size_m: 46 },
-    reqAch: 'rank_diamant_1' },  // ⚠️ condition PROVISOIRE — à remplacer par le bon succès
   { id: 2, label: 'Le Roi des Abysses', src: 'assets/skullking_frame.png',
     hole: { top: 26, left: 31, size: 88, top_m: 14, left_m: 17, size_m: 47 },
     reqAch: 'skullking_win_50' }
