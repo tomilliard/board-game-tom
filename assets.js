@@ -155,7 +155,8 @@ const AVATARS = [
   { id: 17, label: 'La Druidesse', src: 'assets/avatar17.webp' },
   { id: 18, label: 'Le Marchand', src: 'assets/avatar18.webp' },
   { id: 19, label: 'La Guerrière', src: 'assets/avatar19.webp' },
-  { id: 20, label: 'Le Grand Stratège', src: 'assets/avatar20.webp' }
+  { id: 20, label: 'Le Grand Stratège', src: 'assets/avatar20.webp' },
+  { id: 21, label: 'Le Roi-Foudre', src: 'assets/avatar21.webp', reqAch: 'rank_diamant_1' }
 ];
 
 // ─── Images décoratives ───

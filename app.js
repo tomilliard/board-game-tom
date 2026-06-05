@@ -159,7 +159,7 @@ const RANKS = (() => {
         const subMax = (i === div.count - 1) ? div.end : div.start + (i + 1) * step - 1;
         const subNum = NUMS[i];
         ranks.push({
-          name:    div.name,
+          name:    div.name + ' ' + subNum,
           key:     div.key + '_' + (i+1),
           baseKey: div.key,
           min:     subMin,
@@ -1194,15 +1194,24 @@ const buildAvatarPicker = () => {
   // Grille auto selon nb d'avatars (max 5 par ligne)
   const cols = Math.min(AVATARS.length, 5);
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  const achS = (currentProfile && currentProfile.id != null) ? computeAchievementStats(currentProfile.id) : null;
+  const avatarLock = (a) => {
+    if (!a.reqAch) return null;                        // avatar libre
+    const ach = ACHIEVEMENTS.find((x) => x.id === a.reqAch);
+    if (ach && achS && ach.check(achS)) return null;   // succès validé → débloqué
+    return ach ? `🔒 ${ach.name} — ${ach.desc}` : '🔒 Verrouillé';
+  };
   grid.innerHTML = AVATARS.map(a => {
-    const sel = selAvatar === a.id;
-    return `<div onclick="selectAvatar(${a.id})"
-               style="cursor:pointer;border-radius:50%;overflow:hidden;aspect-ratio:1;
+    const sel  = selAvatar === a.id;
+    const lock = avatarLock(a);
+    return `<div ${lock ? '' : `onclick="selectAvatar(${a.id})"`}
+               style="position:relative;cursor:${lock ? 'not-allowed' : 'pointer'};border-radius:50%;overflow:hidden;aspect-ratio:1;
                       border:3px solid ${sel ? 'var(--accent)' : 'transparent'};
                       box-shadow:${sel ? '0 0 0 2px var(--accent)' : 'none'};
                       transition:border-color .15s,box-shadow .15s;flex-shrink:0"
-               data-avid="${a.id}" title="${a.label}">
-             <img src="${a.src}" style="width:100%;height:100%;object-fit:cover;display:block">
+               data-avid="${a.id}" title="${lock || a.label}">
+             <img src="${a.src}" style="width:100%;height:100%;object-fit:cover;display:block${lock ? ';filter:grayscale(1) brightness(.45)' : ''}">
+             ${lock ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;pointer-events:none">🔒</div>' : ''}
            </div>`;
   }).join('');
   _updateAvatarPreview();
@@ -1237,6 +1246,12 @@ const _updateAvatarPreview = () => {
 };
 
 const selectAvatar = (id) => {
+  const _a = AVATARS.find((x) => x.id === id);
+  if (_a && _a.reqAch) {
+    const _ach = ACHIEVEMENTS.find((x) => x.id === _a.reqAch);
+    const _s = (currentProfile && currentProfile.id != null) ? computeAchievementStats(currentProfile.id) : null;
+    if (!(_ach && _s && _ach.check(_s))) return;   // verrouillé → on ignore
+  }
   selAvatar = id;
   const grid = document.getElementById('pe-avatar-grid');
   if (grid) {
@@ -2586,7 +2601,7 @@ const buildPlayerCard = (p) => {
         <div class="wr-bar"><div class="wr-fill" style="width:${rate}%"></div></div>
         ${rk.idx < RANKS.length - 1
           ? `<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:5px;margin-bottom:2px">
-               <span>${rk.name}</span><span>${nextRk.name !== rk.name ? nextRk.name + ' ' : ''}(${p.points||0}/${nextRk.min})</span>
+               <span>${rk.name}</span><span>${nextRk.name} (${p.points||0}/${nextRk.min})</span>
              </div>
              <div class="wr-bar"><div style="height:100%;width:${prog}%;background:${rk.color};border-radius:3px"></div></div>`
           : `<div style="font-size:10px;color:${rk.color};margin-top:5px;text-align:center">Rang max !</div>`}
@@ -3925,6 +3940,7 @@ const ACHIEVEMENTS = [
   // Rangs
   { id:'rank_or',        icon:'🥇', name:'Rang Or',                  desc:'Atteindre le rang Or',                 check: (s) => s.maxPoints >= 350 },
   { id:'rank_diamant',   icon:'💠', name:'Rang Diamant',             desc:'Atteindre le rang Diamant',            check: (s) => s.maxPoints >= 1200 },
+  { id:'rank_diamant_1', icon:'⚡', name:'Diamant I',                desc:'Atteindre le Diamant I',               check: (s) => (s.peakPoints != null ? s.peakPoints : s.maxPoints) >= 1836 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -3962,6 +3978,7 @@ const computeAchievementStats = (pid) => {
   // Max points ever reached (approximate from current)
   const p = players.find((x) => x.id === pid);
   const maxPoints = p?.points || 0;
+  const peakPoints = (p?.peak_points != null ? p.peak_points : (p?.points || 0));
 
   // Different games
   const diffGames = new Set(playerMatches.map((m) => m.game_id)).size;
@@ -4045,6 +4062,7 @@ const computeAchievementStats = (pid) => {
     played: playerMatches.length,
     bestStreak,
     maxPoints,
+    peakPoints,
     diffGames,
     sentChallenges,
     wonChallenges,
