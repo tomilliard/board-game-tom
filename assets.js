@@ -169,13 +169,17 @@ const AVATARS = [
 const FRAMES = [
   { id: 2, label: 'Le Roi des Abysses', src: 'assets/skullking_frame.png',
     hole: { top: 26, left: 31, size: 88, top_m: 14, left_m: 17, size_m: 47 },
-    reqAch: 'skullking_win_50' }
+    reqAch: 'skullking_win_50' },
+  { id: 3, label: 'Les Sept Merveilles', src: 'assets/7wonders_frame.png',
+    hole: { top: 40, left: 38, size: 74, top_m: 21, left_m: 20, size_m: 39 },
+    reqAch: '7w_win_25' }
 ];
 
 // ─── Fonds de carte déblocables par succès ───
 // cardbg = null/0 sur le joueur → fond uni par défaut.
 const BACKGROUNDS = [
-  { id: 1, label: 'Shai-Hulud', src: 'assets/bg_dune.webp', reqAch: 'dune_win_20' }
+  { id: 1, label: 'Shai-Hulud', src: 'assets/bg_dune.webp', reqAch: 'dune_win_20' },
+  { id: 2, label: 'Cité des Merveilles', src: 'assets/bg_7wonders.webp', reqAch: '7w_play_15' }
 ];
 
 // ─── Images décoratives ───
