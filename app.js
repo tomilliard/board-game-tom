@@ -58,6 +58,8 @@ const FRAME_HOLES = {
 
 // Cadre cosmétique choisi par un joueur (si présent dans FRAMES), sinon null → cadre du rang.
 const cosmeticFrame = (p) => (p && p.frame ? (FRAMES.find((f) => f.id === p.frame) || null) : null);
+// Fond de carte cosmétique choisi (si présent dans BACKGROUNDS), sinon null → fond uni.
+const cosmeticBg = (p) => (p && p.cardbg ? (BACKGROUNDS.find((b) => b.id === p.cardbg) || null) : null);
 
 // Cadres spécifiques par division (priorité sur le cadre du rang de base).
 // Clé = clé de rang exacte (ex. bois_1 = Bois V).
@@ -225,6 +227,7 @@ let modalExts        = [];
 let selColor         = '#4ade80';
 let selAvatar        = null;  // id de l'avatar sélectionné
 let selFrame         = null;  // id du cadre cosmétique sélectionné (null/0 = cadre du rang)
+let selBg            = null;  // id du fond de carte cosmétique (null/0 = fond uni)
 let authSelColor     = '#4ade80';
 let currentChallengeId = null;
 
@@ -1105,6 +1108,7 @@ const _openProfileModal = (cfg) => {
   selColor  = cfg.color;
   selAvatar = cfg.avatar;
   selFrame  = cfg.frame || 0;
+  selBg     = cfg.cardbg || 0;
 
   buildProfileColorPicker(selColor);
 
@@ -1116,6 +1120,7 @@ const _openProfileModal = (cfg) => {
 
   buildAvatarPicker();
   buildFramePicker();
+  buildBgPicker();
 
   // Points
   const ptsRow   = document.getElementById('pe-points-row');
@@ -1171,6 +1176,7 @@ const openProfileEdit = () => {
     color:     currentProfile.color || '#4ade80',
     avatar:    currentProfile.avatar || 1,
     frame:     currentProfile.frame || 0,
+    cardbg:    currentProfile.cardbg || 0,
     points:    null,
     showPts:   false,
     showEmail: false,
@@ -1315,6 +1321,61 @@ const selectFrame = (id) => {
   _updateFramePreview();
 };
 
+// ─── Sélecteur de fond de carte ───
+const buildBgPicker = () => {
+  const grid = document.getElementById('pe-bg-grid');
+  if (!grid) return;
+  const _myPlayer = currentUser ? players.find((pp) => pp.user_id === currentUser.id) : null;
+  const achS = _myPlayer ? computeAchievementStats(_myPlayer.id) : null;
+  const bgLock = (b) => {
+    if (isAdmin) return null;
+    if (!b.reqAch) return null;
+    const ach = ACHIEVEMENTS.find((x) => x.id === b.reqAch);
+    if (ach && achS && ach.check(achS)) return null;
+    return ach ? `🔒 ${ach.name} — ${ach.desc}` : '🔒 Verrouillé';
+  };
+  const defSel = !selBg;
+  let html = `<div onclick="selectBg(0)" data-bgid="0" title="Fond uni (défaut)"
+       style="cursor:pointer;border-radius:10px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+              border:3px solid ${defSel ? 'var(--accent)' : 'var(--border)'};
+              box-shadow:${defSel ? '0 0 0 2px var(--accent)' : 'none'};font-size:11px;color:var(--text-muted);text-align:center;line-height:1.1">Défaut<br>(uni)</div>`;
+  html += BACKGROUNDS.map((b) => {
+    const sel  = selBg === b.id;
+    const lock = bgLock(b);
+    return `<div ${lock ? '' : `onclick="selectBg(${b.id})"`}
+               style="position:relative;cursor:${lock ? 'not-allowed' : 'pointer'};border-radius:10px;overflow:hidden;aspect-ratio:1;
+                      border:3px solid ${sel ? 'var(--accent)' : 'transparent'};
+                      box-shadow:${sel ? '0 0 0 2px var(--accent)' : 'none'}"
+               data-bgid="${b.id}" title="${lock || b.label}">
+             <img src="${b.src}" style="width:100%;height:100%;object-fit:cover;display:block${lock ? ';filter:grayscale(1) brightness(.45)' : ''}">
+             ${lock ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;pointer-events:none">🔒</div>' : ''}
+           </div>`;
+  }).join('');
+  grid.innerHTML = html;
+};
+
+const selectBg = (id) => {
+  if (id && !isAdmin) {
+    const b = BACKGROUNDS.find((x) => x.id === id);
+    if (b && b.reqAch) {
+      const ach = ACHIEVEMENTS.find((x) => x.id === b.reqAch);
+      const mp = currentUser ? players.find((pp) => pp.user_id === currentUser.id) : null;
+      const s = mp ? computeAchievementStats(mp.id) : null;
+      if (!(ach && s && ach.check(s))) return;
+    }
+  }
+  selBg = id || 0;
+  const grid = document.getElementById('pe-bg-grid');
+  if (grid) {
+    grid.querySelectorAll('[data-bgid]').forEach((el) => {
+      const elId = parseInt(el.dataset.bgid);
+      const sel  = elId === selBg;
+      el.style.borderColor = sel ? 'var(--accent)' : (elId === 0 ? 'var(--border)' : 'transparent');
+      el.style.boxShadow   = sel ? '0 0 0 2px var(--accent)' : 'none';
+    });
+  }
+};
+
 const selectAvatar = (id) => {
   const _a = AVATARS.find((x) => x.id === id);
   if (_a && _a.reqAch && !isAdmin) {
@@ -1391,10 +1452,10 @@ const saveProfileEdit = async () => {
 
     } else if (currentUser) {
       // ── Modifier son propre profil ──
-      await sb.patch('profiles', { name, color: selColor, avatar: selAvatar, frame: selFrame || null }, { id: currentUser.id });
+      await sb.patch('profiles', { name, color: selColor, avatar: selAvatar, frame: selFrame || null, cardbg: selBg || null }, { id: currentUser.id });
       const myPlayer = players.find((p) => p.user_id === currentUser.id);
-      if (myPlayer) await sb.patch('players', { name, color: selColor, avatar: selAvatar, frame: selFrame || null }, { id: myPlayer.id });
-      currentProfile = { ...currentProfile, name, color: selColor, avatar: selAvatar, frame: selFrame || null };
+      if (myPlayer) await sb.patch('players', { name, color: selColor, avatar: selAvatar, frame: selFrame || null, cardbg: selBg || null }, { id: myPlayer.id });
+      currentProfile = { ...currentProfile, name, color: selColor, avatar: selAvatar, frame: selFrame || null, cardbg: selBg || null };
       updateUserUI();
       toast('Profil mis à jour ✓');
     }
@@ -2570,16 +2631,20 @@ const buildPlayerCard = (p) => {
     : '';
 
   const _cf = cosmeticFrame(p);   // cadre cosmétique choisi (sinon cadre du rang)
+  const _cbg = cosmeticBg(p);     // fond de carte cosmétique (sinon fond uni)
+  const _cardBgStyle = _cbg
+    ? `background:linear-gradient(180deg,rgba(8,10,16,.5),rgba(8,10,16,.82)),url('${_cbg.src}') center/cover;`
+    : 'background:#171a22;';
 
   return `<div class="player-card pcard-resp" data-rank="${rk.key}"
-    style="cursor:pointer;position:relative;overflow:hidden;background:#171a22;
+    style="cursor:pointer;position:relative;overflow:hidden;${_cardBgStyle}
            border-radius:14px;${glowStyle}"
     onclick="openPlayerProfile(${p.id})">
 
     <!-- ── DESKTOP : bannière ── -->
     <div class="pcard-banner"
          style="height:100px;background-size:cover;background-position:center;
-                ${rd.banner ? "background-image:url('"+rd.banner+"')" : 'background:'+bg+'18'}">
+                ${_cbg ? 'background:transparent' : (rd.banner ? "background-image:url('"+rd.banner+"')" : 'background:'+bg+'18')}">
     </div>
 
     <!-- ── DESKTOP avatar wrap 150×150, MOBILE 80×80 ── -->

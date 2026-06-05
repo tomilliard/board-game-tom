@@ -172,6 +172,12 @@ const FRAMES = [
     reqAch: 'skullking_win_50' }
 ];
 
+// ─── Fonds de carte déblocables par succès ───
+// cardbg = null/0 sur le joueur → fond uni par défaut.
+const BACKGROUNDS = [
+  { id: 1, label: 'Shai-Hulud', src: 'assets/bg_dune.webp', reqAch: 'dune_win_20' }
+];
+
 // ─── Images décoratives ───
 const DECO_IMGS = [
   'assets/deco_imgs.png',
