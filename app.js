@@ -159,7 +159,7 @@ const RANKS = (() => {
         const subMax = (i === div.count - 1) ? div.end : div.start + (i + 1) * step - 1;
         const subNum = NUMS[i];
         ranks.push({
-          name:    div.name + ' ' + subNum,
+          name:    div.name,
           key:     div.key + '_' + (i+1),
           baseKey: div.key,
           min:     subMin,
@@ -2534,7 +2534,6 @@ const buildPlayerCard = (p) => {
         ? `<div class="pcard-emblem-desktop"
                style="position:relative;width:48px;height:48px;margin:6px auto 4px;
                       background:url('${rd.emblem}') center/contain no-repeat">
-             ${rk.sub ? `<span style="position:absolute;left:50%;bottom:-3px;transform:translateX(-50%);font-family:'DM Serif Display',serif;font-size:15px;line-height:1;font-weight:700;color:#f7e6b3;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 5px rgba(0,0,0,.65);pointer-events:none">${rk.sub}</span>` : ''}
            </div>`
         : ''}
       <!-- Emblème mobile -->
@@ -2542,7 +2541,6 @@ const buildPlayerCard = (p) => {
         ? `<div class="pcard-emblem-mobile"
                style="display:none;position:relative;width:28px;height:28px;flex-shrink:0;
                       background:url('${rm.emblem}') center/contain no-repeat">
-             ${rk.sub ? `<span style="position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);font-family:'DM Serif Display',serif;font-size:10px;line-height:1;font-weight:700;color:#f7e6b3;text-shadow:0 1px 2px rgba(0,0,0,.95)">${rk.sub}</span>` : ''}
            </div>`
         : ''}
 
@@ -2588,7 +2586,7 @@ const buildPlayerCard = (p) => {
         <div class="wr-bar"><div class="wr-fill" style="width:${rate}%"></div></div>
         ${rk.idx < RANKS.length - 1
           ? `<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:5px;margin-bottom:2px">
-               <span>${rk.name}</span><span>${nextRk.name} (${p.points||0}/${nextRk.min})</span>
+               <span>${rk.name}</span><span>${nextRk.name !== rk.name ? nextRk.name + ' ' : ''}(${p.points||0}/${nextRk.min})</span>
              </div>
              <div class="wr-bar"><div style="height:100%;width:${prog}%;background:${rk.color};border-radius:3px"></div></div>`
           : `<div style="font-size:10px;color:${rk.color};margin-top:5px;text-align:center">Rang max !</div>`}
