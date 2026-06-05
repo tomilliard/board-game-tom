@@ -3944,6 +3944,8 @@ const ACHIEVEMENTS = [
   { id:'rank_diamant',   icon:'💠', name:'Rang Diamant',             desc:'Atteindre le rang Diamant',            check: (s) => s.maxPoints >= 1200 },
   { id:'rank_diamant_1', icon:'⚡', name:'Diamant I',                desc:'Atteindre le Diamant I',               check: (s) => Math.max(s.peakPoints || 0, s.maxPoints || 0) >= 1836 },
   { id:'bois_30j',       icon:'🌳', name:'Le Gardien sylvestre',     desc:'Rester 30 jours sans quitter le Bois', check: (s) => (s.peakPoints || 0) < 50 && (s.daysSinceStart || 0) >= 30 },
+  { id:'dune_win_10',    icon:'🪱', name:'Lisan al-Gaib',             desc:'Gagner 10 parties de Dune Imperium Insurrection', check: (s) => (s.duneWins || 0) >= 10 },
+  { id:'dune_win_20',    icon:'🏜️', name:'Usul',                      desc:'Gagner 20 parties de Dune Imperium Insurrection', check: (s) => (s.duneWins || 0) >= 20 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -3969,6 +3971,12 @@ const ACHIEVEMENTS = [
 const computeAchievementStats = (pid) => {
   const playerMatches = matches.filter((m) => m.players?.some((p) => p.id === pid));
   const won           = playerMatches.filter((m) => m.winners?.includes(pid));
+
+  // Parties de Dune Imperium Insurrection (résolu par nom, repli id 7)
+  const _duneGame = games.find((g) => g.name === 'Dune Imperium Insurrection');
+  const _duneId   = _duneGame ? _duneGame.id : 7;
+  const duneWins   = won.filter((m) => m.game_id === _duneId).length;
+  const dunePlayed = playerMatches.filter((m) => m.game_id === _duneId).length;
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4070,6 +4078,8 @@ const computeAchievementStats = (pid) => {
     maxPoints,
     peakPoints,
     daysSinceStart,
+    duneWins,
+    dunePlayed,
     diffGames,
     sentChallenges,
     wonChallenges,

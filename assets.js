@@ -157,7 +157,9 @@ const AVATARS = [
   { id: 19, label: 'La Guerrière', src: 'assets/avatar19.webp' },
   { id: 20, label: 'Le Grand Stratège', src: 'assets/avatar20.webp' },
   { id: 21, label: 'Le Roi-Foudre', src: 'assets/avatar21.webp', reqAch: 'rank_diamant_1' },
-  { id: 22, label: 'Le Gardien sylvestre', src: 'assets/avatar22.webp', reqAch: 'bois_30j' }
+  { id: 22, label: 'Le Gardien sylvestre', src: 'assets/avatar22.webp', reqAch: 'bois_30j' },
+  { id: 23, label: 'Sandworm King', src: 'assets/avatar23.webp', reqAch: 'dune_win_10' },
+  { id: 24, label: 'The Spice Sovereign', src: 'assets/avatar24.webp', reqAch: 'dune_win_20' }
 ];
 
 // ─── Images décoratives ───
