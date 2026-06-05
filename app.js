@@ -56,6 +56,9 @@ const FRAME_HOLES = {
   challenger: { top: 14, left: 16, size: 118, top_m: 8, left_m: 9, size_m: 63 },
 };
 
+// Cadre cosmétique choisi par un joueur (si présent dans FRAMES), sinon null → cadre du rang.
+const cosmeticFrame = (p) => (p && p.frame ? (FRAMES.find((f) => f.id === p.frame) || null) : null);
+
 // Cadres spécifiques par division (priorité sur le cadre du rang de base).
 // Clé = clé de rang exacte (ex. bois_1 = Bois V).
 const FRAME_BY_DIV = {
@@ -221,6 +224,7 @@ let editGameId       = null;
 let modalExts        = [];
 let selColor         = '#4ade80';
 let selAvatar        = null;  // id de l'avatar sélectionné
+let selFrame         = null;  // id du cadre cosmétique sélectionné (null/0 = cadre du rang)
 let authSelColor     = '#4ade80';
 let currentChallengeId = null;
 
@@ -1100,6 +1104,7 @@ const _openProfileModal = (cfg) => {
 
   selColor  = cfg.color;
   selAvatar = cfg.avatar;
+  selFrame  = cfg.frame || 0;
 
   buildProfileColorPicker(selColor);
 
@@ -1110,6 +1115,7 @@ const _openProfileModal = (cfg) => {
   peRankAssets = _previewRA || null;
 
   buildAvatarPicker();
+  buildFramePicker();
 
   // Points
   const ptsRow   = document.getElementById('pe-points-row');
@@ -1164,6 +1170,7 @@ const openProfileEdit = () => {
     name:      currentProfile.name  || '',
     color:     currentProfile.color || '#4ade80',
     avatar:    currentProfile.avatar || 1,
+    frame:     currentProfile.frame || 0,
     points:    null,
     showPts:   false,
     showEmail: false,
@@ -1235,15 +1242,75 @@ const _updateAvatarPreview = () => {
     prev.innerHTML = `<span style="font-size:24px;font-weight:700;color:${bg};
       font-family:'DM Serif Display',serif">${ini(document.getElementById('pe-name')?.value || '?')}</span>`;
   }
-  // Affiche le cadre de rang si disponible
+  // Preview du cadre (cosmétique choisi sinon cadre du rang)
+  _updateFramePreview();
+};
+
+// ─── Sélecteur de cadre cosmétique ───
+const _updateFramePreview = () => {
   const frameDiv = document.getElementById('pe-frame-preview');
   const frameImg = document.getElementById('pe-frame-img');
-  if (frameDiv && frameImg && peRankAssets && peRankAssets.profile_frame) {
-    frameImg.src = peRankAssets.profile_frame;
-    frameDiv.style.display = 'block';
-  } else if (frameDiv) {
-    frameDiv.style.display = 'none';
+  if (!frameDiv || !frameImg) return;
+  const cf = selFrame ? FRAMES.find((f) => f.id === selFrame) : null;
+  const src = cf ? cf.src : (peRankAssets && peRankAssets.profile_frame ? peRankAssets.profile_frame : null);
+  if (src) { frameImg.src = src; frameDiv.style.display = 'block'; }
+  else frameDiv.style.display = 'none';
+};
+
+const buildFramePicker = () => {
+  const grid = document.getElementById('pe-frame-grid');
+  if (!grid) return;
+  const _myPlayer = currentUser ? players.find((pp) => pp.user_id === currentUser.id) : null;
+  const achS = _myPlayer ? computeAchievementStats(_myPlayer.id) : null;
+  const frameLock = (f) => {
+    if (!f.reqAch) return null;
+    const ach = ACHIEVEMENTS.find((x) => x.id === f.reqAch);
+    if (ach && achS && ach.check(achS)) return null;
+    return ach ? `🔒 ${ach.name} — ${ach.desc}` : '🔒 Verrouillé';
+  };
+  // Vignette "Défaut (rang)" + cadres cosmétiques
+  const defSel = !selFrame;
+  let html = `<div onclick="selectFrame(0)" data-frid="0" title="Cadre du rang (défaut)"
+       style="cursor:pointer;border-radius:50%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+              border:3px solid ${defSel ? 'var(--accent)' : 'var(--border)'};
+              box-shadow:${defSel ? '0 0 0 2px var(--accent)' : 'none'};font-size:11px;color:var(--text-muted);text-align:center;line-height:1.1">Défaut<br>(rang)</div>`;
+  html += FRAMES.map((f) => {
+    const sel  = selFrame === f.id;
+    const lock = frameLock(f);
+    return `<div ${lock ? '' : `onclick="selectFrame(${f.id})"`}
+               style="position:relative;cursor:${lock ? 'not-allowed' : 'pointer'};border-radius:50%;overflow:hidden;aspect-ratio:1;
+                      border:3px solid ${sel ? 'var(--accent)' : 'transparent'};
+                      box-shadow:${sel ? '0 0 0 2px var(--accent)' : 'none'}"
+               data-frid="${f.id}" title="${lock || f.label}">
+             <img src="${f.src}" style="width:100%;height:100%;object-fit:contain;display:block${lock ? ';filter:grayscale(1) brightness(.45)' : ''}">
+             ${lock ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;pointer-events:none">🔒</div>' : ''}
+           </div>`;
+  }).join('');
+  grid.innerHTML = html;
+  _updateFramePreview();
+};
+
+const selectFrame = (id) => {
+  if (id) {
+    const f = FRAMES.find((x) => x.id === id);
+    if (f && f.reqAch) {
+      const ach = ACHIEVEMENTS.find((x) => x.id === f.reqAch);
+      const mp = currentUser ? players.find((pp) => pp.user_id === currentUser.id) : null;
+      const s = mp ? computeAchievementStats(mp.id) : null;
+      if (!(ach && s && ach.check(s))) return;   // verrouillé → on ignore
+    }
   }
+  selFrame = id || 0;
+  const grid = document.getElementById('pe-frame-grid');
+  if (grid) {
+    grid.querySelectorAll('[data-frid]').forEach((el) => {
+      const elId = parseInt(el.dataset.frid);
+      const sel  = elId === selFrame;
+      el.style.borderColor = sel ? 'var(--accent)' : (elId === 0 ? 'var(--border)' : 'transparent');
+      el.style.boxShadow   = sel ? '0 0 0 2px var(--accent)' : 'none';
+    });
+  }
+  _updateFramePreview();
 };
 
 const selectAvatar = (id) => {
@@ -1322,10 +1389,10 @@ const saveProfileEdit = async () => {
 
     } else if (currentUser) {
       // ── Modifier son propre profil ──
-      await sb.patch('profiles', { name, color: selColor, avatar: selAvatar }, { id: currentUser.id });
+      await sb.patch('profiles', { name, color: selColor, avatar: selAvatar, frame: selFrame || null }, { id: currentUser.id });
       const myPlayer = players.find((p) => p.user_id === currentUser.id);
-      if (myPlayer) await sb.patch('players', { name, color: selColor, avatar: selAvatar }, { id: myPlayer.id });
-      currentProfile = { ...currentProfile, name, color: selColor, avatar: selAvatar };
+      if (myPlayer) await sb.patch('players', { name, color: selColor, avatar: selAvatar, frame: selFrame || null }, { id: myPlayer.id });
+      currentProfile = { ...currentProfile, name, color: selColor, avatar: selAvatar, frame: selFrame || null };
       updateUserUI();
       toast('Profil mis à jour ✓');
     }
@@ -2500,6 +2567,8 @@ const buildPlayerCard = (p) => {
     ? `box-shadow:0 0 0 2px ${bg},0 0 18px ${bg}55`
     : '';
 
+  const _cf = cosmeticFrame(p);   // cadre cosmétique choisi (sinon cadre du rang)
+
   return `<div class="player-card pcard-resp" data-rank="${rk.key}"
     style="cursor:pointer;position:relative;overflow:hidden;background:#171a22;
            border-radius:14px;${glowStyle}"
@@ -2515,7 +2584,7 @@ const buildPlayerCard = (p) => {
     <div class="pcard-av-wrap"
          style="position:relative;width:150px;height:150px;margin:-38px auto 0;flex-shrink:0">
       ${(() => {
-        const h      = FRAME_HOLES[rk.key] || FRAME_HOLES[rk.baseKey||rk.key] || { top:32, left:32, size:86, top_m:18, left_m:18, size_m:44 };
+        const h      = _cf ? _cf.hole : (FRAME_HOLES[rk.key] || FRAME_HOLES[rk.baseKey||rk.key] || { top:32, left:32, size:86, top_m:18, left_m:18, size_m:44 });
         const avImg  = AVATARS.find(a => a.id === (p.avatar || 1));
         const bgStyle= RANK_AVATAR_BG[rk.baseKey||rk.key]
           ? 'background-image:url(' + RANK_AVATAR_BG[rk.baseKey||rk.key] + ');background-size:cover'
@@ -2531,14 +2600,14 @@ const buildPlayerCard = (p) => {
              + '<div class="pcard-av-hole-m" style="display:none;position:absolute;top:' + (hcyM - aDm / 2) + 'px;left:' + (hcxM - aDm / 2) + 'px;width:' + aDm + 'px;height:' + aDm + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>';
       })()}
       <!-- Frame desktop -->
-      ${(FRAME_BY_DIV[rk.key] || rd.player_frame)
-        ? `<img class="pcard-frame-desktop" src="${FRAME_BY_DIV[rk.key] || rd.player_frame}"
+      ${(_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rd.player_frame))
+        ? `<img class="pcard-frame-desktop" src="${_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rd.player_frame)}"
                style="position:absolute;top:${offD}px;left:${offD}px;width:${fSd}px;height:${fSd}px;
                       object-fit:contain;pointer-events:none;z-index:2">`
         : ''}
       <!-- Frame mobile (caché par défaut, affiché via CSS ≤700px) -->
-      ${(FRAME_BY_DIV[rk.key] || rm.player_frame)
-        ? `<img class="pcard-frame-mobile" src="${FRAME_BY_DIV[rk.key] || rm.player_frame}"
+      ${(_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rm.player_frame))
+        ? `<img class="pcard-frame-mobile" src="${_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rm.player_frame)}"
                style="display:none;position:absolute;top:${offM}px;left:${offM}px;width:${fSm}px;height:${fSm}px;
                       object-fit:contain;pointer-events:none;z-index:2">`
         : ''}
@@ -3946,6 +4015,7 @@ const ACHIEVEMENTS = [
   { id:'bois_30j',       icon:'🌳', name:'Le Gardien sylvestre',     desc:'Rester 30 jours sans quitter le Bois', check: (s) => (s.peakPoints || 0) < 50 && (s.daysSinceStart || 0) >= 30 },
   { id:'dune_win_10',    icon:'🪱', name:'Lisan al-Gaib',             desc:'Gagner 10 parties de Dune Imperium Insurrection', check: (s) => (s.duneWins || 0) >= 10 },
   { id:'dune_win_20',    icon:'🏜️', name:'Usul',                      desc:'Gagner 20 parties de Dune Imperium Insurrection', check: (s) => (s.duneWins || 0) >= 20 },
+  { id:'skullking_win_50', icon:'🏴‍☠️', name:'Le Roi des Abysses',     desc:'Gagner 50 parties de Skull King', check: (s) => (s.skullKingWins || 0) >= 50 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -3977,6 +4047,11 @@ const computeAchievementStats = (pid) => {
   const _duneId   = _duneGame ? _duneGame.id : 7;
   const duneWins   = won.filter((m) => m.game_id === _duneId).length;
   const dunePlayed = playerMatches.filter((m) => m.game_id === _duneId).length;
+
+  // Parties de Skull King (résolu par nom, repli id 35)
+  const _skGame = games.find((g) => g.name === 'Skull King');
+  const _skId   = _skGame ? _skGame.id : 35;
+  const skullKingWins = won.filter((m) => m.game_id === _skId).length;
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4080,6 +4155,7 @@ const computeAchievementStats = (pid) => {
     daysSinceStart,
     duneWins,
     dunePlayed,
+    skullKingWins,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4227,6 +4303,7 @@ const openPlayerProfile = (pid) => {
   const p   = players.find((x) => x.id === pid);
   if (!p) return;
   const rk  = displayRank(p);
+  const _cf = cosmeticFrame(p);   // cadre cosmétique choisi (sinon cadre du rang)
   const s   = playerStats(pid);
   const rate = s.played > 0 ? Math.round(s.won / s.played * 100) : 0;
   const bg  = p.color || '#4ade80';
@@ -4243,7 +4320,7 @@ const openPlayerProfile = (pid) => {
   const fb  = Math.round(fbBase * fScale);   // taille du cadre (agrandie)
   // L'avatar se cale sur le trou réel du cadre (FRAME_HOLES : position ET taille)
   // pour les rangs aux cadres refaits ; les autres gardent la taille historique.
-  const _h  = FRAME_HOLES[rk.key] || (['bois', 'bronze', 'argent', 'grandmaitre', 'challenger'].includes(_bk) ? FRAME_HOLES[_bk] : null);
+  const _h  = _cf ? _cf.hole : (FRAME_HOLES[rk.key] || (['bois', 'bronze', 'argent', 'grandmaitre', 'challenger'].includes(_bk) ? FRAME_HOLES[_bk] : null));
   const avShrink = _bk === 'challenger' ? 0.92 : 1;   // avatar Challenger réduit d'un poil
   const av  = _h ? Math.round(fbBase * (_h.size / 150) * avShrink) : (big ? 124 : 72);  // diamètre (taille NORMALE, non agrandie)
   const avX = _h ? Math.round(fb * ((_h.left + _h.size / 2) / 150)) : Math.round(fb / 2);
@@ -4266,7 +4343,7 @@ const openPlayerProfile = (pid) => {
             const bgS = RANK_AVATAR_BG[rk.baseKey||rk.key] ? 'background-image:url(' + RANK_AVATAR_BG[rk.baseKey||rk.key] + ');background-size:cover' : 'background:' + bg + '22';
             return '<div style="position:absolute;top:' + avY + 'px;left:' + avX + 'px;transform:translate(-50%,-50%);width:' + av + 'px;height:' + av + 'px;border-radius:50%;' + bgS + ';display:flex;align-items:center;justify-content:center;font-size:' + (big ? 34 : 22) + 'px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8);z-index:1">' + ini(p.name) + '</div>';
           })()}
-          ${(FRAME_BY_DIV[rk.key] || ra2.profile_frame) ? `<img src="${FRAME_BY_DIV[rk.key] || ra2.profile_frame}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${fb}px;height:${fb}px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
+          ${(_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || ra2.profile_frame)) ? `<img src="${_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || ra2.profile_frame)}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${fb}px;height:${fb}px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
         </div>
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px">
           <span style="font-size:${nf}px;font-weight:700;color:var(--text)">${esc(p.name)}</span>
