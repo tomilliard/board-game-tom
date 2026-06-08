@@ -1495,6 +1495,8 @@ const updateAdminUI = () => {
   updateAddBtn();
   const cpBtn = document.getElementById('admin-create-player-btn');
   if (cpBtn) cpBtn.style.display = isAdmin ? 'flex' : 'none';
+  const rcBtn = document.getElementById('recompress-btn');
+  if (rcBtn) rcBtn.style.display = isAdmin ? '' : 'none';
   if      (curPage === 'games')   renderGames();
   else if (curPage === 'players') renderPlayers();
   else if (curPage === 'history') renderHistory();
@@ -2294,6 +2296,69 @@ const uploadGameImage = async (input) => {
     toast('Image uploadée ✓');
   } catch (e) { toastErr('Erreur upload : ' + e.message); clearImage(); }
   if (prog) prog.style.display = 'none';
+};
+
+// Recompresse en un passage toutes les couvertures stockées sur Supabase :
+// télécharge → compresse (webp) → ré-upload (cache 1 an) → met à jour le jeu →
+// supprime l'ancien fichier. Réduit fortement le cached egress et le stockage.
+const recompressCovers = async () => {
+  if (!isAdmin) return;
+  const MARK = '/storage/v1/object/public/game-images/';
+  const targets = games.filter((g) => g.image_url && g.image_url.includes(MARK));
+  if (!targets.length) { toast('Aucune couverture Supabase à recompresser.'); return; }
+  if (!confirm(`Recompresser ${targets.length} couverture(s) ? Opération unique, peut prendre un moment.`)) return;
+
+  const btn = document.getElementById('recompress-btn');
+  const label = btn ? btn.textContent : '';
+  if (btn) btn.disabled = true;
+  let done = 0, fail = 0, skip = 0, saved = 0;
+  const progress = () => { if (btn) btn.textContent = `Recompression… ${done + fail + skip}/${targets.length}`; };
+
+  for (const g of targets) {
+    try {
+      const oldUrl = g.image_url;
+      const resp = await fetch(oldUrl, { cache: 'no-store' });
+      if (!resp.ok) throw new Error('download');
+      const orig = await resp.blob();
+      const blob = await compressImage(orig).catch(() => null);
+      if (!blob) throw new Error('compress');
+      if (blob.size >= orig.size) { skip++; progress(); continue; }  // déjà optimale
+
+      const base = (g.name || 'game').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      const filename = `${base}-${g.id}-${Date.now()}.webp`;
+      const up = await fetch(`${SB_URL}/storage/v1/object/game-images/${filename}`, {
+        method:  'POST',
+        headers: {
+          apikey:         SB_KEY,
+          Authorization:  `Bearer ${authToken || SB_KEY}`,
+          'Content-Type': 'image/webp',
+          'cache-control':'max-age=31536000',
+          'x-upsert':     'true',
+        },
+        body: blob,
+      });
+      if (!up.ok) throw new Error('upload');
+      const newUrl = `${SB_URL}${MARK}${filename}`;
+      await sb.patch('games', { image_url: newUrl }, { id: g.id });
+      g.image_url = newUrl;
+      // suppression best-effort de l'ancien fichier (libère du stockage)
+      try {
+        const oldPath = oldUrl.split(MARK)[1];
+        if (oldPath) await fetch(`${SB_URL}/storage/v1/object/game-images/${oldPath}`, {
+          method:  'DELETE',
+          headers: { apikey: SB_KEY, Authorization: `Bearer ${authToken || SB_KEY}` },
+        });
+      } catch {}
+      saved += (orig.size - blob.size);
+      done++;
+    } catch { fail++; }
+    progress();
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = label || '🗜️ Recompresser les couvertures'; }
+  const savedMB = (saved / 1048576).toFixed(1);
+  toast(`Terminé : ${done} recompressée(s)${skip ? `, ${skip} déjà optimale(s)` : ''}${fail ? `, ${fail} échec(s)` : ''} — ~${savedMB} Mo économisés.`);
+  if (curPage === 'games') renderGrid();
 };
 
 // ─── Reco modal ───────────────────────────────────────────────
