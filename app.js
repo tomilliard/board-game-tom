@@ -4092,6 +4092,12 @@ const ACHIEVEMENTS = [
   { id:'7w_play_15',     icon:'🏗️', name:'Architecte',               desc:'Jouer 15 parties de 7 Wonders',  check: (s) => (s.sevenWondersPlayed || 0) >= 15 },
   { id:'7w_win_25',      icon:'🏛️', name:'Les Sept Merveilles',      desc:'Gagner 25 parties de 7 Wonders', check: (s) => (s.sevenWondersWins || 0) >= 25 },
   { id:'foret_play_15',  icon:'🌲', name:'L\'Arbre-Monde',           desc:'Jouer 15 parties de Foret mixte', check: (s) => (s.foretMixtePlayed || 0) >= 15 },
+  { id:'iaww_win_15',    icon:'🪐', name:'Bâtisseur de mondes',      desc:'Gagner 15 parties d\'It\'s a Wonderful World', check: (s) => (s.iawwWins || 0) >= 15 },
+  { id:'akropolis_win_15',icon:'🏺', name:'Maître bâtisseur',        desc:'Gagner 15 parties d\'Akropolis',         check: (s) => (s.akropolisWins || 0) >= 15 },
+  { id:'brass_play_10',  icon:'⚙️', name:'Industriel',               desc:'Jouer 10 parties de Brass Birmingham',   check: (s) => (s.brassPlayed || 0) >= 10 },
+  { id:'brass_win_15',   icon:'🏭', name:'Magnat de l\'acier',       desc:'Gagner 15 parties de Brass Birmingham',  check: (s) => (s.brassWins || 0) >= 15 },
+  { id:'catan_play_15',  icon:'🏝️', name:'Colon de Catane',          desc:'Jouer 15 parties de Catan',              check: (s) => (s.catanPlayed || 0) >= 15 },
+  { id:'cyberpunk_play_10',icon:'🌃', name:'Légende de Night City',   desc:'Jouer 10 parties de Gangs of Night City',check: (s) => (s.cyberpunkPlayed || 0) >= 10 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4139,6 +4145,29 @@ const computeAchievementStats = (pid) => {
   const _fmGame = games.find((g) => g.name === 'foret mixte');
   const _fmId   = _fmGame ? _fmGame.id : 40;
   const foretMixtePlayed = playerMatches.filter((m) => m.game_id === _fmId).length;
+
+  // Résolution souple d'un jeu par nom (exact, sinon insensible casse/partiel).
+  // ⚠️ Ajuste les libellés ci-dessous s'ils diffèrent de ta table `games`.
+  const _resolveGame = (cands) => {
+    for (const n of cands) { const g = games.find((x) => x.name === n); if (g) return g.id; }
+    const low = cands.map((n) => n.toLowerCase());
+    const g2 = games.find((x) => x.name && low.some((n) => x.name.toLowerCase().includes(n)));
+    return g2 ? g2.id : null;
+  };
+  const _byGame = (id, list) => id == null ? 0 : list.filter((m) => m.game_id === id).length;
+
+  const _iawwId      = _resolveGame(["It's a Wonderful World", "It\u2019s a Wonderful World", "Its a Wonderful World", "wonderful world"]);
+  const _akropolisId = _resolveGame(["Akropolis", "Acropolis", "akropolis"]);
+  const _brassId     = _resolveGame(["Brass Birmingham", "Brass: Birmingham", "Brass"]);
+  const _catanId     = _resolveGame(["Catan", "Catane", "Les Colons de Catane", "Colons de Catane"]);
+  const _cyberpunkId = _resolveGame(["Cyberpunk Gangs of Night City", "Cyberpunk: Gangs of Night City", "Gangs of Night City", "night city"]);
+
+  const iawwWins        = _byGame(_iawwId, won);
+  const akropolisWins   = _byGame(_akropolisId, won);
+  const brassWins       = _byGame(_brassId, won);
+  const brassPlayed     = _byGame(_brassId, playerMatches);
+  const catanPlayed     = _byGame(_catanId, playerMatches);
+  const cyberpunkPlayed = _byGame(_cyberpunkId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4246,6 +4275,12 @@ const computeAchievementStats = (pid) => {
     sevenWondersWins,
     sevenWondersPlayed,
     foretMixtePlayed,
+    iawwWins,
+    akropolisWins,
+    brassWins,
+    brassPlayed,
+    catanPlayed,
+    cyberpunkPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4286,6 +4321,12 @@ const ACH_PROGRESS = {
   '7w_play_15':     [(s) => s.sevenWondersPlayed, 15],
   '7w_win_25':      [(s) => s.sevenWondersWins, 25],
   foret_play_15:    [(s) => s.foretMixtePlayed, 15],
+  iaww_win_15:      [(s) => s.iawwWins, 15],
+  akropolis_win_15: [(s) => s.akropolisWins, 15],
+  brass_play_10:    [(s) => s.brassPlayed, 10],
+  brass_win_15:     [(s) => s.brassWins, 15],
+  catan_play_15:    [(s) => s.catanPlayed, 15],
+  cyberpunk_play_10:[(s) => s.cyberpunkPlayed, 10],
   rank_challenger:  [(s) => s.maxPoints, 3000],
   games_10:         [(s) => s.played, 10],
   games_50:         [(s) => s.played, 50],

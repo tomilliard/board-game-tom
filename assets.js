@@ -160,7 +160,10 @@ const AVATARS = [
   { id: 22, label: 'Le Gardien sylvestre', src: 'assets/avatar22.webp', reqAch: 'bois_30j' },
   { id: 23, label: 'Sandworm King', src: 'assets/avatar23.webp', reqAch: 'dune_win_10' },
   { id: 24, label: 'The Spice Sovereign', src: 'assets/avatar24.webp', reqAch: 'dune_win_20' },
-  { id: 25, label: 'Le Roi des Abysses', src: 'assets/avatar25.webp', reqAch: 'skullking_win_50' }
+  { id: 25, label: 'Le Roi des Abysses', src: 'assets/avatar25.webp', reqAch: 'skullking_win_50' },
+  { id: 26, label: 'L\'Impératrice Stellaire',   src: 'assets/avatar26.webp', reqAch: 'iaww_win_15' },
+  { id: 27, label: 'L\'Architecte d\'Akropolis', src: 'assets/avatar27.webp', reqAch: 'akropolis_win_15' },
+  { id: 28, label: 'La Magnat de Birmingham',     src: 'assets/avatar28.webp', reqAch: 'brass_play_10' }
 ];
 
 // ─── Cadres cosmétiques déblocables par succès ───
@@ -172,7 +175,13 @@ const FRAMES = [
     reqAch: 'skullking_win_50' },
   { id: 3, label: 'Les Sept Merveilles', src: 'assets/7wonders_frame.png',
     hole: { top: 40, left: 38, size: 74, top_m: 21, left_m: 20, size_m: 39 },
-    reqAch: '7w_win_25' }
+    reqAch: '7w_win_25' },
+  { id: 4, label: 'Akropolis', src: 'assets/akropolis_frame.png',
+    hole: { top: 19, left: 19, size: 112, top_m: 10, left_m: 10, size_m: 60 },
+    reqAch: 'akropolis_win_15' },
+  { id: 5, label: 'Brass Birmingham', src: 'assets/brass_frame.png',
+    hole: { top: 20, left: 30, size: 89, top_m: 11, left_m: 16, size_m: 47 },
+    reqAch: 'brass_win_15' }
 ];
 
 // ─── Fonds de carte déblocables par succès ───
@@ -180,7 +189,10 @@ const FRAMES = [
 const BACKGROUNDS = [
   { id: 1, label: 'Shai-Hulud', src: 'assets/bg_dune.webp', reqAch: 'dune_win_20' },
   { id: 2, label: 'Cité des Merveilles', src: 'assets/bg_7wonders.webp', reqAch: '7w_play_15' },
-  { id: 3, label: 'L\'Arbre-Monde', src: 'assets/bg_foret.webp', reqAch: 'foret_play_15' }
+  { id: 3, label: 'L\'Arbre-Monde', src: 'assets/bg_foret.webp', reqAch: 'foret_play_15' },
+  { id: 4, label: 'Un Monde Merveilleux', src: 'assets/bg_iaww.webp', reqAch: 'iaww_win_15' },
+  { id: 5, label: 'Île de Catane', src: 'assets/bg_catan.webp', reqAch: 'catan_play_15' },
+  { id: 6, label: 'Night City', src: 'assets/bg_cyberpunk.webp', reqAch: 'cyberpunk_play_10' }
 ];
 
 // ─── Images décoratives ───
