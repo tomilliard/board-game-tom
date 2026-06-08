@@ -4219,6 +4219,13 @@ const ACHIEVEMENTS = [
   { id:'mytho_play_10',  icon:'🐲', name:'Initié des mythes',        desc:'Jouer 10 parties de Mythologies',        check: (s) => (s.mythologiesPlayed || 0) >= 10 },
   { id:'mytho_play_20',  icon:'🪷', name:'Gardien des panthéons',    desc:'Jouer 20 parties de Mythologies',        check: (s) => (s.mythologiesPlayed || 0) >= 20 },
   { id:'mytho_play_30',  icon:'☥', name:'Maître des mythologies',    desc:'Jouer 30 parties de Mythologies',        check: (s) => (s.mythologiesPlayed || 0) >= 30 },
+  { id:'zenith_play_10', icon:'🚀', name:'Cadet de Zenith',           desc:'Jouer 10 parties de Zenith',             check: (s) => (s.zenithPlayed || 0) >= 10 },
+  { id:'zenith_win_10',  icon:'🌍', name:'Pionnier de Terra',         desc:'Gagner 10 parties de Zenith',            check: (s) => (s.zenithWins || 0) >= 10 },
+  { id:'zenith_play_20', icon:'🤖', name:'Ingénieur de Zenith',       desc:'Jouer 20 parties de Zenith',             check: (s) => (s.zenithPlayed || 0) >= 20 },
+  { id:'zenith_win_20',  icon:'⚙️', name:'Androïde Prime',            desc:'Gagner 20 parties de Zenith',            check: (s) => (s.zenithWins || 0) >= 20 },
+  { id:'zenith_play_30', icon:'🦊', name:'Explorateur de Zenith',     desc:'Jouer 30 parties de Zenith',             check: (s) => (s.zenithPlayed || 0) >= 30 },
+  { id:'zenith_win_30',  icon:'🌌', name:'Légende de Zenith',         desc:'Gagner 30 parties de Zenith',            check: (s) => (s.zenithWins || 0) >= 30 },
+  { id:'zenith_play_50', icon:'🪐', name:'Citoyen de Zenith',         desc:'Jouer 50 parties de Zenith',             check: (s) => (s.zenithPlayed || 0) >= 50 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4286,6 +4293,7 @@ const computeAchievementStats = (pid) => {
   const _cardiaId    = _resolveGame(["Duel de Cardia", "Cardia", "Cardia Duel", "cardia"]);
   const _harmoniesId = _resolveGame(["Harmonies", "harmonies"]);
   const _mythoId     = _resolveGame(["Mythologies", "Mythology", "mythologies"]);
+  const _zenithId    = _resolveGame(["Zenith", "zenith"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4298,6 +4306,8 @@ const computeAchievementStats = (pid) => {
   const harmoniesPlayed = _byGame(_harmoniesId, playerMatches);
   const harmoniesWins   = _byGame(_harmoniesId, won);
   const mythologiesPlayed = _byGame(_mythoId, playerMatches);
+  const zenithPlayed    = _byGame(_zenithId, playerMatches);
+  const zenithWins      = _byGame(_zenithId, won);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4416,6 +4426,8 @@ const computeAchievementStats = (pid) => {
     harmoniesPlayed,
     harmoniesWins,
     mythologiesPlayed,
+    zenithPlayed,
+    zenithWins,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4472,6 +4484,13 @@ const ACH_PROGRESS = {
   mytho_play_10:    [(s) => s.mythologiesPlayed, 10],
   mytho_play_20:    [(s) => s.mythologiesPlayed, 20],
   mytho_play_30:    [(s) => s.mythologiesPlayed, 30],
+  zenith_play_10:   [(s) => s.zenithPlayed, 10],
+  zenith_win_10:    [(s) => s.zenithWins, 10],
+  zenith_play_20:   [(s) => s.zenithPlayed, 20],
+  zenith_win_20:    [(s) => s.zenithWins, 20],
+  zenith_play_30:   [(s) => s.zenithPlayed, 30],
+  zenith_win_30:    [(s) => s.zenithWins, 30],
+  zenith_play_50:   [(s) => s.zenithPlayed, 50],
   rank_challenger:  [(s) => s.maxPoints, 3000],
   games_10:         [(s) => s.played, 10],
   games_50:         [(s) => s.played, 50],

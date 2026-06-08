@@ -174,7 +174,13 @@ const AVATARS = [
   { id: 36, label: 'La Grue Légendaire',          src: 'assets/avatar36.webp', reqAch: 'harmonies_win_30' },
   { id: 37, label: 'Le Dragon de Jade',           src: 'assets/avatar37.webp', reqAch: 'mytho_play_10' },
   { id: 38, label: 'La Déesse au Lotus',          src: 'assets/avatar38.webp', reqAch: 'mytho_play_20' },
-  { id: 39, label: 'La Reine du Nil',             src: 'assets/avatar39.webp', reqAch: 'mytho_play_30' }
+  { id: 39, label: 'La Reine du Nil',             src: 'assets/avatar39.webp', reqAch: 'mytho_play_30' },
+  { id: 40, label: 'Humain Zenith',               src: 'assets/avatar40.webp', reqAch: 'zenith_play_10' },
+  { id: 41, label: 'Humain Zenith Prime',         src: 'assets/avatar41.webp', reqAch: 'zenith_win_10' },
+  { id: 42, label: 'Robot Zenith',                src: 'assets/avatar42.webp', reqAch: 'zenith_play_20' },
+  { id: 43, label: 'Robot Zenith Prime',          src: 'assets/avatar43.webp', reqAch: 'zenith_win_20' },
+  { id: 44, label: 'Animal Zenith',               src: 'assets/avatar44.webp', reqAch: 'zenith_play_30' },
+  { id: 45, label: 'Animal Zenith Prime',         src: 'assets/avatar45.webp', reqAch: 'zenith_win_30' }
 ];
 
 // ─── Cadres cosmétiques déblocables par succès ───
@@ -213,7 +219,8 @@ const BACKGROUNDS = [
   { id: 4, label: 'Un Monde Merveilleux', src: 'assets/bg_iaww.webp', reqAch: 'iaww_win_15' },
   { id: 5, label: 'Île de Catane', src: 'assets/bg_catan.webp', reqAch: 'catan_play_15' },
   { id: 6, label: 'Night City', src: 'assets/bg_cyberpunk.webp', reqAch: 'cyberpunk_play_10' },
-  { id: 7, label: 'Sanctuaire d\'Harmonies', src: 'assets/bg_harmonies.webp', reqAch: 'harmonies_play_15' }
+  { id: 7, label: 'Sanctuaire d\'Harmonies', src: 'assets/bg_harmonies.webp', reqAch: 'harmonies_play_15' },
+  { id: 8, label: 'Cité de Zenith', src: 'assets/bg_zenith.webp', reqAch: 'zenith_play_50' }
 ];
 
 // ─── Images décoratives ───
