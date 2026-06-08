@@ -163,7 +163,12 @@ const AVATARS = [
   { id: 25, label: 'Le Roi des Abysses', src: 'assets/avatar25.webp', reqAch: 'skullking_win_50' },
   { id: 26, label: 'L\'Impératrice Stellaire',   src: 'assets/avatar26.webp', reqAch: 'iaww_win_15' },
   { id: 27, label: 'L\'Architecte d\'Akropolis', src: 'assets/avatar27.webp', reqAch: 'akropolis_win_15' },
-  { id: 28, label: 'La Magnat de Birmingham',     src: 'assets/avatar28.webp', reqAch: 'brass_play_10' }
+  { id: 28, label: 'La Magnat de Birmingham',     src: 'assets/avatar28.webp', reqAch: 'brass_play_10' },
+  { id: 29, label: 'Le Roi de Divinus',           src: 'assets/avatar29.webp', reqAch: 'divinus_win_10' },
+  { id: 30, label: 'La Reine de Divinus',         src: 'assets/avatar30.webp', reqAch: 'divinus_win_10' },
+  { id: 31, label: 'Le Roi de Cardia',            src: 'assets/avatar31.webp', reqAch: 'cardia_win_75' },
+  { id: 32, label: 'Le Daimyo de Cardia',         src: 'assets/avatar32.webp', reqAch: 'cardia_win_50' },
+  { id: 33, label: 'Le Seigneur de Cardia',       src: 'assets/avatar33.webp', reqAch: 'cardia_win_25' }
 ];
 
 // ─── Cadres cosmétiques déblocables par succès ───

@@ -4098,6 +4098,10 @@ const ACHIEVEMENTS = [
   { id:'brass_win_15',   icon:'🏭', name:'Magnat de l\'acier',       desc:'Gagner 15 parties de Brass Birmingham',  check: (s) => (s.brassWins || 0) >= 15 },
   { id:'catan_play_15',  icon:'🏝️', name:'Colon de Catane',          desc:'Jouer 15 parties de Catan',              check: (s) => (s.catanPlayed || 0) >= 15 },
   { id:'cyberpunk_play_10',icon:'🌃', name:'Légende de Night City',   desc:'Jouer 10 parties de Gangs of Night City',check: (s) => (s.cyberpunkPlayed || 0) >= 10 },
+  { id:'divinus_win_10', icon:'🦉', name:'Élu des dieux',            desc:'Remporter 10 scénarios de Divinus',      check: (s) => (s.divinusWins || 0) >= 10 },
+  { id:'cardia_win_25',  icon:'🛡️', name:'Seigneur de Cardia',       desc:'Gagner 25 duels de Cardia',              check: (s) => (s.cardiaWins || 0) >= 25 },
+  { id:'cardia_win_50',  icon:'🐉', name:'Daimyo de Cardia',         desc:'Gagner 50 duels de Cardia',              check: (s) => (s.cardiaWins || 0) >= 50 },
+  { id:'cardia_win_75',  icon:'👑', name:'Roi de Cardia',            desc:'Gagner 75 duels de Cardia',              check: (s) => (s.cardiaWins || 0) >= 75 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4161,6 +4165,8 @@ const computeAchievementStats = (pid) => {
   const _brassId     = _resolveGame(["Brass Birmingham", "Brass: Birmingham", "Brass"]);
   const _catanId     = _resolveGame(["Catan", "Catane", "Les Colons de Catane", "Colons de Catane"]);
   const _cyberpunkId = _resolveGame(["Cyberpunk Gangs of Night City", "Cyberpunk: Gangs of Night City", "Gangs of Night City", "night city"]);
+  const _divinusId   = _resolveGame(["Divinus", "divinus"]);
+  const _cardiaId    = _resolveGame(["Duel de Cardia", "Cardia", "Cardia Duel", "cardia"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4168,6 +4174,8 @@ const computeAchievementStats = (pid) => {
   const brassPlayed     = _byGame(_brassId, playerMatches);
   const catanPlayed     = _byGame(_catanId, playerMatches);
   const cyberpunkPlayed = _byGame(_cyberpunkId, playerMatches);
+  const divinusWins     = _byGame(_divinusId, won);
+  const cardiaWins      = _byGame(_cardiaId, won);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4281,6 +4289,8 @@ const computeAchievementStats = (pid) => {
     brassPlayed,
     catanPlayed,
     cyberpunkPlayed,
+    divinusWins,
+    cardiaWins,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4327,6 +4337,10 @@ const ACH_PROGRESS = {
   brass_win_15:     [(s) => s.brassWins, 15],
   catan_play_15:    [(s) => s.catanPlayed, 15],
   cyberpunk_play_10:[(s) => s.cyberpunkPlayed, 10],
+  divinus_win_10:   [(s) => s.divinusWins, 10],
+  cardia_win_25:    [(s) => s.cardiaWins, 25],
+  cardia_win_50:    [(s) => s.cardiaWins, 50],
+  cardia_win_75:    [(s) => s.cardiaWins, 75],
   rank_challenger:  [(s) => s.maxPoints, 3000],
   games_10:         [(s) => s.played, 10],
   games_50:         [(s) => s.played, 50],
