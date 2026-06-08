@@ -798,6 +798,7 @@ async function loadAll() {
     if (uid && row.user_id === uid)
       ratingsCache[row.game_id].myScore = Number(row.score);
   });
+  syncAchievementUnlocks(false);   // notifie les nouveaux succès (si baseline déjà posée)
 }
 
 async function loadSocial() {
@@ -816,6 +817,7 @@ async function loadSocial() {
   challenges  = ch;
   events      = ev;
   updateNotifBadge();
+  syncAchievementUnlocks(false);   // succès sociaux (défis, avis, suggestions)
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -978,6 +980,7 @@ const doRegisterStep2 = async () => {
     saveSession(d.access_token, d.refresh_token, d.expires_in);
     hideAuthWall();
     await Promise.all([loadAll(), loadSocial()]);
+    syncAchievementUnlocks(true);   // pose la baseline (sans notifier)
     updateUserUI();
     renderGames();
     toast(`Bienvenue ${name} ! 🎉`);
@@ -1003,6 +1006,7 @@ const doLogin = async () => {
     currentProfile = pr?.length ? pr[0] : null;
     hideAuthWall();
     await Promise.all([loadAll(), loadSocial()]);
+    syncAchievementUnlocks(true);   // pose la baseline (sans notifier)
     updateUserUI();
     renderGames();
     toast(`Bon retour ${currentProfile?.name || ''} !`);
@@ -4256,6 +4260,111 @@ const computeAchievementStats = (pid) => {
   };
 };
 
+// ═══════════════════════════════════════════════════════════════
+// SUCCÈS — notifications de déblocage + progression
+// ═══════════════════════════════════════════════════════════════
+
+// Progression des succès chiffrés : [fonction(stats) → valeur courante, cible].
+// Les succès booléens (battre le meilleur, 5+ joueurs, 4 jeux/jour) n'ont pas de barre.
+const ACH_PROGRESS = {
+  first_win:        [(s) => s.won, 1],
+  wins_10:          [(s) => s.won, 10],
+  wins_50:          [(s) => s.won, 50],
+  wins_100:         [(s) => s.won, 100],
+  wins_500:         [(s) => s.won, 500],
+  streak_3:         [(s) => s.bestStreak, 3],
+  streak_5:         [(s) => s.bestStreak, 5],
+  streak_10:        [(s) => s.bestStreak, 10],
+  streak_20:        [(s) => s.bestStreak, 20],
+  rank_or:          [(s) => s.maxPoints, 350],
+  rank_diamant:     [(s) => s.maxPoints, 1200],
+  rank_diamant_1:   [(s) => Math.max(s.peakPoints || 0, s.maxPoints || 0), 1836],
+  bois_30j:         [(s) => s.daysSinceStart, 30],
+  dune_win_10:      [(s) => s.duneWins, 10],
+  dune_win_20:      [(s) => s.duneWins, 20],
+  skullking_win_50: [(s) => s.skullKingWins, 50],
+  '7w_play_15':     [(s) => s.sevenWondersPlayed, 15],
+  '7w_win_25':      [(s) => s.sevenWondersWins, 25],
+  foret_play_15:    [(s) => s.foretMixtePlayed, 15],
+  rank_challenger:  [(s) => s.maxPoints, 3000],
+  games_10:         [(s) => s.played, 10],
+  games_50:         [(s) => s.played, 50],
+  games_100:        [(s) => s.played, 100],
+  diff_games_10:    [(s) => s.diffGames, 10],
+  diff_games_20:    [(s) => s.diffGames, 20],
+  comments_5:       [(s) => s.commentCount, 5],
+  days_7:           [(s) => s.maxConsecDays, 7],
+  days_30:          [(s) => s.maxMonthDays, 30],
+  weekly_4:         [(s) => s.weekStreak, 4],
+};
+
+// Cosmétique éventuellement lié à un succès (pour enrichir la notif).
+const _cosmeticForAch = (achId) => {
+  if (typeof AVATARS     !== 'undefined' && AVATARS.some((a) => a.reqAch === achId))     return 'avatar';
+  if (typeof FRAMES      !== 'undefined' && FRAMES.some((f) => f.reqAch === achId))      return 'cadre';
+  if (typeof BACKGROUNDS !== 'undefined' && BACKGROUNDS.some((b) => b.reqAch === achId)) return 'fond de carte';
+  return null;
+};
+
+// Toast enrichi de déblocage d'un succès (empilable, auto-disparition).
+const announceAchievement = (a) => {
+  let wrap = document.getElementById('ach-toast-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'ach-toast-wrap';
+    document.body.appendChild(wrap);
+  }
+  const cos = _cosmeticForAch(a.id);
+  const el  = document.createElement('div');
+  el.className = 'ach-toast';
+  el.innerHTML =
+    `<div class="at-icon">${a.icon}</div>
+     <div class="at-body">
+       <div class="at-label">Succès débloqué</div>
+       <div class="at-name">${esc(a.name)}</div>
+       ${cos ? `<div class="at-cosmetic">🎁 Nouveau ${cos} à équiper</div>` : ''}
+     </div>`;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 350); }, 4200);
+};
+
+// Baseline locale des succès déjà vus, par joueur.
+const _achSeenKey = (pid) => `bgt_ach_seen_${pid}`;
+
+// Détecte les succès nouvellement débloqués et les notifie.
+//   allowSeed=true  → si aucune baseline, on enregistre l'état SANS notifier
+//                     (évite de spammer les succès déjà acquis). À appeler APRÈS
+//                     chargement complet (loadAll + loadSocial terminés).
+//   allowSeed=false → ne notifie que si une baseline existe déjà (hooks de chargement).
+const syncAchievementUnlocks = (allowSeed = false) => {
+  try {
+    if (!currentUser) return;
+    const mp = players.find((p) => p.user_id === currentUser.id);
+    if (!mp) return;
+    const stats    = computeAchievementStats(mp.id);
+    const unlocked = ACHIEVEMENTS.filter((a) => a.check(stats)).map((a) => a.id);
+    const key      = _achSeenKey(mp.id);
+
+    let seen = null;
+    try { seen = JSON.parse(localStorage.getItem(key) || 'null'); } catch { seen = null; }
+
+    if (!Array.isArray(seen)) {
+      if (allowSeed) { try { localStorage.setItem(key, JSON.stringify(unlocked)); } catch {} }
+      return; // pas de baseline fiable → on ne notifie pas
+    }
+
+    const fresh = unlocked.filter((id) => !seen.includes(id));
+    fresh.forEach((id, i) => {
+      const a = ACHIEVEMENTS.find((x) => x.id === id);
+      if (a) setTimeout(() => announceAchievement(a), i * 700);
+    });
+    // Baseline = union : un succès vu reste vu (même si la condition repasse sous le seuil).
+    const merged = Array.from(new Set([...seen, ...unlocked]));
+    try { localStorage.setItem(key, JSON.stringify(merged)); } catch {}
+  } catch { /* ne jamais casser le chargement */ }
+};
+
 // ─── Draw progression chart ──────────────────────────────────
 
 const drawProgressionChart = (pid, color) => {
@@ -4466,14 +4575,29 @@ const openPlayerProfile = (pid) => {
   document.getElementById('pp-ach-count').textContent =
     `${unlocked.length}/${total} débloqués`;
 
-  const buildAch = (a, isUnlocked) =>
-    `<div class="ach-card ${isUnlocked ? 'unlocked' : 'locked'}">
+  const buildAch = (a, isUnlocked) => {
+    let bar = '';
+    const pdef = ACH_PROGRESS[a.id];
+    if (!isUnlocked && pdef) {
+      const [fn, target] = pdef;
+      if (target > 1) {
+        const cur = Math.max(0, Math.min(Math.round(fn(achStats)), target));
+        const pct = Math.round((cur / target) * 100);
+        bar = `<div class="ach-prog">
+                 <div class="ach-prog-bar"><span style="width:${pct}%"></span></div>
+                 <div class="ach-prog-txt">${cur}/${target}</div>
+               </div>`;
+      }
+    }
+    return `<div class="ach-card ${isUnlocked ? 'unlocked' : 'locked'}">
        <div class="ach-icon">${a.icon}</div>
        <div class="ach-info">
          <div class="ach-name">${a.name}</div>
          <div class="ach-desc">${a.desc}</div>
+         ${bar}
        </div>
      </div>`;
+  };
 
   document.getElementById('pp-achievements').innerHTML =
     unlocked.map((a) => buildAch(a, true)).join('') +
@@ -4688,6 +4812,7 @@ const init = async () => {
   }
 
   await Promise.all([loadAll(), loadSocial()]);
+  syncAchievementUnlocks(true);   // pose la baseline au démarrage (sans notifier)
 
   if (games.length === 0) {
     showLoading('Importation de la collection…');

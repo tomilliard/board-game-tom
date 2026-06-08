@@ -444,7 +444,20 @@ select:focus{border-color:var(--accent);outline:none}
 /* ── ACHIEVEMENTS ── */
 .ach-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;display:flex;align-items:center;gap:8px;transition:border-color .2s}
 .ach-card.unlocked{border-color:var(--gold);background:var(--gold-light)}
-.ach-card.locked{opacity:.45;filter:grayscale(1)}
+.ach-card.locked{opacity:.62;filter:grayscale(.7)}
+.ach-prog{display:flex;align-items:center;gap:6px;margin-top:5px}
+.ach-prog-bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.ach-prog-bar span{display:block;height:100%;background:var(--gold);border-radius:3px;transition:width .4s ease}
+.ach-prog-txt{font-size:9px;color:var(--text-faint);font-variant-numeric:tabular-nums;flex-shrink:0;min-width:30px;text-align:right}
+/* Notifications de déblocage de succès (empilées, bas-centre) */
+#ach-toast-wrap{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1200;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none;width:max-content;max-width:92vw}
+.ach-toast{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:var(--radius);padding:12px 16px;box-shadow:0 12px 40px rgba(0,0,0,.45);min-width:240px;max-width:340px;opacity:0;transform:translateY(16px) scale(.96);transition:opacity .3s,transform .3s}
+.ach-toast.show{opacity:1;transform:translateY(0) scale(1)}
+.ach-toast .at-icon{font-size:30px;flex-shrink:0;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.3))}
+.ach-toast .at-body{min-width:0}
+.ach-toast .at-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:700}
+.ach-toast .at-name{font-size:14px;font-weight:600;color:var(--text);margin-top:1px}
+.ach-toast .at-cosmetic{font-size:11px;color:var(--text-muted);margin-top:3px}
 .ach-icon{font-size:20px;flex-shrink:0;width:28px;text-align:center}
 .ach-info{flex:1;min-width:0}
 .ach-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
