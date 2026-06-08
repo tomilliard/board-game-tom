@@ -4087,6 +4087,7 @@ const ACHIEVEMENTS = [
   { id:'skullking_win_50', icon:'🏴‍☠️', name:'Le Roi des Abysses',     desc:'Gagner 50 parties de Skull King', check: (s) => (s.skullKingWins || 0) >= 50 },
   { id:'7w_play_15',     icon:'🏗️', name:'Architecte',               desc:'Jouer 15 parties de 7 Wonders',  check: (s) => (s.sevenWondersPlayed || 0) >= 15 },
   { id:'7w_win_25',      icon:'🏛️', name:'Les Sept Merveilles',      desc:'Gagner 25 parties de 7 Wonders', check: (s) => (s.sevenWondersWins || 0) >= 25 },
+  { id:'foret_play_15',  icon:'🌲', name:'L\'Arbre-Monde',           desc:'Jouer 15 parties de Foret mixte', check: (s) => (s.foretMixtePlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4129,6 +4130,11 @@ const computeAchievementStats = (pid) => {
   const _7wId   = _7wGame ? _7wGame.id : 4;
   const sevenWondersWins   = won.filter((m) => m.game_id === _7wId).length;
   const sevenWondersPlayed = playerMatches.filter((m) => m.game_id === _7wId).length;
+
+  // Parties de Foret mixte (résolu par nom, repli id 40)
+  const _fmGame = games.find((g) => g.name === 'foret mixte');
+  const _fmId   = _fmGame ? _fmGame.id : 40;
+  const foretMixtePlayed = playerMatches.filter((m) => m.game_id === _fmId).length;
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4235,6 +4241,7 @@ const computeAchievementStats = (pid) => {
     skullKingWins,
     sevenWondersWins,
     sevenWondersPlayed,
+    foretMixtePlayed,
     diffGames,
     sentChallenges,
     wonChallenges,

@@ -179,7 +179,8 @@ const FRAMES = [
 // cardbg = null/0 sur le joueur → fond uni par défaut.
 const BACKGROUNDS = [
   { id: 1, label: 'Shai-Hulud', src: 'assets/bg_dune.webp', reqAch: 'dune_win_20' },
-  { id: 2, label: 'Cité des Merveilles', src: 'assets/bg_7wonders.webp', reqAch: '7w_play_15' }
+  { id: 2, label: 'Cité des Merveilles', src: 'assets/bg_7wonders.webp', reqAch: '7w_play_15' },
+  { id: 3, label: 'L\'Arbre-Monde', src: 'assets/bg_foret.webp', reqAch: 'foret_play_15' }
 ];
 
 // ─── Images décoratives ───
