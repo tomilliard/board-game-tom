@@ -1958,13 +1958,8 @@ const renderGrid = () => {
 
   document.getElementById('grid').innerHTML = list.map(buildGameCard).join('');
 
-  // Trigger BGG image fetch for visible cards
-  setTimeout(() => {
-    list.forEach((g) => {
-      const card = document.getElementById(`gc-${g.id}`);
-      if (card) applyGameImage(card, g);
-    });
-  }, 100);
+  // Ne charge les couvertures QUE lorsqu'elles approchent de l'écran (lazy-load).
+  setTimeout(() => lazyApplyGameImages(list), 100);
 };
 
 ['search', 'fp', 'fd', 'fsort'].forEach((id) => {
@@ -2015,6 +2010,31 @@ const applyGameImage = (cardEl, game) => {
   if (game.image_url) { bg.style.backgroundImage = `url(${game.image_url})`; return; }
   fetchBGGImage(game.name).then((url) => {
     if (url) bg.style.backgroundImage = `url(${url})`;
+  });
+};
+
+// Charge les images de couverture à la demande : seules les cartes proches de
+// l'écran déclenchent le téléchargement → réduit fortement l'egress (cached).
+let _gameImgObserver = null;
+const lazyApplyGameImages = (list) => {
+  if (_gameImgObserver) _gameImgObserver.disconnect();
+  const byId = {};
+  list.forEach((g) => { byId[g.id] = g; });
+  if (!('IntersectionObserver' in window)) {   // repli navigateurs anciens
+    list.forEach((g) => { const c = document.getElementById(`gc-${g.id}`); if (c) applyGameImage(c, g); });
+    return;
+  }
+  _gameImgObserver = new IntersectionObserver((entries, obs) => {
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      const g = byId[e.target.dataset.gid];
+      if (g) applyGameImage(e.target, g);
+      obs.unobserve(e.target);
+    });
+  }, { rootMargin: '300px' });   // précharge 300px avant l'entrée à l'écran
+  list.forEach((g) => {
+    const card = document.getElementById(`gc-${g.id}`);
+    if (card) { card.dataset.gid = g.id; _gameImgObserver.observe(card); }
   });
 };
 
@@ -2218,6 +2238,28 @@ document.addEventListener('input', (e) => {
   if (e.target.id === 'fg-image') setImagePreview(e.target.value.trim());
 });
 
+// Compresse/redimensionne une image côté client avant upload (réduit fortement
+// le poids → moins de stockage ET moins d'egress à chaque affichage).
+const compressImage = (file, maxDim = 800, quality = 0.82) =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (Math.max(w, h) > maxDim) {
+        const s = maxDim / Math.max(w, h);
+        w = Math.round(w * s); h = Math.round(h * s);
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      c.toBlob((b) => b ? resolve(b) : reject(new Error('compression échouée')), 'image/webp', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image illisible')); };
+    img.src = url;
+  });
+
 const uploadGameImage = async (input) => {
   const file = input.files[0];
   if (!file) return;
@@ -2227,7 +2269,10 @@ const uploadGameImage = async (input) => {
   if (prog) prog.style.display = 'block';
   setImagePreview(URL.createObjectURL(file));
   try {
-    const ext      = file.name.split('.').pop().toLowerCase();
+    // Compression webp (repli sur l'original si le navigateur échoue).
+    const blob     = await compressImage(file).catch(() => file);
+    const isWebp   = blob.type === 'image/webp';
+    const ext      = isWebp ? 'webp' : (file.name.split('.').pop().toLowerCase() || 'jpg');
     const base     = (document.getElementById('fg-name').value.trim() || 'game')
       .replace(/[^a-z0-9]/gi, '-').toLowerCase();
     const filename = `${base}-${Date.now()}.${ext}`;
@@ -2236,10 +2281,11 @@ const uploadGameImage = async (input) => {
       headers: {
         apikey:         SB_KEY,
         Authorization:  `Bearer ${authToken || SB_KEY}`,
-        'Content-Type': file.type,
+        'Content-Type': blob.type || file.type,
+        'cache-control':'max-age=31536000',   // cache 1 an → bien moins de re-téléchargements (egress)
         'x-upsert':     'true',
       },
-      body: file,
+      body: blob,
     });
     if (!res.ok) throw new Error(await res.text());
     const publicUrl = `${SB_URL}/storage/v1/object/public/game-images/${filename}`;
