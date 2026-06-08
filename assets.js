@@ -171,7 +171,10 @@ const AVATARS = [
   { id: 33, label: 'Le Seigneur de Cardia',       src: 'assets/avatar33.webp', reqAch: 'cardia_win_25' },
   { id: 34, label: 'Le Lapin Jardinier',          src: 'assets/avatar34.webp', reqAch: 'harmonies_play_15' },
   { id: 35, label: 'Le Cerf des Saisons',         src: 'assets/avatar35.webp', reqAch: 'harmonies_win_15' },
-  { id: 36, label: 'La Grue Légendaire',          src: 'assets/avatar36.webp', reqAch: 'harmonies_win_30' }
+  { id: 36, label: 'La Grue Légendaire',          src: 'assets/avatar36.webp', reqAch: 'harmonies_win_30' },
+  { id: 37, label: 'Le Dragon de Jade',           src: 'assets/avatar37.webp', reqAch: 'mytho_play_10' },
+  { id: 38, label: 'La Déesse au Lotus',          src: 'assets/avatar38.webp', reqAch: 'mytho_play_20' },
+  { id: 39, label: 'La Reine du Nil',             src: 'assets/avatar39.webp', reqAch: 'mytho_play_30' }
 ];
 
 // ─── Cadres cosmétiques déblocables par succès ───
@@ -189,7 +192,16 @@ const FRAMES = [
     reqAch: 'akropolis_win_15' },
   { id: 5, label: 'Brass Birmingham', src: 'assets/brass_frame.png',
     hole: { top: 20, left: 30, size: 89, top_m: 11, left_m: 16, size_m: 47 },
-    reqAch: 'brass_win_15' }
+    reqAch: 'brass_win_15' },
+  { id: 6, label: 'Panthéon Grec', src: 'assets/mytho_grec_frame.png',
+    hole: { top: 34, left: 33, size: 84, top_m: 18, left_m: 18, size_m: 45 },
+    reqAch: 'mytho_play_10' },
+  { id: 7, label: 'Panthéon Nordique', src: 'assets/mytho_nordique_frame.png',
+    hole: { top: 23, left: 31, size: 87, top_m: 12, left_m: 17, size_m: 46 },
+    reqAch: 'mytho_play_20' },
+  { id: 8, label: 'Panthéon Aztèque', src: 'assets/mytho_azteque_frame.png',
+    hole: { top: 27, left: 32, size: 85, top_m: 15, left_m: 17, size_m: 46 },
+    reqAch: 'mytho_play_30' }
 ];
 
 // ─── Fonds de carte déblocables par succès ───

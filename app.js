@@ -4105,6 +4105,9 @@ const ACHIEVEMENTS = [
   { id:'harmonies_play_15',icon:'🌿', name:'Jardinier d\'Harmonies',  desc:'Jouer 15 parties d\'Harmonies',          check: (s) => (s.harmoniesPlayed || 0) >= 15 },
   { id:'harmonies_win_15',icon:'🦌', name:'Esprit des saisons',      desc:'Gagner 15 parties d\'Harmonies',         check: (s) => (s.harmoniesWins || 0) >= 15 },
   { id:'harmonies_win_30',icon:'🕊️', name:'Grue Légendaire',         desc:'Gagner 30 parties d\'Harmonies',         check: (s) => (s.harmoniesWins || 0) >= 30 },
+  { id:'mytho_play_10',  icon:'🐲', name:'Initié des mythes',        desc:'Jouer 10 parties de Mythologies',        check: (s) => (s.mythologiesPlayed || 0) >= 10 },
+  { id:'mytho_play_20',  icon:'🪷', name:'Gardien des panthéons',    desc:'Jouer 20 parties de Mythologies',        check: (s) => (s.mythologiesPlayed || 0) >= 20 },
+  { id:'mytho_play_30',  icon:'☥', name:'Maître des mythologies',    desc:'Jouer 30 parties de Mythologies',        check: (s) => (s.mythologiesPlayed || 0) >= 30 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4171,6 +4174,7 @@ const computeAchievementStats = (pid) => {
   const _divinusId   = _resolveGame(["Divinus", "divinus"]);
   const _cardiaId    = _resolveGame(["Duel de Cardia", "Cardia", "Cardia Duel", "cardia"]);
   const _harmoniesId = _resolveGame(["Harmonies", "harmonies"]);
+  const _mythoId     = _resolveGame(["Mythologies", "Mythology", "mythologies"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4182,6 +4186,7 @@ const computeAchievementStats = (pid) => {
   const cardiaWins      = _byGame(_cardiaId, won);
   const harmoniesPlayed = _byGame(_harmoniesId, playerMatches);
   const harmoniesWins   = _byGame(_harmoniesId, won);
+  const mythologiesPlayed = _byGame(_mythoId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4299,6 +4304,7 @@ const computeAchievementStats = (pid) => {
     cardiaWins,
     harmoniesPlayed,
     harmoniesWins,
+    mythologiesPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4352,6 +4358,9 @@ const ACH_PROGRESS = {
   harmonies_play_15:[(s) => s.harmoniesPlayed, 15],
   harmonies_win_15: [(s) => s.harmoniesWins, 15],
   harmonies_win_30: [(s) => s.harmoniesWins, 30],
+  mytho_play_10:    [(s) => s.mythologiesPlayed, 10],
+  mytho_play_20:    [(s) => s.mythologiesPlayed, 20],
+  mytho_play_30:    [(s) => s.mythologiesPlayed, 30],
   rank_challenger:  [(s) => s.maxPoints, 3000],
   games_10:         [(s) => s.played, 10],
   games_50:         [(s) => s.played, 50],
