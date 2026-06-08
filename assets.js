@@ -180,7 +180,10 @@ const AVATARS = [
   { id: 42, label: 'Robot Zenith',                src: 'assets/avatar42.webp', reqAch: 'zenith_play_20' },
   { id: 43, label: 'Robot Zenith Prime',          src: 'assets/avatar43.webp', reqAch: 'zenith_win_20' },
   { id: 44, label: 'Animal Zenith',               src: 'assets/avatar44.webp', reqAch: 'zenith_play_30' },
-  { id: 45, label: 'Animal Zenith Prime',         src: 'assets/avatar45.webp', reqAch: 'zenith_win_30' }
+  { id: 45, label: 'Animal Zenith Prime',         src: 'assets/avatar45.webp', reqAch: 'zenith_win_30' },
+  { id: 46, label: 'Canard Toy Battle',           src: 'assets/avatar46.webp', reqAch: 'toybattle_play_15' },
+  { id: 47, label: 'Canard Toy Battle Prime',     src: 'assets/avatar47.webp', reqAch: 'toybattle_win_15' },
+  { id: 48, label: 'Chevalier Toy Battle Prime',  src: 'assets/avatar48.webp', reqAch: 'toybattle_win_50' }
 ];
 
 // ─── Cadres cosmétiques déblocables par succès ───
@@ -207,7 +210,13 @@ const FRAMES = [
     reqAch: 'mytho_play_20' },
   { id: 8, label: 'Panthéon Aztèque', src: 'assets/mytho_azteque_frame.png',
     hole: { top: 27, left: 32, size: 85, top_m: 15, left_m: 17, size_m: 46 },
-    reqAch: 'mytho_play_30' }
+    reqAch: 'mytho_play_30' },
+  { id: 9, label: 'Citadelle Toy Battle', src: 'assets/toybattle_player_frame.png',
+    hole: { top: 18, left: 20, size: 109, top_m: 10, left_m: 11, size_m: 58 },
+    reqAch: 'toybattle_play_30' },
+  { id: 10, label: 'Couronne Toy Battle', src: 'assets/toybattle_crown_frame.png',
+    hole: { top: 27, left: 26, size: 98, top_m: 14, left_m: 14, size_m: 52 },
+    reqAch: 'toybattle_win_50' }
 ];
 
 // ─── Fonds de carte déblocables par succès ───
@@ -220,7 +229,8 @@ const BACKGROUNDS = [
   { id: 5, label: 'Île de Catane', src: 'assets/bg_catan.webp', reqAch: 'catan_play_15' },
   { id: 6, label: 'Night City', src: 'assets/bg_cyberpunk.webp', reqAch: 'cyberpunk_play_10' },
   { id: 7, label: 'Sanctuaire d\'Harmonies', src: 'assets/bg_harmonies.webp', reqAch: 'harmonies_play_15' },
-  { id: 8, label: 'Cité de Zenith', src: 'assets/bg_zenith.webp', reqAch: 'zenith_play_50' }
+  { id: 8, label: 'Cité de Zenith', src: 'assets/bg_zenith.webp', reqAch: 'zenith_play_50' },
+  { id: 9, label: 'Champ de bataille Toy Battle', src: 'assets/bg_toybattle.webp', reqAch: 'toybattle_win_15' }
 ];
 
 // ─── Images décoratives ───

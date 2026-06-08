@@ -4226,6 +4226,10 @@ const ACHIEVEMENTS = [
   { id:'zenith_play_30', icon:'🦊', name:'Explorateur de Zenith',     desc:'Jouer 30 parties de Zenith',             check: (s) => (s.zenithPlayed || 0) >= 30 },
   { id:'zenith_win_30',  icon:'🌌', name:'Légende de Zenith',         desc:'Gagner 30 parties de Zenith',            check: (s) => (s.zenithWins || 0) >= 30 },
   { id:'zenith_play_50', icon:'🪐', name:'Citoyen de Zenith',         desc:'Jouer 50 parties de Zenith',             check: (s) => (s.zenithPlayed || 0) >= 50 },
+  { id:'toybattle_play_15',icon:'🦆', name:'Recrue de Toy Battle',    desc:'Jouer 15 parties de Toy Battle',         check: (s) => (s.toyBattlePlayed || 0) >= 15 },
+  { id:'toybattle_win_15',icon:'👑', name:'Canard Royal',             desc:'Gagner 15 parties de Toy Battle',        check: (s) => (s.toyBattleWins || 0) >= 15 },
+  { id:'toybattle_play_30',icon:'🏰', name:'Bâtisseur de citadelle',  desc:'Jouer 30 parties de Toy Battle',         check: (s) => (s.toyBattlePlayed || 0) >= 30 },
+  { id:'toybattle_win_50',icon:'⚔️', name:'Champion de Toy Battle',   desc:'Gagner 50 parties de Toy Battle',        check: (s) => (s.toyBattleWins || 0) >= 50 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4294,6 +4298,7 @@ const computeAchievementStats = (pid) => {
   const _harmoniesId = _resolveGame(["Harmonies", "harmonies"]);
   const _mythoId     = _resolveGame(["Mythologies", "Mythology", "mythologies"]);
   const _zenithId    = _resolveGame(["Zenith", "zenith"]);
+  const _toyBattleId = _resolveGame(["Toy Battle", "ToyBattle", "toy battle"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4308,6 +4313,8 @@ const computeAchievementStats = (pid) => {
   const mythologiesPlayed = _byGame(_mythoId, playerMatches);
   const zenithPlayed    = _byGame(_zenithId, playerMatches);
   const zenithWins      = _byGame(_zenithId, won);
+  const toyBattlePlayed = _byGame(_toyBattleId, playerMatches);
+  const toyBattleWins   = _byGame(_toyBattleId, won);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4428,6 +4435,8 @@ const computeAchievementStats = (pid) => {
     mythologiesPlayed,
     zenithPlayed,
     zenithWins,
+    toyBattlePlayed,
+    toyBattleWins,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4491,6 +4500,10 @@ const ACH_PROGRESS = {
   zenith_play_30:   [(s) => s.zenithPlayed, 30],
   zenith_win_30:    [(s) => s.zenithWins, 30],
   zenith_play_50:   [(s) => s.zenithPlayed, 50],
+  toybattle_play_15:[(s) => s.toyBattlePlayed, 15],
+  toybattle_win_15: [(s) => s.toyBattleWins, 15],
+  toybattle_play_30:[(s) => s.toyBattlePlayed, 30],
+  toybattle_win_50: [(s) => s.toyBattleWins, 50],
   rank_challenger:  [(s) => s.maxPoints, 3000],
   games_10:         [(s) => s.played, 10],
   games_50:         [(s) => s.played, 50],
