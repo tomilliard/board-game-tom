@@ -168,7 +168,10 @@ const AVATARS = [
   { id: 30, label: 'La Reine de Divinus',         src: 'assets/avatar30.webp', reqAch: 'divinus_win_10' },
   { id: 31, label: 'Le Roi de Cardia',            src: 'assets/avatar31.webp', reqAch: 'cardia_win_75' },
   { id: 32, label: 'Le Daimyo de Cardia',         src: 'assets/avatar32.webp', reqAch: 'cardia_win_50' },
-  { id: 33, label: 'Le Seigneur de Cardia',       src: 'assets/avatar33.webp', reqAch: 'cardia_win_25' }
+  { id: 33, label: 'Le Seigneur de Cardia',       src: 'assets/avatar33.webp', reqAch: 'cardia_win_25' },
+  { id: 34, label: 'Le Lapin Jardinier',          src: 'assets/avatar34.webp', reqAch: 'harmonies_play_15' },
+  { id: 35, label: 'Le Cerf des Saisons',         src: 'assets/avatar35.webp', reqAch: 'harmonies_win_15' },
+  { id: 36, label: 'La Grue Légendaire',          src: 'assets/avatar36.webp', reqAch: 'harmonies_win_30' }
 ];
 
 // ─── Cadres cosmétiques déblocables par succès ───
@@ -197,7 +200,8 @@ const BACKGROUNDS = [
   { id: 3, label: 'L\'Arbre-Monde', src: 'assets/bg_foret.webp', reqAch: 'foret_play_15' },
   { id: 4, label: 'Un Monde Merveilleux', src: 'assets/bg_iaww.webp', reqAch: 'iaww_win_15' },
   { id: 5, label: 'Île de Catane', src: 'assets/bg_catan.webp', reqAch: 'catan_play_15' },
-  { id: 6, label: 'Night City', src: 'assets/bg_cyberpunk.webp', reqAch: 'cyberpunk_play_10' }
+  { id: 6, label: 'Night City', src: 'assets/bg_cyberpunk.webp', reqAch: 'cyberpunk_play_10' },
+  { id: 7, label: 'Sanctuaire d\'Harmonies', src: 'assets/bg_harmonies.webp', reqAch: 'harmonies_play_15' }
 ];
 
 // ─── Images décoratives ───
