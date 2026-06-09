@@ -3191,7 +3191,7 @@ const buildPendingCard = (m) => {
          ${iRecorded ? `<button onclick="rejectMatch(${m.id})" style="padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-muted);font-family:inherit;font-size:12px;cursor:pointer">Annuler</button>` : ''}
        </div>`;
 
-  return `<div class="hist-card" style="border:1px solid var(--gold)">
+  return `<div class="hist-card" id="pending-${m.id}" style="border:1px solid var(--gold)">
     <div class="hist-hdr"><div>
       <div class="hist-game">${g ? esc(g.name) : 'Jeu inconnu'}</div>
       <div class="hist-date">${m.date ? fmtDate(m.date) : ''} · par ${recorder ? esc(recorder.name) : '?'}</div>
@@ -3407,7 +3407,7 @@ const notifyValidators = async (otherPids, matchId, token, gid) => {
       `${recorder?.name || 'Un joueur'} vient d'enregistrer une partie de "${game?.name || '?'}" ` +
       `à laquelle tu as participé.\nPour que les points et l'Elo soient comptés, elle doit être ` +
       `validée par un autre joueur de la partie.\n\n` +
-      `✅ Valider en un clic :\n${link}\n\n` +
+      `✅ Valide-la ici :\n${link}\n\n` +
       `Ou connecte-toi sur le site : la partie t'attend dans « À valider ».\n${SITE_URL}`;
     sendBrevoEmail(email, pl?.name || '', subject, body).catch(() => {});
   }
@@ -3454,26 +3454,36 @@ const rejectMatch = async (id) => {
   hideLoading();
 };
 
-// Validation via lien email (?validate=<id>&token=<tok>) au chargement.
+// Lien email (?validate=<id>&token=<tok>) : on amène le joueur à la partie
+// en attente pour qu'il la valide LUI-MÊME — aucune validation automatique.
 const handleValidationLink = async () => {
   const params = new URLSearchParams(window.location.search);
   const id     = parseInt(params.get('validate'));
   const token  = params.get('token');
   if (!id || !token) return;
   history.replaceState({}, '', window.location.pathname);   // évite de rejouer au refresh
+  if (!currentUser) {
+    toast('Connecte-toi : la partie t\'attend dans « À valider ».');
+    return;
+  }
+  focusPendingMatch(id);
+};
+
+// Va sur la page Parties et met en avant la partie en attente (sans la valider).
+const focusPendingMatch = (id) => {
   const m = pendingMatches.find((x) => x.id === id);
   if (!m) { toast('Cette partie est déjà validée ou introuvable.'); return; }
-  if (m.validation_token !== token) { toast('Lien de validation invalide.'); return; }
-  showLoading('Validation…');
-  try {
-    await sb.patch('matches', { status: 'confirmed', confirmed_at: new Date().toISOString() }, { id });
-    const pids = (m.players || []).map((pp) => pp.id);
-    await awardPoints(id, m.winners || [], pids, !!m.is_challenge, m.game_id, m.scores || {});
-    await loadAll();
-    renderHistory();
-    toast('Partie validée — merci ! ✨');
-  } catch (e) { toastErr(e.message); }
-  hideLoading();
+  showPage('history');
+  setTimeout(() => {
+    const card = document.getElementById(`pending-${id}`);
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.transition = 'box-shadow .3s';
+      card.style.boxShadow  = '0 0 0 3px var(--gold)';
+      setTimeout(() => { card.style.boxShadow = ''; }, 2500);
+    }
+    toast('Vérifie la partie puis clique sur « Valider » ✅');
+  }, 200);
 };
 
 const delMatch = async (id) => {
