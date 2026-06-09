@@ -1523,7 +1523,7 @@ const showPage = (page, el) => {
   if      (page === 'games')   renderGames();
   else if (page === 'players') renderPlayers();
   else if (page === 'history') renderHistory();
-  else if (page === 'social')  loadSocial().then(() => renderCurrentSocialTab());
+  else if (page === 'social')  loadSocial().then(() => { renderCurrentSocialTab(); loadChat(); });
   else if (page === 'events')  loadSocial().then(renderEvents);
 };
 
@@ -3554,7 +3554,7 @@ const setSocialTab = (tab, el) => {
   socialTab = tab;
   document.querySelectorAll('#page-social .tab').forEach((t) => t.classList.remove('active'));
   el.classList.add('active');
-  ['suggestions', 'challenges', 'h2h', 'newsletter', 'chat'].forEach((t) => {
+  ['suggestions', 'challenges', 'h2h', 'newsletter'].forEach((t) => {
     const div = document.getElementById(`social-${t}`);
     if (div) div.style.display = t === tab ? 'block' : 'none';
   });
@@ -3577,7 +3577,6 @@ const renderCurrentSocialTab = () => {
   else if (socialTab === 'challenges')  renderChallenges();
   else if (socialTab === 'h2h')         renderH2HSelects();
   else if (socialTab === 'newsletter')  renderNewsletter();
-  else if (socialTab === 'chat')        { if (!chatLoaded) loadChat(); else renderChat(true); }
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -3594,7 +3593,7 @@ const loadChat = async () => {
     chatError = true;
     console.error('Chat indisponible :', e.message);
   }
-  if (curPage === 'social' && socialTab === 'chat') renderChat(true);
+  if (curPage === 'social') renderChat(true);
 };
 
 const renderChat = (toBottom) => {
@@ -3658,7 +3657,7 @@ const appendChatMessage = (rec) => {
   if (chatMessages.some((x) => x.id === rec.id)) return;
   chatMessages.push(rec);
   if (chatMessages.length > 120) chatMessages = chatMessages.slice(-120);
-  if (curPage === 'social' && socialTab === 'chat') renderChat(true);
+  if (curPage === 'social') renderChat(true);
 };
 
 const handleSocialAdd = () => {

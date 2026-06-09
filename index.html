@@ -376,13 +376,14 @@
 
   <!-- SOCIAL -->
   <div class="page" id="page-social">
+    <div class="social-layout">
+    <div class="social-main">
     <div style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;
                 align-items:center;justify-content:space-between">
       <div class="tabs" style="margin-bottom:0">
         <button class="tab active" onclick="setSocialTab('suggestions',this)">💡 Suggestions</button>
         <button class="tab" onclick="setSocialTab('challenges',this)">⚔️ Défis</button>
         <button class="tab" onclick="setSocialTab('h2h',this)">📊 Head-to-Head</button>
-        <button class="tab" onclick="setSocialTab('chat',this)">💬 Chat</button>
         <button class="tab" id="tab-newsletter" style="display:none"
                 onclick="setSocialTab('newsletter',this)">📧 Newsletter</button>
       </div>
@@ -414,20 +415,6 @@
       </div>
       <div id="h2h-result"></div>
     </div>
-    <div id="social-chat" style="display:none">
-      <div class="chat-wrap">
-        <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-input-row" id="chat-input-row" style="display:none">
-          <input class="finput" type="text" id="chat-input" maxlength="1000" autocomplete="off"
-                 placeholder="Écris un message…"
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();sendChatMessage();}">
-          <button class="btn-save-m" onclick="sendChatMessage()">Envoyer</button>
-        </div>
-        <div class="chat-locked" id="chat-locked" style="display:none">
-          Connecte-toi pour participer au chat.
-        </div>
-      </div>
-    </div>
     <div id="social-newsletter" style="display:none">
       <div class="newsletter-form">
         <h2 class="section-title" style="margin-bottom:1rem">Envoyer une newsletter</h2>
@@ -455,6 +442,25 @@
         <div id="subscribers-grid"></div>
       </div>
     </div>
+    </div><!-- /social-main -->
+    <aside class="social-chat-side">
+      <h2 class="section-title" style="margin-bottom:.75rem">💬 Chat</h2>
+      <div id="social-chat">
+        <div class="chat-wrap">
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-row" id="chat-input-row" style="display:none">
+            <input class="finput" type="text" id="chat-input" maxlength="1000" autocomplete="off"
+                   placeholder="Écris un message…"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();sendChatMessage();}">
+            <button class="btn-save-m" onclick="sendChatMessage()">Envoyer</button>
+          </div>
+          <div class="chat-locked" id="chat-locked" style="display:none">
+            Connecte-toi pour participer au chat.
+          </div>
+        </div>
+      </div>
+    </aside>
+    </div><!-- /social-layout -->
   </div>
 
   <!-- ÉVÉNEMENTS -->

@@ -551,3 +551,11 @@ select:focus{border-color:var(--accent);outline:none}
 .rating-tip{position:fixed;z-index:1300;display:none;pointer-events:none;background:var(--surface);border:1px solid var(--gold);border-radius:10px;padding:7px 11px;max-width:240px;box-shadow:0 8px 28px rgba(0,0,0,.45);font-size:12px;line-height:1.35}
 .rating-tip b{display:block;color:var(--gold);font-size:12.5px;margin-bottom:2px}
 .rating-tip span{display:block;color:var(--text-muted)}
+
+/* ─── Page Social : contenu + chat permanent ─── */
+.social-layout{display:grid;grid-template-columns:1fr 360px;gap:1.5rem;align-items:start}
+.social-chat-side{position:sticky;top:76px}
+@media(max-width:900px){
+ .social-layout{grid-template-columns:1fr}
+ .social-chat-side{position:static}
+}
