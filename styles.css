@@ -574,7 +574,8 @@ select:focus{border-color:var(--accent);outline:none}
 .side-empty{font-size:12px;color:var(--text-faint);padding:6px}
 @media(max-width:1000px){
  .collection-layout{grid-template-columns:1fr}
- .collection-side{position:static;flex-direction:row;flex-wrap:wrap}
+ .collection-side{position:static;flex-direction:row;flex-wrap:wrap;order:-1}
+ .collection-main{order:0}
  .side-panel{flex:1;min-width:240px}
 }
 @media(max-width:700px){ .collection-side{flex-direction:column} }
