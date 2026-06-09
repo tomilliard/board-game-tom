@@ -230,7 +230,8 @@ const BACKGROUNDS = [
   { id: 6, label: 'Night City', src: 'assets/bg_cyberpunk.webp', reqAch: 'cyberpunk_play_10' },
   { id: 7, label: 'Sanctuaire d\'Harmonies', src: 'assets/bg_harmonies.webp', reqAch: 'harmonies_play_15' },
   { id: 8, label: 'Cité de Zenith', src: 'assets/bg_zenith.webp', reqAch: 'zenith_play_50' },
-  { id: 9, label: 'Champ de bataille Toy Battle', src: 'assets/bg_toybattle.webp', reqAch: 'toybattle_win_15' }
+  { id: 9, label: 'Champ de bataille Toy Battle', src: 'assets/bg_toybattle.webp', reqAch: 'toybattle_win_15' },
+  { id: 10, label: 'Vallée de l\'Éternité', src: 'assets/bg_vale.webp', reqAch: 'vale_play_25' }
 ];
 
 // ─── Images décoratives ───

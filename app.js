@@ -4230,6 +4230,7 @@ const ACHIEVEMENTS = [
   { id:'toybattle_win_15',icon:'👑', name:'Canard Royal',             desc:'Gagner 15 parties de Toy Battle',        check: (s) => (s.toyBattleWins || 0) >= 15 },
   { id:'toybattle_play_30',icon:'🏰', name:'Bâtisseur de citadelle',  desc:'Jouer 30 parties de Toy Battle',         check: (s) => (s.toyBattlePlayed || 0) >= 30 },
   { id:'toybattle_win_50',icon:'⚔️', name:'Champion de Toy Battle',   desc:'Gagner 50 parties de Toy Battle',        check: (s) => (s.toyBattleWins || 0) >= 50 },
+  { id:'vale_play_25',   icon:'🐉', name:'Gardien de la Vallée',      desc:'Jouer 25 parties de The Vale of Eternity', check: (s) => (s.valePlayed || 0) >= 25 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4299,6 +4300,7 @@ const computeAchievementStats = (pid) => {
   const _mythoId     = _resolveGame(["Mythologies", "Mythology", "mythologies"]);
   const _zenithId    = _resolveGame(["Zenith", "zenith"]);
   const _toyBattleId = _resolveGame(["Toy Battle", "ToyBattle", "toy battle"]);
+  const _valeId      = _resolveGame(["The Vale of Eternity", "Vale of Eternity", "Vallée de l'Éternité", "Vallee de l'Eternite", "vale of eternity"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4315,6 +4317,7 @@ const computeAchievementStats = (pid) => {
   const zenithWins      = _byGame(_zenithId, won);
   const toyBattlePlayed = _byGame(_toyBattleId, playerMatches);
   const toyBattleWins   = _byGame(_toyBattleId, won);
+  const valePlayed      = _byGame(_valeId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4437,6 +4440,7 @@ const computeAchievementStats = (pid) => {
     zenithWins,
     toyBattlePlayed,
     toyBattleWins,
+    valePlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4504,6 +4508,7 @@ const ACH_PROGRESS = {
   toybattle_win_15: [(s) => s.toyBattleWins, 15],
   toybattle_play_30:[(s) => s.toyBattlePlayed, 30],
   toybattle_win_50: [(s) => s.toyBattleWins, 50],
+  vale_play_25:     [(s) => s.valePlayed, 25],
   rank_challenger:  [(s) => s.maxPoints, 3000],
   games_10:         [(s) => s.played, 10],
   games_50:         [(s) => s.played, 50],
