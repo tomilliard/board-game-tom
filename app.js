@@ -1974,7 +1974,71 @@ const buildGameCard = (g) => {
 
 // ─── Grid renderer ───────────────────────────────────────────
 
+// ─── Colonne latérale Collection : Top 10 + joués récemment ──
+const renderCollectionSide = () => {
+  const topEl = document.getElementById('top-rated-list');
+  const recEl = document.getElementById('recent-played-list');
+  if (!topEl && !recEl) return;
+
+  // Top 10 — meilleurs jeux par note moyenne (au moins 1 note).
+  if (topEl) {
+    const rated = games
+      .filter((g) => ratingCount(g) > 0)
+      .sort((a, b) => avgRating(b) - avgRating(a) || ratingCount(b) - ratingCount(a))
+      .slice(0, 10);
+    topEl.innerHTML = rated.length
+      ? rated.map((g, i) =>
+          `<div class="side-row" onclick="scrollToGame(${g.id})">
+             <span class="side-rank">${i + 1}</span>
+             <span class="side-name">${esc(g.name)}</span>
+             <span class="side-val">★ ${avgRating(g).toFixed(1)}</span>
+           </div>`).join('')
+      : '<div class="side-empty">Aucun jeu noté pour l\'instant.</div>';
+  }
+
+  // 5 jeux joués le plus récemment (parties récentes, jeux distincts).
+  if (recEl) {
+    const seen = new Set(); const recent = [];
+    [...matches]
+      .sort((a, b) =>
+        String(b.date || '').localeCompare(String(a.date || '')) || (b.id || 0) - (a.id || 0))
+      .forEach((m) => {
+        if (recent.length >= 5 || seen.has(m.game_id)) return;
+        const g = games.find((x) => x.id === m.game_id);
+        if (!g) return;
+        seen.add(m.game_id);
+        recent.push({ g, date: m.date });
+      });
+    recEl.innerHTML = recent.length
+      ? recent.map(({ g, date }) =>
+          `<div class="side-row" onclick="scrollToGame(${g.id})">
+             <span class="side-name">${esc(g.name)}</span>
+             <span class="side-val">${date ? fmtDate(date) : ''}</span>
+           </div>`).join('')
+      : '<div class="side-empty">Aucune partie récente.</div>';
+  }
+};
+
+// Fait défiler jusqu'à la carte d'un jeu (réinitialise filtres/onglet si masqué).
+const scrollToGame = (id) => {
+  let card = document.getElementById(`gc-${id}`);
+  if (!card) {
+    const s = document.getElementById('search'); if (s) s.value = '';
+    curTab = 'all';
+    const tabs = document.querySelectorAll('#page-games .tabs .tab');
+    tabs.forEach((t, i) => t.classList.toggle('active', i === 0));
+    renderGrid();
+    card = document.getElementById(`gc-${id}`);
+  }
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.style.transition = 'box-shadow .3s';
+  card.style.boxShadow  = '0 0 0 2px var(--gold)';
+  setTimeout(() => { card.style.boxShadow = ''; }, 1600);
+};
+
 const renderGrid = () => {
+  renderCollectionSide();
   const q    = document.getElementById('search').value.toLowerCase();
   const fp   = document.getElementById('fp').value;
   const fd   = document.getElementById('fd').value;
