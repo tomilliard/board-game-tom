@@ -1658,22 +1658,13 @@ const initRatingTooltip = () => {
 const buildStars = (gid, myR) =>
   [1,2,3,4,5,6,7,8,9,10].map((i) => {
     const full = myR >= i;
-    const half = !full && myR >= i - 0.5;
-    const stroke = (full || half) ? '#fbbf24' : 'var(--text-faint)';
-    return `<span class="half-star-wrap">
+    const stroke = full ? '#fbbf24' : 'var(--text-faint)';
+    return `<span class="half-star-wrap" data-rv="${i}" onclick="rateGame(${gid},${i})">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <defs><clipPath id="lh${gid}_${i}">
-          <rect x="0" y="0" width="12" height="24"/>
-        </clipPath></defs>
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
           12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
           stroke="${stroke}" stroke-width="1.5" fill="${full ? '#fbbf24' : 'none'}"/>
-        ${half ? `<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
-          12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-          fill="#fbbf24" clip-path="url(#lh${gid}_${i})"/>` : ''}
       </svg>
-      <span class="half-star-left"  data-rv="${i - 0.5}" onclick="rateGame(${gid},${i - 0.5})"></span>
-      <span class="half-star-right" data-rv="${i}" onclick="rateGame(${gid},${i})"></span>
     </span>`;
   }).join('');
 
