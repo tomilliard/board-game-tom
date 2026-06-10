@@ -300,6 +300,18 @@ const calcLoss = (pts, placement, totalPlayers) => {
   return 0;
 };
 
+// ─── Bonus d'exploit (indexé sur l'Elo des adversaires battus) ───
+// Un vainqueur gagne des points supplémentaires s'il bat des joueurs mieux
+// notés que lui : on additionne les écarts d'Elo au-dessus du sien, on divise,
+// et on plafonne. Battre plus faible que soi ne donne aucun bonus (ni malus).
+const UPSET_DIV = 40;   // 40 points d'Elo au-dessus de toi = +1 point de bonus
+const UPSET_CAP = 10;   // bonus maximum par partie
+const upsetBonus = (myElo, beatenElos) => {
+  let acc = 0;
+  beatenElos.forEach((e) => { if (e > myElo) acc += e - myElo; });
+  return Math.min(UPSET_CAP, Math.round(acc / UPSET_DIV));
+};
+
 // ─── Note Elo (niveau relatif) ───────────────────────────────
 // Contrairement aux points (cumulés, récompensent le volume), l'Elo mesure
 // le NIVEAU : battre plus fort que soi rapporte beaucoup, perdre contre plus
@@ -3554,6 +3566,10 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
   // Variations Elo : calculées en une passe sur tous les joueurs de la partie.
   const eloDelta = eloDeltas(allPlayerIds, place);
 
+  // Elo de chaque joueur AVANT la partie (sert au bonus d'exploit).
+  const eloAt = {};
+  allPlayerIds.forEach((id) => { eloAt[id] = getElo(players.find((x) => x.id === id)); });
+
   // 1) Calculer le nouvel état de chaque joueur (sans encore écrire).
   const results = [];
   for (const pid of allPlayerIds) {
@@ -3565,6 +3581,13 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
     if (isChallengeWin && isW) gain += 5;
     const newStreak = isW ? (p.streak || 0) + 1 : 0;
     if (isW && newStreak > 0 && newStreak % 3 === 0) gain += 3;
+    // Bonus d'exploit : adversaires battus (placés derrière, hors co-vainqueurs).
+    if (isW) {
+      const beaten = allPlayerIds
+        .filter((oid) => oid !== pid && !winnerIds.includes(oid))
+        .map((oid) => eloAt[oid]);
+      gain += upsetBonus(eloAt[pid], beaten);
+    }
     const rankIdx = getRank(curPts).idx;
     const streakPenalty = (!isW && (p.streak || 0) >= 3 && rankIdx >= 3) ? 3 : 0;
     const loss    = calcLoss(curPts, place(pid), n);
