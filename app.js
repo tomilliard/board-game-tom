@@ -300,16 +300,30 @@ const calcLoss = (pts, placement, totalPlayers) => {
   return 0;
 };
 
-// ─── Bonus d'exploit (indexé sur l'Elo des adversaires battus) ───
-// Un vainqueur gagne des points supplémentaires s'il bat des joueurs mieux
-// notés que lui : on additionne les écarts d'Elo au-dessus du sien, on divise,
-// et on plafonne. Battre plus faible que soi ne donne aucun bonus (ni malus).
-const UPSET_DIV = 40;   // 40 points d'Elo au-dessus de toi = +1 point de bonus
-const UPSET_CAP = 10;   // bonus maximum par partie
-const upsetBonus = (myElo, beatenElos) => {
-  let acc = 0;
-  beatenElos.forEach((e) => { if (e > myElo) acc += e - myElo; });
-  return Math.min(UPSET_CAP, Math.round(acc / UPSET_DIV));
+// ─── Ajustement « niveau » des gains de victoire (indexé sur l'Elo) ───
+// • Bonus d'exploit : battre des joueurs MIEUX notés rapporte des points.
+// • Malus de farm   : battre des joueurs BIEN PLUS FAIBLES en rapporte un peu
+//   moins — MAIS jamais contre un débutant (exempté), jamais sous un plancher,
+//   et toujours plafonné.
+const UPSET_DIV    = 40;     // 40 pts d'Elo AU-DESSUS de toi = +1 pt (bonus)
+const UPSET_CAP    = 10;     // bonus max par partie
+const MALUS_DIV    = 50;     // 50 pts d'Elo EN DESSOUS de toi = -1 pt (malus)
+const MALUS_CAP    = 4;      // malus max par partie
+const WIN_FLOOR    = 0.6;    // une victoire garde toujours ≥ 60 % de ses points de base
+const NEWBIE_GAMES = 10;     // adversaire avec < 10 parties = débutant (exempté du malus)
+
+// beaten = [{ elo, newbie }] — adversaires réellement battus (hors co-vainqueurs).
+const skillAdjust = (myElo, beaten) => {
+  let up = 0, down = 0;
+  beaten.forEach(({ elo, newbie }) => {
+    const gap = elo - myElo;
+    if (gap > 0) up += gap;
+    else if (!newbie) down += -gap;
+  });
+  return {
+    bonus: Math.min(UPSET_CAP, Math.round(up / UPSET_DIV)),
+    malus: Math.min(MALUS_CAP, Math.round(down / MALUS_DIV)),
+  };
 };
 
 // ─── Note Elo (niveau relatif) ───────────────────────────────
@@ -2556,7 +2570,7 @@ const renderPlayerStats = () => {
     ${isAdmin ? `
     <div class="stat-card" style="justify-content:center;align-items:center;text-align:center;gap:8px">
       <div class="stat-sub">Saison ${currentSeason ? currentSeason.number : 1} — admin</div>
-      <button id="recalc-elo-btn" class="btn-icon" onclick="recalcAllElo()" style="white-space:nowrap">&#9876;&#65039; Recalculer l'Elo</button>
+      <button id="recalc-season-btn" class="btn-icon" onclick="recomputeSeason()" style="white-space:nowrap">♻️ Recalculer la saison</button>
       <button id="close-season-btn" class="btn-icon danger" onclick="closeSeason()" style="white-space:nowrap">&#127942; Clôturer la saison</button>
     </div>` : ''}`;
 };
@@ -3556,51 +3570,77 @@ document.addEventListener('click', (e) => {
 // POINTS SYSTEM
 // ═══════════════════════════════════════════════════════════════
 
-const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gameId, scores) => {
-  const n       = allPlayerIds.length;
-  const losers  = sortedLosers(allPlayerIds, winnerIds, scores || {});
-  const place   = (pid) => winnerIds.includes(pid)
-    ? 1
-    : winnerIds.length + 1 + losers.indexOf(pid);
+// Cœur de calcul d'une partie — PUR (aucune lecture/écriture d'état global).
+// pre = { [id]: { pts, elo, streak, games } } : état AVANT la partie.
+// Renvoie { [id]: { net, newPts, newStreak, newElo } }.
+const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre) => {
+  const n = ids.length;
+  const losers = ids.filter((id) => !winnerIds.includes(id));
+  if (scores && Object.keys(scores).length)
+    losers.sort((a, b) => (Number(scores[b]) || 0) - (Number(scores[a]) || 0));
+  const place = (id) => winnerIds.includes(id) ? 1 : winnerIds.length + 1 + losers.indexOf(id);
 
-  // Variations Elo : calculées en une passe sur tous les joueurs de la partie.
-  const eloDelta = eloDeltas(allPlayerIds, place);
+  // Variations Elo (comparaisons par paires), à partir de l'Elo d'AVANT.
+  const R = {}; ids.forEach((id) => { R[id] = Math.round(pre[id].elo); });
+  const eloDelta = {};
+  if (n >= 2) ids.forEach((i) => {
+    let expected = 0, actual = 0;
+    ids.forEach((j) => {
+      if (i === j) return;
+      expected += 1 / (1 + Math.pow(10, (R[j] - R[i]) / 400));
+      const pi = place(i), pj = place(j);
+      actual  += pi < pj ? 1 : pi > pj ? 0 : 0.5;
+    });
+    eloDelta[i] = Math.round(eloK(R[i], pre[i].games) * (actual - expected) / (n - 1));
+  });
 
-  // Elo de chaque joueur AVANT la partie (sert au bonus d'exploit).
-  const eloAt = {};
-  allPlayerIds.forEach((id) => { eloAt[id] = getElo(players.find((x) => x.id === id)); });
-
-  // 1) Calculer le nouvel état de chaque joueur (sans encore écrire).
-  const results = [];
-  for (const pid of allPlayerIds) {
-    const p = players.find((x) => x.id === pid);
-    if (!p) continue;
-    const isW    = winnerIds.includes(pid);
-    const curPts = p.points || 0;
-    let gain     = calcPoints(place(pid), n, gameId);
-    if (isChallengeWin && isW) gain += 5;
-    const newStreak = isW ? (p.streak || 0) + 1 : 0;
+  const out = {};
+  ids.forEach((id) => {
+    const isW    = winnerIds.includes(id);
+    const curPts = pre[id].pts;
+    const basePts = calcPoints(place(id), n, gameId);
+    let gain = basePts;
+    if (isChallenge && isW) gain += 5;
+    const newStreak = isW ? pre[id].streak + 1 : 0;
     if (isW && newStreak > 0 && newStreak % 3 === 0) gain += 3;
-    // Bonus d'exploit : adversaires battus (placés derrière, hors co-vainqueurs).
     if (isW) {
-      const beaten = allPlayerIds
-        .filter((oid) => oid !== pid && !winnerIds.includes(oid))
-        .map((oid) => eloAt[oid]);
-      gain += upsetBonus(eloAt[pid], beaten);
+      const beaten = ids
+        .filter((o) => o !== id && !winnerIds.includes(o))
+        .map((o) => ({ elo: R[o], newbie: pre[o].games < NEWBIE_GAMES }));
+      const { bonus, malus } = skillAdjust(R[id], beaten);
+      gain += bonus - malus;
+      const floor = Math.ceil(basePts * WIN_FLOOR);   // plancher : victoire toujours payante
+      if (gain < floor) gain = floor;
     }
-    const rankIdx = getRank(curPts).idx;
-    const streakPenalty = (!isW && (p.streak || 0) >= 3 && rankIdx >= 3) ? 3 : 0;
-    const loss    = calcLoss(curPts, place(pid), n);
-    const net     = gain - loss - streakPenalty;
-    const newPts  = Math.max(0, curPts + net);
-    const newElo  = getElo(p) + (eloDelta[pid] || 0);
-    results.push({ pid, p, net, newPts, newStreak, newElo });
-  }
+    const streakPenalty = (!isW && pre[id].streak >= 3 && getRank(curPts).idx >= 3) ? 3 : 0;
+    const loss = calcLoss(curPts, place(id), n);
+    const net  = gain - loss - streakPenalty;
+    out[id] = {
+      net,
+      newPts:    Math.max(0, curPts + net),
+      newStreak,
+      newElo:    Math.round(pre[id].elo + (eloDelta[id] || 0)),
+    };
+  });
+  return out;
+};
 
-  // 2) Trône projeté après la partie (n°1 aux points, ≥ palier Maître).
+const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gameId, scores) => {
+  const ids = allPlayerIds.filter((id) => players.some((x) => x.id === id));
+  if (!ids.length) { await loadAll(); return; }
+
+  // État AVANT la partie (live).
+  const pre = {};
+  ids.forEach((id) => {
+    const p = players.find((x) => x.id === id);
+    pre[id] = { pts: p.points || 0, elo: getElo(p), streak: p.streak || 0, games: eloGamesPlayed(id) };
+  });
+  const res = computeMatch(ids, winnerIds, scores || {}, isChallengeWin, gameId, pre);
+
+  // Trône projeté après la partie (n°1 aux points, ≥ palier Maître).
   const projPts = {};
   players.forEach((p) => { projPts[p.id] = p.points || 0; });
-  results.forEach((r) => { projPts[r.pid] = r.newPts; });
+  ids.forEach((id) => { projPts[id] = res[id].newPts; });
   let thrId = null, thrPts = -1;
   players.forEach((p) => {
     const pts = projPts[p.id];
@@ -3610,28 +3650,90 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
     }
   });
 
-  // 3) Écrire chaque joueur (points, streak, elo + pics de saison).
-  for (const r of results) {
-    const { pid, p, net, newPts, newStreak, newElo } = r;
-    showPtsGain(net >= 0 ? '+' + net : net);
-
-    const body = { points: newPts, streak: newStreak };
-    if (eloDelta[pid] !== undefined) body.elo = newElo;
-    body.peak_points = Math.max(p.peak_points != null ? p.peak_points : (p.points || 0), newPts);
-    body.peak_elo    = Math.max(p.peak_elo    != null ? p.peak_elo    : getElo(p),       newElo);
-    if (thrId != null && pid === thrId) body.was_challenger = true;
-
+  // Écriture (points, streak, elo + pics de saison).
+  for (const id of ids) {
+    const p = players.find((x) => x.id === id);
+    const r = res[id];
+    showPtsGain(r.net >= 0 ? '+' + r.net : '' + r.net);
+    const body = { points: r.newPts, streak: r.newStreak, elo: r.newElo };
+    body.peak_points = Math.max(p.peak_points != null ? p.peak_points : (p.points || 0), r.newPts);
+    body.peak_elo    = Math.max(p.peak_elo    != null ? p.peak_elo    : getElo(p),       r.newElo);
+    if (thrId != null && id === thrId) body.was_challenger = true;
     try {
-      await sb.patch('players', body, { id: pid });
+      await sb.patch('players', body, { id });
     } catch (e) {
-      // Colonnes saison/elo absentes ? On réessaie avec le minimum pour ne pas
-      // perdre la mise à jour des points.
-      console.warn('Patch joueur échoué, nouvel essai minimal :', e);
-      try { await sb.patch('players', { points: newPts, streak: newStreak }, { id: pid }); }
+      console.warn('Patch joueur échoué, essai minimal :', e);
+      try { await sb.patch('players', { points: r.newPts, streak: r.newStreak }, { id }); }
       catch (e2) { console.warn('Points error:', e2); }
     }
   }
   await loadAll();
+};
+
+// Rejoue TOUTE la saison depuis zéro avec la formule actuelle et réécrit
+// points / Elo / série / pics. Ordre chronologique (date, puis id).
+const recomputeSeason = async () => {
+  if (!isAdmin) return;
+  const list = [...seasonMatches()].sort((a, b) => {
+    const da = String(a.date || ''), db = String(b.date || '');
+    if (da !== db) return da < db ? -1 : 1;
+    return (a.id || 0) - (b.id || 0);
+  });
+  if (!confirm(
+    `Recalculer la SAISON en cours ?\n\n` +
+    `Les ${list.length} parties confirmées seront rejouées depuis zéro avec la ` +
+    `formule actuelle (bonus d'exploit, malus de farm, plancher, etc.).\n` +
+    `Points, Elo, séries et pics seront réécrits proprement.`
+  )) return;
+
+  const btn = document.getElementById('recalc-season-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Recalcul…'; }
+  showLoading('Recalcul de la saison…');
+  try {
+    const sim = {};
+    players.forEach((p) => { sim[p.id] = { pts: 0, elo: ELO_BASE, streak: 0, games: 0, peakPts: 0, peakElo: ELO_BASE }; });
+
+    for (const m of list) {
+      const ids = [...new Set((m.players || []).map((pp) => pp && pp.id).filter((id) => id && sim[id]))];
+      if (!ids.length) continue;
+      const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+      const pre = {};
+      ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
+      const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
+      ids.forEach((id) => {
+        sim[id].pts     = res[id].newPts;
+        sim[id].elo     = res[id].newElo;
+        sim[id].streak  = res[id].newStreak;
+        sim[id].games  += 1;
+        sim[id].peakPts = Math.max(sim[id].peakPts, sim[id].pts);
+        sim[id].peakElo = Math.max(sim[id].peakElo, sim[id].elo);
+      });
+    }
+
+    let written = 0;
+    for (const p of players) {
+      const s = sim[p.id];
+      const body = {
+        points: s.pts, elo: Math.round(s.elo), streak: s.streak,
+        peak_points: s.peakPts, peak_elo: Math.round(s.peakElo),
+      };
+      try { await sb.patch('players', body, { id: p.id }); written++; }
+      catch (e) {
+        try { await sb.patch('players', { points: s.pts, streak: s.streak }, { id: p.id }); written++; }
+        catch (e2) { console.warn('recompute patch error', p.id, e2); }
+      }
+    }
+    await loadAll();
+    renderPlayers();
+    toast(`Saison recalculée — ${written} joueur${written > 1 ? 's' : ''} mis à jour ✨`);
+  } catch (e) {
+    console.error('recomputeSeason:', e);
+    toast('Erreur pendant le recalcul', true);
+  } finally {
+    const b = document.getElementById('recalc-season-btn');
+    if (b) { b.disabled = false; b.textContent = '♻️ Recalculer la saison'; }
+    hideLoading();
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════

@@ -57,11 +57,12 @@
   };
   const eloK = (rating, g) => (g < 10 ? 40 : rating >= 2000 ? 16 : 24);
 
-  // Bonus d'exploit (doit rester identique à app.js)
-  const UPSET_DIV = 40, UPSET_CAP = 10;
-  const upsetBonus = (myElo, beatenElos) => {
-    let acc = 0; beatenElos.forEach((e) => { if (e > myElo) acc += e - myElo; });
-    return Math.min(UPSET_CAP, Math.round(acc / UPSET_DIV));
+  // Ajustement niveau (doit rester identique à app.js)
+  const UPSET_DIV = 40, UPSET_CAP = 10, MALUS_DIV = 50, MALUS_CAP = 4, WIN_FLOOR = 0.6, NEWBIE_GAMES = 10;
+  const skillAdjust = (myElo, beaten) => {
+    let up = 0, down = 0;
+    beaten.forEach(({ elo, newbie }) => { const g = elo - myElo; if (g > 0) up += g; else if (!newbie) down += -g; });
+    return { bonus: Math.min(UPSET_CAP, Math.round(up / UPSET_DIV)), malus: Math.min(MALUS_CAP, Math.round(down / MALUS_DIV)) };
   };
 
   // ── État simulé par joueur ──
@@ -73,7 +74,7 @@
   const season = matches
     .filter((m) => m.status !== 'pending' && String(m.date || '') >= start)
     .slice()
-    .sort((a,b) => String(a.confirmed_at||a.date||'').localeCompare(String(b.confirmed_at||b.date||'')) || (a.id||0)-(b.id||0));
+    .sort((a,b) => { const da=String(a.date||''), db=String(b.date||''); if (da!==db) return da<db?-1:1; return (a.id||0)-(b.id||0); });
 
   console.log(`%c▶ ${season.length} partie(s) confirmée(s) sur la saison (début ${start})`, 'color:#fbbf24;font-weight:700');
 
@@ -94,6 +95,7 @@
 
     // Elo (pairwise) — utilise l'elo simulé courant + games joués AVANT cette partie
     const R = {}; ids.forEach((id) => R[id] = Math.round(sim[id].elo));
+    const G = {}; ids.forEach((id) => G[id] = sim[id].games);   // parties AVANT ce match
     const eloDelta = {};
     if (n >= 2) ids.forEach((i) => {
       let exp = 0, act = 0;
@@ -101,20 +103,25 @@
         exp += 1/(1+Math.pow(10,(R[j]-R[i])/400));
         const pi=place(i), pj=place(j); act += pi<pj?1:pi>pj?0:0.5;
       });
-      eloDelta[i] = Math.round(eloK(R[i], sim[i].games) * (act-exp)/(n-1));
+      eloDelta[i] = Math.round(eloK(R[i], G[i]) * (act-exp)/(n-1));
     });
 
     // points + streak + elo
     ids.forEach((id) => {
       const s = sim[id];
       const isW = winners.includes(id);
-      let gain = calcPoints(place(id), n, m.game_id);
+      const basePts = calcPoints(place(id), n, m.game_id);
+      let gain = basePts;
       if (m.is_challenge && isW) gain += 5;
       const newStreak = isW ? s.streak + 1 : 0;
       if (isW && newStreak % 3 === 0) gain += 3;
       if (isW) {
-        const beaten = ids.filter((o) => o !== id && !winners.includes(o)).map((o) => R[o]);
-        gain += upsetBonus(R[id], beaten);
+        const beaten = ids.filter((o) => o !== id && !winners.includes(o))
+          .map((o) => ({ elo: R[o], newbie: G[o] < NEWBIE_GAMES }));
+        const { bonus, malus } = skillAdjust(R[id], beaten);
+        gain += bonus - malus;
+        const floor = Math.ceil(basePts * WIN_FLOOR);
+        if (gain < floor) gain = floor;
       }
       const idx = rankIdx(s.pts);
       const penalty = (!isW && s.streak >= 3 && idx >= 3) ? 3 : 0;
