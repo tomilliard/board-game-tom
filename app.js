@@ -1012,7 +1012,7 @@ const doRegisterStep2 = async () => {
     await Promise.all([loadAll(), loadSocial()]);
     syncAchievementUnlocks(true);   // pose la baseline (sans notifier)
     updateUserUI();
-    renderGames();
+    renderCurrentPage();
     toast(`Bienvenue ${name} ! 🎉`);
   } catch (e) {
     const el = document.getElementById('auth-err2');
@@ -1038,7 +1038,7 @@ const doLogin = async () => {
     await Promise.all([loadAll(), loadSocial()]);
     syncAchievementUnlocks(true);   // pose la baseline (sans notifier)
     updateUserUI();
-    renderGames();
+    renderCurrentPage();
     toast(`Bon retour ${currentProfile?.name || ''} !`);
   } catch (e) { showAuthErr(e.message); }
   hideLoading();
@@ -1052,7 +1052,7 @@ const doLogout = async () => {
   closeUserMenu();
   updateUserUI();
   await Promise.all([loadAll(), loadSocial()]);
-  renderGames();
+  renderCurrentPage();
   hideLoading();
   toast('Déconnecté');
 };
@@ -1553,6 +1553,15 @@ const showPage = (page, el) => {
   else if (page === 'history') renderHistory();
   else if (page === 'social')  loadSocial().then(() => { renderCurrentSocialTab(); loadChat(); });
   else if (page === 'events')  loadSocial().then(renderEvents);
+};
+
+const renderCurrentPage = () => {
+  if      (curPage === 'classement') renderHome();
+  else if (curPage === 'games')   renderGames();
+  else if (curPage === 'players') renderPlayers();
+  else if (curPage === 'history') renderHistory();
+  else if (curPage === 'social')  renderCurrentSocialTab();
+  else if (curPage === 'events')  renderEvents();
 };
 
 const syncMobileNav = (page) => {
@@ -3292,8 +3301,17 @@ const renderHomeHero = () => {
   const meta = document.getElementById('home-hero-meta');
   if (!meta) return;
   const leader = [...players].sort((a, b) => (b.points || 0) - (a.points || 0))[0];
+  let daysHtml = '';
+  if (currentSeason) {
+    let end;
+    if (currentSeason.ends_at) end = new Date(currentSeason.ends_at);
+    else { end = new Date(currentSeason.started_at); end.setMonth(end.getMonth() + 6); }
+    const days = Math.max(0, Math.ceil((end - new Date()) / 86400000));
+    daysHtml = `<div><b>${days}</b>jour${days > 1 ? 's' : ''} restant${days > 1 ? 's' : ''}</div>`;
+  }
   meta.innerHTML =
     `<div><b>${seasonMatches().length}</b>parties cette saison</div>` +
+    daysHtml +
     `<div><b>${leader ? esc(leader.name) : '—'}</b>en tête</div>` +
     `<div><b>${players.length}</b>membres</div>`;
 };
@@ -3338,7 +3356,7 @@ const renderLeaderboard = () => {
       <div class="ctr">Parties</div><div class="ctr">V/D</div><div class="ctr">Winrate</div><div class="ctr">Série</div>
     </div>`;
 
-  const html = seasonBannerHtml() + head + ranked.map((p, i) => {
+  const html = head + ranked.map((p, i) => {
     const md = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
     const mc = i === 0 ? 'm1' : i === 1 ? 'm2' : i === 2 ? 'm3' : '';
     const bg = p.color || '#4ade80';
@@ -3358,8 +3376,8 @@ const renderLeaderboard = () => {
         <div class="lb-nm"><b>${esc(p.name)}</b><span>${sub}</span></div>
       </div>
       <div class="lb-tier" title="${esc(rk.name)}${isAdmin ? ' · Elo ' + getElo(p) : ''}">
-        <span class="lb-emblem" style="background:${tc}">${tierEmoji(rk)}</span>
-        <div class="lb-tinfo"><b>${p.points || 0}</b> pts</div>
+        <span class="lb-emblem">${rankImg(rk, 26)}</span>
+        <div class="lb-tinfo"><b style="color:${tc}">${p.points || 0}</b> pts</div>
       </div>
       <div class="lb-col ctr">${p.played}</div>
       <div class="lb-col ctr"><span class="win">${p.won}</span>/<span class="lose">${p.lost}</span></div>
@@ -5262,9 +5280,7 @@ const startRealtime = () => {
         updateNotifBadge();
       } else {
         await loadAll();
-        if      (curPage === 'games')   renderGames();
-        else if (curPage === 'players') renderPlayers();
-        else if (curPage === 'history') renderHistory();
+        renderCurrentPage();
       }
     }, 400);
   };
@@ -5447,9 +5463,9 @@ const init = async () => {
 
   hideLoading();
   updateUserUI();
-  curPage = 'games';
+  curPage = 'classement';
   updateAddBtn();
-  renderGames();
+  renderCurrentPage();
   startRealtime();
   initDecorations();
   initRatingTooltip();
