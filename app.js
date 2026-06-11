@@ -2869,158 +2869,75 @@ const recalcAllElo = async () => {
 const buildPlayerCard = (p) => {
   const s    = playerStats(p.id);
   const rate = s.played > 0 ? Math.round(s.won / s.played * 100) : 0;
-  const bg   = p.color || '#4ade80';
   const isMe = currentUser && p.user_id === currentUser.id;
   const rk   = displayRank(p);
+  const tc   = tierColor(rk);
   const nextRk = RANKS[Math.min(rk.idx + 1, RANKS.length - 1)];
   const prog = rk.idx < RANKS.length - 1
-    ? Math.round(((p.points || 0) - rk.min) / (nextRk.min - rk.min) * 100)
+    ? Math.max(0, Math.min(100, Math.round(((p.points || 0) - rk.min) / (nextRk.min - rk.min) * 100)))
     : 100;
-  const adv = bestAdversary(p.id);
-  const bg2 = bestGame(p.id);
+  const adv  = bestAdversary(p.id);
+  const fav  = bestGame(p.id);
+  const _cf  = cosmeticFrame(p);
+  const _cbg = cosmeticBg(p);
+  const rd   = RANK_ASSETS_DESKTOP[rk.baseKey || rk.key] || {};
 
-  // Assets desktop (server-side fallback : desktop)
-  const rd = RANK_ASSETS_DESKTOP[rk.baseKey||rk.key] || {};
-  const rm = RANK_ASSETS_MOBILE[rk.baseKey||rk.key]  || {};
+  const bgImg = (_cbg && _cbg.src) || rd.banner || RANK_AVATAR_BG[rk.baseKey || rk.key] || null;
+  const bgStyle = bgImg
+    ? `background:linear-gradient(180deg,rgba(8,11,20,.42),rgba(8,11,20,.86) 56%,rgba(8,11,20,.96)),url('${bgImg}') center/cover;`
+    : `background:linear-gradient(160deg,${(p.color || '#4ade80')}22,var(--surface-2));`;
 
-  // Le Challenger est agrandi (déborde du gabarit ; ailes transparentes).
-  const cScale = (rk.baseKey||rk.key) === 'challenger' ? 1.6 : 1;
-  const cAvShrink = (rk.baseKey||rk.key) === 'challenger' ? 0.92 : 1;  // avatar réduit d'un poil
-  const fSd = Math.round(150 * cScale), offD = Math.round((150 - fSd) / 2);
-  const fSm = Math.round(80  * cScale), offM = Math.round((80  - fSm) / 2);
+  const avImg   = AVATARS.find((a) => a.id === (p.avatar || 1));
+  const avInner = avImg
+    ? `<img src="${avImg.src}" style="width:100%;height:100%;object-fit:cover;display:block">`
+    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff">${ini(p.name)}</div>`;
+  const frameSrc = _cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rd.player_frame);
+  let avatarBlock;
+  if (frameSrc) {
+    const S = 128, k = S / 150;
+    const h = _cf ? _cf.hole : (FRAME_HOLES[rk.key] || FRAME_HOLES[rk.baseKey || rk.key] || { top: 32, left: 32, size: 86 });
+    const aL = h.left * k, aT = h.top * k, aS = h.size * k;
+    avatarBlock = `<div style="position:relative;width:${S}px;height:${S}px;margin:0 auto">
+        <div style="position:absolute;left:${aL}px;top:${aT}px;width:${aS}px;height:${aS}px;border-radius:50%;overflow:hidden;z-index:1">${avInner}</div>
+        <img src="${frameSrc}" style="position:absolute;inset:0;width:${S}px;height:${S}px;object-fit:contain;pointer-events:none;z-index:2">
+      </div>`;
+  } else {
+    avatarBlock = `<div style="width:84px;height:84px;border-radius:50%;overflow:hidden;margin:14px auto 0;border:3px solid ${tc};box-shadow:0 0 0 3px rgba(0,0,0,.4)">${avInner}</div>`;
+  }
+
+  const badges = [];
+  if ((p.streak || 0) >= 3) badges.push(`<span class="pl-badge">🔥 ${p.streak}</span>`);
+  if (Array.isArray(p.champion_seasons) && p.champion_seasons.length)
+    badges.push(`<span class="pl-badge" style="color:var(--gold)">🏆 ${p.champion_seasons.length}×</span>`);
+  if (isAdmin) badges.push(`<span class="pl-badge">⚔️ ${getElo(p)}</span>`);
 
   const adminFoot = isAdmin
-    ? `<div class="p-card-foot">
-         <button class="btn-icon" onclick="editPlayerAdmin(${p.id})">${SVG_EDIT} Modifier</button>
-         <button class="btn-icon danger" onclick="delPlayer(${p.id})">${SVG_TRASH} Suppr.</button>
+    ? `<div class="pl-foot">
+         <button class="btn-icon" onclick="event.stopPropagation();editPlayerAdmin(${p.id})">${SVG_EDIT} Modifier</button>
+         <button class="btn-icon danger" onclick="event.stopPropagation();delPlayer(${p.id})">${SVG_TRASH} Suppr.</button>
        </div>`
     : '';
 
-  const glowStyle = isMe
-    ? `box-shadow:0 0 0 2px ${bg},0 0 18px ${bg}55`
-    : '';
-
-  const _cf = cosmeticFrame(p);   // cadre cosmétique choisi (sinon cadre du rang)
-  const _cbg = cosmeticBg(p);     // fond de carte cosmétique (sinon fond uni)
-  const _cardBgStyle = _cbg
-    ? `background:linear-gradient(180deg,rgba(8,10,16,.5),rgba(8,10,16,.82)),url('${_cbg.src}') center/cover;`
-    : 'background:#171a22;';
-
-  return `<div class="player-card pcard-resp" data-rank="${rk.key}"
-    style="cursor:pointer;position:relative;overflow:hidden;${_cardBgStyle}
-           border-radius:14px;${glowStyle}"
-    onclick="openPlayerProfile(${p.id})">
-
-    <!-- ── DESKTOP : bannière ── -->
-    <div class="pcard-banner"
-         style="height:100px;background-size:cover;background-position:center;
-                ${_cbg ? 'background:transparent' : (rd.banner ? "background-image:url('"+rd.banner+"')" : 'background:'+bg+'18')}">
-    </div>
-
-    <!-- ── DESKTOP avatar wrap 150×150, MOBILE 80×80 ── -->
-    <div class="pcard-av-wrap"
-         style="position:relative;width:150px;height:150px;margin:-38px auto 0;flex-shrink:0">
-      ${(() => {
-        const h      = _cf ? _cf.hole : (FRAME_HOLES[rk.key] || FRAME_HOLES[rk.baseKey||rk.key] || { top:32, left:32, size:86, top_m:18, left_m:18, size_m:44 });
-        const avImg  = AVATARS.find(a => a.id === (p.avatar || 1));
-        const bgStyle= RANK_AVATAR_BG[rk.baseKey||rk.key]
-          ? 'background-image:url(' + RANK_AVATAR_BG[rk.baseKey||rk.key] + ');background-size:cover'
-          : 'background:' + bg + '22';
-        const inner  = avImg
-          ? '<img src="' + avImg.src + '" style="width:100%;height:100%;object-fit:cover;display:block">'
-          : '<div style="width:100%;height:100%;' + bgStyle + ';display:flex;align-items:center;justify-content:center;font-size:' + Math.round(h.size*0.35) + 'px;font-weight:700;color:rgba(255,255,255,0.92);text-shadow:0 1px 4px rgba(0,0,0,0.8)">' + ini(p.name) + '</div>';
-        // Cadre agrandi (×cScale) MAIS avatar à sa taille normale (réduit d'un poil), centré sur le trou.
-        const hcxD = offD + (h.left + h.size / 2) * cScale, hcyD = offD + (h.top + h.size / 2) * cScale;
-        const hcxM = offM + (h.left_m + h.size_m / 2) * cScale, hcyM = offM + (h.top_m + h.size_m / 2) * cScale;
-        const aD = h.size * cAvShrink, aDm = h.size_m * cAvShrink;
-        return '<div class="pcard-av-hole-d" style="position:absolute;top:' + (hcyD - aD / 2) + 'px;left:' + (hcxD - aD / 2) + 'px;width:' + aD + 'px;height:' + aD + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>'
-             + '<div class="pcard-av-hole-m" style="display:none;position:absolute;top:' + (hcyM - aDm / 2) + 'px;left:' + (hcxM - aDm / 2) + 'px;width:' + aDm + 'px;height:' + aDm + 'px;border-radius:50%;overflow:hidden;z-index:1">' + inner + '</div>';
-      })()}
-      <!-- Frame desktop -->
-      ${(_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rd.player_frame))
-        ? `<img class="pcard-frame-desktop" src="${_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rd.player_frame)}"
-               style="position:absolute;top:${offD}px;left:${offD}px;width:${fSd}px;height:${fSd}px;
-                      object-fit:contain;pointer-events:none;z-index:2">`
-        : ''}
-      <!-- Frame mobile (caché par défaut, affiché via CSS ≤700px) -->
-      ${(_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rm.player_frame))
-        ? `<img class="pcard-frame-mobile" src="${_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rm.player_frame)}"
-               style="display:none;position:absolute;top:${offM}px;left:${offM}px;width:${fSm}px;height:${fSm}px;
-                      object-fit:contain;pointer-events:none;z-index:2">`
-        : ''}
-    </div>
-
-    <!-- ── Contenu principal ── -->
-    <div class="pcard-body" style="padding:0 12px 10px">
-      <!-- Emblème desktop -->
-      ${rd.emblem
-        ? `<div class="pcard-emblem-desktop"
-               style="position:relative;width:48px;height:48px;margin:6px auto 4px;
-                      background:url('${rd.emblem}') center/contain no-repeat">
-           </div>`
-        : ''}
-      <!-- Emblème mobile -->
-      ${rm.emblem
-        ? `<div class="pcard-emblem-mobile"
-               style="display:none;position:relative;width:28px;height:28px;flex-shrink:0;
-                      background:url('${rm.emblem}') center/contain no-repeat">
-           </div>`
-        : ''}
-
-      <div style="text-align:center;font-weight:800;color:#f7e6b3;font-size:15px;margin-bottom:3px">
-        ${esc(p.name)}
-        ${isMe ? '<span style="font-size:11px;color:var(--accent);font-weight:400"> (moi)</span>' : ''}
+  return `<div class="pl-card${isMe ? ' me' : ''}" onclick="openPlayerProfile(${p.id})" style="${bgStyle}">
+    <div class="pl-in">
+      ${avatarBlock}
+      <div class="pl-name">${esc(p.name)}${isMe ? '<span class="pl-me"> (moi)</span>' : ''}</div>
+      <div class="pl-tier" style="color:${tc};border-color:${tc}55;background:${tc}1f">${rankImg(rk, 15)} ${rk.name}</div>
+      <div class="pl-pts">${p.points || 0}<small> pts</small></div>
+      ${rk.idx < RANKS.length - 1
+        ? `<div class="pl-prog"><i style="width:${prog}%;background:${tc}"></i></div>
+           <div class="pl-prog-lbl">&rarr; ${nextRk.name} &middot; ${Math.max(0, (nextRk.min - (p.points || 0)))} pts</div>`
+        : `<div class="pl-prog-lbl" style="color:${tc}">Rang max !</div>`}
+      <div class="pl-stats">
+        <div><b style="color:var(--accent)">${s.won}</b>V</div>
+        <div><b>${s.lost}</b>D</div>
+        <div><b>${rate}%</b>WR</div>
       </div>
-
-      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px">
-        <span style="font-size:11px;padding:2px 10px;border-radius:12px;
-                     background:${rk.color}22;color:${rk.color};border:1px solid ${rk.color}44">
-          ${rk.name}
-        </span>
-        ${(p.points || 0) > 0
-          ? `<span class="points-badge">&#11088; ${p.points} pts</span>`
-          : ''}
-        ${isAdmin ? `<span class="points-badge" title="Note de niveau (Elo)">&#9876;&#65039; ${getElo(p)} Elo</span>` : ''}
-        ${(p.streak || 0) >= 3
-          ? `<span class="streak-badge">&#128293; ${p.streak}</span>`
-          : ''}
-      </div>
-      ${p.honor_title
-        ? `<div style="text-align:center;font-size:10px;color:var(--text-faint);margin:-2px 0 8px">
-             &#127942; Saison ${p.honor_season || '?'} : <strong style="color:var(--text-muted)">${esc(p.honor_title)}</strong>${p.honor_elo ? ` · Elo max ${p.honor_elo}` : ''}
-           </div>`
-        : ''}
-      ${Array.isArray(p.champion_seasons) && p.champion_seasons.length
-        ? `<div style="text-align:center;font-size:11px;color:var(--gold);margin:-2px 0 8px;font-weight:600">
-             &#127941; Champion ${p.champion_seasons.sort((a,b)=>a-b).map((n) => 'S' + n).join(', ')}
-           </div>`
-        : ''}
-
-      <div class="pstats">
-        <div class="pst"><div class="pst-val" style="color:var(--accent)">${s.won}</div><div class="pst-lbl">Victoires</div></div>
-        <div class="pst"><div class="pst-val" style="color:var(--text-muted)">${s.lost}</div><div class="pst-lbl">Défaites</div></div>
-        <div class="pst"><div class="pst-val">${s.played}</div><div class="pst-lbl">Parties</div></div>
-      </div>
-
-      <div style="margin-top:8px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-faint);margin-bottom:3px">
-          <span>Victoires</span><span style="color:var(--accent)">${rate}%</span>
-        </div>
-        <div class="wr-bar"><div class="wr-fill" style="width:${rate}%"></div></div>
-        ${rk.idx < RANKS.length - 1
-          ? `<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:5px;margin-bottom:2px">
-               <span>${rk.name}</span><span>${nextRk.name} (${p.points||0}/${nextRk.min})</span>
-             </div>
-             <div class="wr-bar"><div style="height:100%;width:${prog}%;background:${rk.color};border-radius:3px"></div></div>`
-          : `<div style="font-size:10px;color:${rk.color};margin-top:5px;text-align:center">Rang max !</div>`}
-      </div>
-
-      <div class="pdet" style="margin-top:8px">
-        ${bg2  ? `<div class="pdet-row"><span>🎯 Favori</span><span>${esc(bg2.name)} (${bg2.rate}%)</span></div>` : ''}
-        ${adv?.best  ? `<div class="pdet-row"><span>😊 Facile</span><span>${esc(adv.best.name)} (${adv.best.rate}%)</span></div>` : ''}
-        ${adv?.worst ? `<div class="pdet-row"><span>😤 Difficile</span><span>${esc(adv.worst.name)} (${adv.worst.rate}%)</span></div>` : ''}
-      </div>
-
+      ${badges.length ? `<div class="pl-badges">${badges.join('')}</div>` : ''}
+      ${(fav || (adv && adv.worst)) ? `<div class="pl-tags">
+        ${fav ? `<span class="pl-tag">🎯 ${esc(fav.name)}</span>` : ''}
+        ${adv && adv.worst ? `<span class="pl-tag">😈 ${esc(adv.worst.name)}</span>` : ''}
+      </div>` : ''}
       ${adminFoot}
     </div>
   </div>`;
