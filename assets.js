@@ -258,7 +258,16 @@ const BACKGROUNDS = [
   { id: 34, label: 'La Vallée des Cerisiers',    src: 'assets/bg_dorfromantik.webp',  reqAch: 'dorfromantik_play_15' },
   { id: 35, label: 'Le Panthéon de Divinus',     src: 'assets/bg_divinus.webp',       reqAch: 'divinus_win_10' },
   { id: 36, label: 'La Table du Royaume',        src: 'assets/bg_dilemmeduroi.webp',  reqAch: 'dilemmeduroi_play_15' },
-  { id: 37, label: 'La Forge des Dieux',         src: 'assets/bg_diceforge.webp',     reqAch: 'diceforge_play_15' }
+  { id: 37, label: 'La Forge des Dieux',         src: 'assets/bg_diceforge.webp',     reqAch: 'diceforge_play_15' },
+  { id: 38, label: 'Les Lunes Lointaines',       src: 'assets/bg_faraway.webp',       reqAch: 'faraway_play_15' },
+  { id: 39, label: 'L\'Arbre d\'Everdell',       src: 'assets/bg_everdell.webp',      reqAch: 'everdell_play_15' },
+  { id: 40, label: 'Le Crépuscule d\'Automne',   src: 'assets/bg_evenfall.webp',      reqAch: 'evenfall_play_15' },
+  { id: 41, label: 'Le Cristal d\'Éternité',     src: 'assets/bg_eternitium.webp',    reqAch: 'eternitium_play_15' },
+  { id: 42, label: 'La Vallée Fleurie',          src: 'assets/bg_flowers.webp',       reqAch: 'flowers_play_15' },
+  { id: 43, label: 'Le Port d\'Edo',             src: 'assets/bg_iki.webp',           reqAch: 'iki_play_15' },
+  { id: 44, label: 'L\'Olympe Céleste',          src: 'assets/bg_hybris.webp',        reqAch: 'hybris_play_15' },
+  { id: 45, label: 'Les Royaumes en Guerre',     src: 'assets/bg_gwent.webp',         reqAch: 'gwent_play_15' },
+  { id: 46, label: 'La Cité Sombre',             src: 'assets/bg_gloomhaven.webp',    reqAch: 'gloomhaven_play_15' }
 ];
 
 // ─── Images décoratives ───

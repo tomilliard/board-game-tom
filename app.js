@@ -4664,6 +4664,15 @@ const ACHIEVEMENTS = [
   { id:'dorfromantik_play_15',  icon:'🌸', name:'Peintre des cerisiers',       desc:'Jouer 15 parties de Dorfromantik Sakura',        check: (s) => (s.dorfromantikPlayed || 0) >= 15 },
   { id:'dilemmeduroi_play_15',  icon:'👑', name:'Conseiller du Roi',           desc:'Jouer 15 parties du Dilemme du Roi',             check: (s) => (s.dilemmeDuRoiPlayed || 0) >= 15 },
   { id:'diceforge_play_15',     icon:'⚒️', name:'Forgeron divin',              desc:'Jouer 15 parties de Dice Forge',                 check: (s) => (s.diceForgePlayed || 0) >= 15 },
+  { id:'faraway_play_15',    icon:'🪐', name:'Explorateur de l\'Inconnu', desc:'Jouer 15 parties de Far Away',    check: (s) => (s.farAwayPlayed || 0) >= 15 },
+  { id:'everdell_play_15',   icon:'🦊', name:'Citoyen d\'Everdell',       desc:'Jouer 15 parties d\'Everdell',    check: (s) => (s.everdellPlayed || 0) >= 15 },
+  { id:'evenfall_play_15',   icon:'🍂', name:'Mystique du Crépuscule',    desc:'Jouer 15 parties d\'Evenfall',    check: (s) => (s.evenfallPlayed || 0) >= 15 },
+  { id:'eternitium_play_15', icon:'💠', name:'Gardien de l\'Éternité',    desc:'Jouer 15 parties d\'Eternitium',  check: (s) => (s.eternitiumPlayed || 0) >= 15 },
+  { id:'flowers_play_15',    icon:'🦋', name:'Botaniste émérite',         desc:'Jouer 15 parties de Flowers',     check: (s) => (s.flowersPlayed || 0) >= 15 },
+  { id:'iki_play_15',        icon:'🏮', name:'Artisan d\'Edo',            desc:'Jouer 15 parties d\'Iki',         check: (s) => (s.ikiPlayed || 0) >= 15 },
+  { id:'hybris_play_15',     icon:'🏛️', name:'Défi aux Dieux',            desc:'Jouer 15 parties d\'Hybris',      check: (s) => (s.hybrisPlayed || 0) >= 15 },
+  { id:'gwent_play_15',      icon:'🐺', name:'Maître du Gwent',           desc:'Jouer 15 parties de Gwent',       check: (s) => (s.gwentPlayed || 0) >= 15 },
+  { id:'gloomhaven_play_15', icon:'🗡️', name:'Mercenaire de Gloomhaven',  desc:'Jouer 15 parties de Gloomhaven',  check: (s) => (s.gloomhavenPlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4757,6 +4766,15 @@ const computeAchievementStats = (pid) => {
   const _dorfromantikId  = _resolveGame(["Dorfromantik Sakura", "Dorfromantik : Sakura", "Dorfromantik", "Sakura"]);
   const _dilemmeDuRoiId  = _resolveGame(["Le Dilemme du Roi", "Dilemme du Roi", "Dilemme du roi", "Dillemme du roi", "The King's Dilemma", "King's Dilemma"]);
   const _diceForgeId     = _resolveGame(["Dice Forge", "DiceForge", "dice forge"]);
+  const _farAwayId    = _resolveGame(["Far Away", "FarAway", "far away"]);
+  const _everdellId   = _resolveGame(["Everdell", "everdell"]);
+  const _evenfallId   = _resolveGame(["Evenfall", "evenfall"]);
+  const _eternitiumId = _resolveGame(["Eternitium", "Eternitum", "eternitium"]);
+  const _flowersId    = _resolveGame(["Flowers", "flowers"]);
+  const _ikiId        = _resolveGame(["Iki", "IKI", "iki"]);
+  const _hybrisId     = _resolveGame(["Hybris", "Hybris Disordered Cosmos", "Hybris : Disordered Cosmos", "hybris"]);
+  const _gwentId      = _resolveGame(["Gwent", "Gwynt", "gwent"]);
+  const _gloomhavenId = _resolveGame(["Gloomhaven", "Gloomhaven Les Mâchoires du Lion", "Gloomhaven: Jaws of the Lion", "gloomhaven"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4798,6 +4816,15 @@ const computeAchievementStats = (pid) => {
   const dorfromantikPlayed  = _byGame(_dorfromantikId, playerMatches);
   const dilemmeDuRoiPlayed  = _byGame(_dilemmeDuRoiId, playerMatches);
   const diceForgePlayed     = _byGame(_diceForgeId, playerMatches);
+  const farAwayPlayed    = _byGame(_farAwayId, playerMatches);
+  const everdellPlayed   = _byGame(_everdellId, playerMatches);
+  const evenfallPlayed   = _byGame(_evenfallId, playerMatches);
+  const eternitiumPlayed = _byGame(_eternitiumId, playerMatches);
+  const flowersPlayed    = _byGame(_flowersId, playerMatches);
+  const ikiPlayed        = _byGame(_ikiId, playerMatches);
+  const hybrisPlayed     = _byGame(_hybrisId, playerMatches);
+  const gwentPlayed      = _byGame(_gwentId, playerMatches);
+  const gloomhavenPlayed = _byGame(_gloomhavenId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4945,6 +4972,15 @@ const computeAchievementStats = (pid) => {
     dorfromantikPlayed,
     dilemmeDuRoiPlayed,
     diceForgePlayed,
+    farAwayPlayed,
+    everdellPlayed,
+    evenfallPlayed,
+    eternitiumPlayed,
+    flowersPlayed,
+    ikiPlayed,
+    hybrisPlayed,
+    gwentPlayed,
+    gloomhavenPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4991,6 +5027,15 @@ const ACH_PROGRESS = {
   dorfromantik_play_15:  [(s) => s.dorfromantikPlayed, 15],
   dilemmeduroi_play_15:  [(s) => s.dilemmeDuRoiPlayed, 15],
   diceforge_play_15:     [(s) => s.diceForgePlayed, 15],
+  faraway_play_15:    [(s) => s.farAwayPlayed, 15],
+  everdell_play_15:   [(s) => s.everdellPlayed, 15],
+  evenfall_play_15:   [(s) => s.evenfallPlayed, 15],
+  eternitium_play_15: [(s) => s.eternitiumPlayed, 15],
+  flowers_play_15:    [(s) => s.flowersPlayed, 15],
+  iki_play_15:        [(s) => s.ikiPlayed, 15],
+  hybris_play_15:     [(s) => s.hybrisPlayed, 15],
+  gwent_play_15:      [(s) => s.gwentPlayed, 15],
+  gloomhaven_play_15: [(s) => s.gloomhavenPlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],
