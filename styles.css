@@ -136,7 +136,7 @@ select:focus{border-color:var(--accent);outline:none}
 .sc-chip.top{border-color:var(--gold);color:var(--gold);background:var(--gold-light)}
 .lboard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow)}
 .lboard .ctr{text-align:center}
-.lb-head,.lb-row{display:grid;grid-template-columns:38px 1.7fr 150px 64px 86px 58px;align-items:center;gap:10px;padding:10px 14px}
+.lb-head,.lb-row{display:grid;grid-template-columns:42px 1.6fr 118px 70px 64px 74px 58px;align-items:center;gap:10px;padding:10px 14px}
 .lb-head{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);font-weight:700;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
 .lb-row{border-top:1px solid var(--border);cursor:pointer;transition:background .14s}
 .lb-head + .lb-row{border-top:none}
@@ -148,21 +148,19 @@ select:focus{border-color:var(--accent);outline:none}
 .lb-av img{width:100%;height:100%;object-fit:cover;display:block}
 .lb-nm{min-width:0}
 .lb-nm b{display:block;font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lb-nm span{font-size:11px;color:var(--text-muted)}
+.lb-nm span{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .lb-tier{display:flex;align-items:center;gap:8px;min-width:0}
-.lb-emblem{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.05)}
-.lb-emblem img{width:22px;height:22px;object-fit:contain}
-.lb-tinfo{min-width:0}
-.lb-tinfo b{display:block;font-size:12.5px;font-weight:700;font-family:'Chakra Petch',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lb-tinfo span{font-size:11px;color:var(--text-muted)}
-.lb-vd{font-size:13px;color:var(--text-muted)}
-.lb-vd .w{color:var(--accent);font-weight:700}.lb-vd .l{color:var(--text-muted)}
+.lb-emblem{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.lb-tinfo{font-size:12px;color:var(--text-muted);white-space:nowrap}
+.lb-tinfo b{font-family:'Chakra Petch',sans-serif;font-size:16px;color:var(--text)}
+.lb-col{font-size:13px;color:var(--text-muted)}
+.lb-col .win{color:var(--accent);font-weight:700}.lb-col .lose{color:var(--text-muted)}
 .lb-wr{display:flex;flex-direction:column;align-items:center;gap:4px}
 .lb-wr b{font-size:13px;font-weight:800;font-family:'Chakra Petch',sans-serif}
-.lb-bar{width:62px;height:5px;background:var(--border);border-radius:999px;overflow:hidden}
+.lb-bar{width:60px;height:5px;background:var(--border);border-radius:999px;overflow:hidden}
 .lb-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--blue));border-radius:999px}
 .lb-streak{font-size:12px;font-weight:800}
-.lb-streak.up{color:var(--accent)}.lb-streak.flat{color:var(--text-faint)}
+.lb-streak.up{color:var(--accent)}.lb-streak.down{color:var(--danger)}.lb-streak.flat{color:var(--text-faint)}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:1rem}
 .modal-overlay.open{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius-lg);padding:1.75rem;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:slideUp .2s ease;border:1px solid var(--border-strong)}
@@ -290,7 +288,7 @@ select:focus{border-color:var(--accent);outline:none}
   /* Leaderboard compact */
   .lb-head{display:none}
   .lb-row{grid-template-columns:30px 1.5fr auto;gap:9px;padding:10px 12px}
-  .lb-vd,.lb-wr,.lb-strk{display:none}
+  .lb-col,.lb-wr,.lb-strk{display:none}
 
   /* ── MODALES ── */
   .modal-overlay{align-items:flex-end;padding:0}
@@ -602,3 +600,23 @@ select:focus{border-color:var(--accent);outline:none}
  .side-panel{flex:1;min-width:240px}
 }
 @media(max-width:700px){ .collection-side{flex-direction:column} }
+
+/* ─── Page d'accueil « Classement » : hero + podium ─── */
+.home-hero{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:1.5rem;background:linear-gradient(120deg,var(--accent-light),transparent 60%),var(--surface);box-shadow:var(--shadow)}
+.home-hero-eye{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
+.home-hero-title{font-family:'Chakra Petch',sans-serif;font-size:30px;margin:6px 0 12px}
+.home-hero-meta{display:flex;gap:24px;flex-wrap:wrap}
+.home-hero-meta div{font-size:12px;color:var(--text-muted)}
+.home-hero-meta b{display:block;font-size:20px;color:var(--text);font-family:'Chakra Petch',sans-serif}
+.home-podium{display:grid;grid-template-columns:1fr 1.12fr 1fr;gap:16px;align-items:end;margin-bottom:1.5rem}
+.podium-slot{position:relative;min-width:0}
+.podium-slot.pos-1{order:2;transform:translateY(-14px)}
+.podium-slot.pos-2{order:1}
+.podium-slot.pos-3{order:3}
+.podium-slot.pos-1 .player-card{box-shadow:0 0 0 2px var(--gold),var(--shadow-md)}
+.podium-medal{position:absolute;top:8px;left:8px;z-index:4;font-size:24px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+@media(max-width:760px){
+  .home-podium{display:flex;flex-direction:column}
+  .podium-slot{order:0!important;transform:none}
+  .home-hero-title{font-size:24px}
+}

@@ -221,7 +221,7 @@ let currentProfile = null;
 
 let isAdmin      = false;
 let isOwner      = false;   // vrai uniquement si le compte connecté a profiles.is_admin = true
-let curPage      = 'games';
+let curPage      = 'classement';
 let curTab       = 'all';
 let socialTab    = 'suggestions';
 
@@ -1527,7 +1527,8 @@ const updateAdminUI = () => {
   if (cpBtn) cpBtn.style.display = isAdmin ? 'flex' : 'none';
   const rcBtn = document.getElementById('recompress-btn');
   if (rcBtn) rcBtn.style.display = isAdmin ? '' : 'none';
-  if      (curPage === 'games')   renderGames();
+  if      (curPage === 'classement') renderHome();
+  else if (curPage === 'games')   renderGames();
   else if (curPage === 'players') renderPlayers();
   else if (curPage === 'history') renderHistory();
   else if (curPage === 'social')  renderCurrentSocialTab();
@@ -1546,7 +1547,8 @@ const showPage = (page, el) => {
   if (el) el.classList.add('active');
   syncMobileNav(page);
   updateAddBtn();
-  if      (page === 'games')   renderGames();
+  if      (page === 'classement') renderHome();
+  else if (page === 'games')   renderGames();
   else if (page === 'players') renderPlayers();
   else if (page === 'history') renderHistory();
   else if (page === 'social')  loadSocial().then(() => { renderCurrentSocialTab(); loadChat(); });
@@ -1554,7 +1556,7 @@ const showPage = (page, el) => {
 };
 
 const syncMobileNav = (page) => {
-  ['games', 'players', 'history', 'social', 'events'].forEach((p) => {
+  ['classement', 'games', 'players', 'history', 'social', 'events'].forEach((p) => {
     document.getElementById(`mnav-${p}`)?.classList.toggle('active', p === page);
   });
 };
@@ -1562,7 +1564,7 @@ const syncMobileNav = (page) => {
 const updateAddBtn = () => {
   const btn = document.getElementById('main-add-btn');
   if (!btn) return;
-  if (curPage === 'social' || curPage === 'events' || curPage === 'players') {
+  if (curPage === 'social' || curPage === 'events' || curPage === 'players' || curPage === 'classement') {
     btn.style.display = 'none';
   } else if (curPage === 'games') {
     btn.style.display = isAdmin ? 'flex' : 'none';
@@ -1582,7 +1584,7 @@ const updateAddBtn = () => {
 const updateFab = () => {
   const fab = document.getElementById('fab-btn');
   if (!fab) return;
-  if (curPage === 'social' || curPage === 'events' || curPage === 'players') {
+  if (curPage === 'social' || curPage === 'events' || curPage === 'players' || curPage === 'classement') {
     fab.classList.add('fab-hidden');
     return;
   }
@@ -3281,28 +3283,62 @@ const seasonBannerHtml = () => {
     </div>`;
 };
 
+// ── Page d'accueil « Classement » : hero + podium + leaderboard ──
+const renderHome = () => { renderHomeHero(); renderPodium(); renderLeaderboard(); };
+
+const renderHomeHero = () => {
+  const snum = document.getElementById('home-season-num');
+  if (snum) snum.textContent = currentSeason ? currentSeason.number : 1;
+  const meta = document.getElementById('home-hero-meta');
+  if (!meta) return;
+  const leader = [...players].sort((a, b) => (b.points || 0) - (a.points || 0))[0];
+  meta.innerHTML =
+    `<div><b>${seasonMatches().length}</b>parties cette saison</div>` +
+    `<div><b>${leader ? esc(leader.name) : '—'}</b>en tête</div>` +
+    `<div><b>${players.length}</b>membres</div>`;
+};
+
+const renderPodium = () => {
+  const el = document.getElementById('home-podium');
+  if (!el) return;
+  if (!players.length) { el.innerHTML = ''; return; }
+  const top = players
+    .map((p) => ({ ...p, ...playerStats(p.id) }))
+    .sort((a, b) => (b.points || 0) - (a.points || 0) || b.won - a.won)
+    .slice(0, 3);
+  const medals = ['🥇', '🥈', '🥉'];
+  el.innerHTML = top.map((p, i) =>
+    `<div class="podium-slot pos-${i + 1}"><div class="podium-medal">${medals[i]}</div>${buildPlayerCard(p)}</div>`
+  ).join('');
+};
+
 const TIER_COLOR = {
   bois:'var(--t-bois)', bronze:'var(--t-bronze)', argent:'var(--t-argent)', or:'var(--t-or)',
   platine:'var(--t-platine)', diamant:'var(--t-diamant)', maitre:'var(--t-maitre)', challenger:'var(--t-chall)',
 };
+const TIER_EMOJI = {
+  bois:'🪵', bronze:'🥉', argent:'🥈', or:'🥇', platine:'💠', diamant:'💎', maitre:'👑', challenger:'🏆',
+};
 const tierColor = (rk) => TIER_COLOR[(rk && (rk.baseKey || rk.key))] || 'var(--text-muted)';
+const tierEmoji = (rk) => TIER_EMOJI[(rk && (rk.baseKey || rk.key))] || '•';
 
 const renderLeaderboard = () => {
-  const el = document.getElementById('lboard');
+  const els = document.querySelectorAll('.lboard');
+  if (!els.length) return;
   if (!players.length) {
-    el.innerHTML = '<p style="font-size:13px;color:var(--text-faint);text-align:center;padding:1rem">Aucun joueur</p>';
+    els.forEach((el) => { el.innerHTML = '<p style="font-size:13px;color:var(--text-faint);text-align:center;padding:1rem">Aucun joueur</p>'; });
     return;
   }
   const ranked = players
     .map((p) => { const s = playerStats(p.id); return { ...p, ...s, rate: s.played > 0 ? Math.round(s.won / s.played * 100) : 0 }; })
-    .sort((a, b) => b.rate - a.rate || b.won - a.won);
+    .sort((a, b) => (b.points || 0) - (a.points || 0) || b.won - a.won || b.rate - a.rate);
 
   const head = `<div class="lb-head">
       <div class="ctr">#</div><div>Joueur</div><div>Rang</div>
-      <div class="ctr">V/D</div><div class="ctr">Winrate</div><div class="ctr">Série</div>
+      <div class="ctr">Parties</div><div class="ctr">V/D</div><div class="ctr">Winrate</div><div class="ctr">Série</div>
     </div>`;
 
-  el.innerHTML = seasonBannerHtml() + head + ranked.map((p, i) => {
+  const html = seasonBannerHtml() + head + ranked.map((p, i) => {
     const md = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
     const mc = i === 0 ? 'm1' : i === 1 ? 'm2' : i === 2 ? 'm3' : '';
     const bg = p.color || '#4ade80';
@@ -3310,24 +3346,28 @@ const renderLeaderboard = () => {
     const tc = tierColor(rk);
     const av = AVATARS.find((a) => a.id === (p.avatar || 1));
     const avHtml = av ? `<img src="${av.src}" alt="">` : `<span style="color:${bg}">${ini(p.name)}</span>`;
+    const fav = bestGame(p.id);
+    const sub = fav ? `🎯 ${esc(fav.name)}` : `${p.played} parties`;
     const streak = (p.streak || 0) >= 1
-      ? `<span class="lb-streak up">🔥${p.streak}</span>`
+      ? `<span class="lb-streak up">▲${p.streak}</span>`
       : `<span class="lb-streak flat">—</span>`;
     return `<div class="lb-row" onclick="openPlayerProfile(${p.id})">
       <div class="lb-rank ${mc}">${md}</div>
       <div class="lb-pl">
         <div class="lb-av">${avHtml}</div>
-        <div class="lb-nm"><b>${esc(p.name)}</b><span>${p.played} parties${isAdmin ? ' · ⚔️' + getElo(p) : ''}</span></div>
+        <div class="lb-nm"><b>${esc(p.name)}</b><span>${sub}</span></div>
       </div>
-      <div class="lb-tier">
-        <span class="lb-emblem">${rankImg(rk, 22)}</span>
-        <div class="lb-tinfo"><b style="color:${tc}">${rk.name}</b><span>${p.points || 0} pts</span></div>
+      <div class="lb-tier" title="${esc(rk.name)}${isAdmin ? ' · Elo ' + getElo(p) : ''}">
+        <span class="lb-emblem" style="background:${tc}">${tierEmoji(rk)}</span>
+        <div class="lb-tinfo"><b>${p.points || 0}</b> pts</div>
       </div>
-      <div class="lb-vd ctr"><b class="w">${p.won}</b>/<span class="l">${p.lost}</span></div>
+      <div class="lb-col ctr">${p.played}</div>
+      <div class="lb-col ctr"><span class="win">${p.won}</span>/<span class="lose">${p.lost}</span></div>
       <div class="lb-wr"><b>${p.rate}%</b><div class="lb-bar"><i style="width:${p.rate}%"></i></div></div>
       <div class="lb-strk ctr">${streak}</div>
     </div>`;
   }).join('');
+  els.forEach((el) => { el.innerHTML = html; });
 };
 
 // ─── Match modal ──────────────────────────────────────────────

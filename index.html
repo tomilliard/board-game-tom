@@ -128,7 +128,13 @@
     </a>
 
     <nav class="nav-tabs">
-      <button class="nav-tab active" onclick="showPage('games',this)">
+      <button class="nav-tab active" onclick="showPage('classement',this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 20h4v-8H4zM10 20h4V4h-4zM16 20h4v-6h-4z"/>
+        </svg>
+        Classement
+      </button>
+      <button class="nav-tab" onclick="showPage('games',this)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="2" y="3" width="20" height="14" rx="2"/>
           <line x1="8" y1="21" x2="16" y2="21"/>
@@ -232,7 +238,14 @@
 ═══════════════════════════════════════════════════════════════ -->
 <nav class="mobile-nav">
   <div class="mobile-nav-inner">
-    <button class="mobile-nav-tab active" id="mnav-games"
+    <button class="mobile-nav-tab active" id="mnav-classement"
+            onclick="showPage('classement',this);syncMobileNav('classement')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 20h4v-8H4zM10 20h4V4h-4zM16 20h4v-6h-4z"/>
+      </svg>
+      Classement
+    </button>
+    <button class="mobile-nav-tab" id="mnav-games"
             onclick="showPage('games',this);syncMobileNav('games')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -293,7 +306,19 @@
 <main class="main">
 
   <!-- COLLECTION -->
-  <div class="page active" id="page-games">
+  <div class="page active" id="page-classement">
+    <section class="home-hero">
+      <div class="home-hero-eye">Saison <span id="home-season-num">1</span> · en cours</div>
+      <h1 class="home-hero-title">Le Classement du Club</h1>
+      <div class="home-hero-meta" id="home-hero-meta"></div>
+    </section>
+    <h2 class="section-title">Podium</h2>
+    <div class="home-podium" id="home-podium"></div>
+    <h2 class="section-title">Classement complet</h2>
+    <div class="lboard" id="home-lb"></div>
+  </div>
+
+  <div class="page" id="page-games">
     <div class="stats-grid sg6" id="stats"></div>
     <div class="collection-layout">
     <div class="collection-main">
