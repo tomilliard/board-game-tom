@@ -1938,6 +1938,7 @@ const buildExtList = (g) => {
 
 const buildGameCard = (g) => {
   const tp    = timesPlayed(g.id);
+  const avg   = avgRating(g);
   const exts  = g.extensions || [];
   const extV  = exts.reduce((s, e) => s + (e.price || 0), 0);
   const pMin  = g.pmin === g.pmax
@@ -1958,14 +1959,13 @@ const buildGameCard = (g) => {
     : '';
 
   return `<div class="game-card" id="gc-${g.id}">
-    <div class="game-card-bg"></div>
+    <div class="gc-cover">
+      <div class="game-card-bg"></div>
+      <span class="badge ${g.status === 'own' ? 'badge-own' : 'badge-wish'}">${g.status === 'own' ? 'Possédé' : 'Souhait'}</span>
+      ${avg > 0 ? `<span class="gc-rate">★ ${avg.toFixed(1)}</span>` : ''}
+    </div>
     <div class="game-card-content">
-      <div class="card-header">
-        <div class="game-name">${esc(g.name)}</div>
-        <span class="badge ${g.status === 'own' ? 'badge-own' : 'badge-wish'}">
-          ${g.status === 'own' ? 'Possédé' : 'Souhait'}
-        </span>
-      </div>
+      <div class="game-name">${esc(g.name)}</div>
       ${buildRatingRow(g)}
       <div class="card-pills">
         <span class="pill">
@@ -2026,7 +2026,7 @@ const renderCollectionSide = () => {
     topEl.innerHTML = rated.length
       ? rated.map((g, i) =>
           `<div class="side-row" onclick="scrollToGame(${g.id})">
-             <span class="side-rank">${i + 1}</span>
+             <span class="side-rank ${i < 3 ? 'top' : ''}">${i + 1}</span>
              <span class="side-name">${esc(g.name)}</span>
              <span class="side-val">★ ${avgRating(g).toFixed(1)}</span>
            </div>`).join('')
