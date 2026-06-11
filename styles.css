@@ -631,7 +631,6 @@ select:focus{border-color:var(--accent);outline:none}
 .pod-games{display:flex;justify-content:center;gap:5px;margin-top:12px}
 .pod-games img{width:30px;height:30px;border-radius:8px;object-fit:cover;border:1px solid var(--border-strong)}
 @media(max-width:760px){
-  .home-podium{display:flex;flex-direction:column}
-  .podium-slot{order:0!important;transform:none}
+  .home-podium,.podium-title{display:none}
   .home-hero-title{font-size:24px}
 }
