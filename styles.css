@@ -700,3 +700,21 @@ select:focus{border-color:var(--accent);outline:none}
 .lb-frm i.w{background:var(--accent);box-shadow:0 0 5px rgba(74,222,128,.45)}
 .lb-frm i.l{background:var(--danger);box-shadow:0 0 5px rgba(248,113,113,.4)}
 .lb-row.has-bg .lb-frm i.l{background:var(--danger)}
+
+/* ─── Titres équipables ─── */
+.pe-title-chip{font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text-muted);cursor:pointer;user-select:none;
+  transition:border-color .15s,color .15s;line-height:1.2}
+.pe-title-chip:hover{border-color:var(--accent)}
+.pe-title-chip.sel{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent);font-weight:600}
+.pe-title-chip.locked{cursor:not-allowed;opacity:.45;filter:grayscale(1)}
+.pe-title-chip.locked:hover{border-color:var(--border)}
+.pp-title{font-size:12px;color:var(--gold);margin-top:4px;font-weight:600;letter-spacing:.02em}
+.pl-title{font-size:11px;color:var(--gold);text-align:center;margin-top:2px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ─── Onglets Points / Elo du graphique profil ─── */
+.pp-mode-tabs{display:inline-flex;gap:0;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+.pp-mode-btn{font-size:11px;padding:3px 12px;border:none;background:transparent;color:var(--text-muted);
+  cursor:pointer;font-family:inherit;line-height:1.4}
+.pp-mode-btn.on{background:var(--accent);color:#0b0e14;font-weight:700}
