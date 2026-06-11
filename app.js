@@ -76,6 +76,12 @@ const GAME_BG_DEFS = [
   { src: 'assets/bg_brass.webp',        names: ['Brass Birmingham', 'Brass: Birmingham', 'Brass', 'brass'] },
   { src: 'assets/bg_blackforest.webp',  names: ['Black Forest', 'BlackForest', 'black forest'] },
   { src: 'assets/bg_barrage.webp',      names: ['Barrage', 'barrage'] },
+  { src: 'assets/bg_dewan.webp',      names: ['Dewan', 'dewan'] },
+  { src: 'assets/bg_deadcells.webp',  names: ['Dead Cells', 'DeadCells', 'dead cells'] },
+  { src: 'assets/bg_darwins.webp',    names: ["Darwin's Journey", 'Darwins Journey', 'Darwin Journey', "darwin's journey"] },
+  { src: 'assets/bg_cybertcg.webp',   names: ['Cyberpunk TCG', 'Cyberpunk 2077 TCG', 'cyberpunk tcg'] },
+  { src: 'assets/bg_courtisans.webp', names: ['Courtisans', 'Courtisan', 'courtisans'] },
+  { src: 'assets/bg_civolution.webp', names: ['Civolution', 'civolution'] },
   { src: 'assets/bg_dune.webp',      names: ['Dune Imperium Insurrection', 'Dune Imperium', 'Dune', 'dune'] },
   { src: 'assets/bg_7wonders.webp',  names: ['7 Wonders', '7wonders', 'seven wonders'] },
   { src: 'assets/bg_foret.webp',     names: ['foret mixte', 'forêt mixte', 'foret'] },
@@ -4588,6 +4594,12 @@ const ACHIEVEMENTS = [
   { id:'brass_play_15',        icon:'🚂', name:'Baron du charbon',     desc:'Jouer 15 parties de Brass Birmingham', check: (s) => (s.brassPlayed || 0) >= 15 },
   { id:'blackforest_play_15',  icon:'🌑', name:'Alchimiste de la Forêt-Noire', desc:'Jouer 15 parties de Black Forest', check: (s) => (s.blackForestPlayed || 0) >= 15 },
   { id:'barrage_play_15',      icon:'💧', name:'Ingénieur hydraulique', desc:'Jouer 15 parties de Barrage',       check: (s) => (s.barragePlayed || 0) >= 15 },
+  { id:'dewan_play_15',      icon:'🗿', name:'Esprit de Dewan',          desc:'Jouer 15 parties de Dewan',            check: (s) => (s.dewanPlayed || 0) >= 15 },
+  { id:'deadcells_play_15',  icon:'💀', name:'Prisonnier immortel',      desc:'Jouer 15 parties de Dead Cells',       check: (s) => (s.deadCellsPlayed || 0) >= 15 },
+  { id:'darwins_play_15',    icon:'🐢', name:'Naturaliste du Beagle',    desc:"Jouer 15 parties de Darwin's Journey", check: (s) => (s.darwinsPlayed || 0) >= 15 },
+  { id:'cybertcg_play_15',   icon:'🎴', name:'Duelliste de Night City',  desc:'Jouer 15 parties de Cyberpunk TCG',    check: (s) => (s.cyberTcgPlayed || 0) >= 15 },
+  { id:'courtisans_play_15', icon:'🎭', name:'Intrigant de la cour',     desc:'Jouer 15 parties de Courtisans',       check: (s) => (s.courtisansPlayed || 0) >= 15 },
+  { id:'civolution_play_15', icon:'🧬', name:'Architecte des civilisations', desc:'Jouer 15 parties de Civolution',   check: (s) => (s.civolutionPlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4669,6 +4681,12 @@ const computeAchievementStats = (pid) => {
   const _carcaId     = _resolveGame(["Carcassonne", "Carcassone"]);
   const _blackForestId = _resolveGame(["Black Forest", "BlackForest"]);
   const _barrageId   = _resolveGame(["Barrage", "barrage"]);
+  const _dewanId      = _resolveGame(["Dewan", "dewan"]);
+  const _deadCellsId  = _resolveGame(["Dead Cells", "DeadCells"]);
+  const _darwinsId    = _resolveGame(["Darwin's Journey", "Darwins Journey", "Darwin Journey"]);
+  const _cyberTcgId   = _resolveGame(["Cyberpunk TCG", "Cyberpunk 2077 TCG"]);
+  const _courtisansId = _resolveGame(["Courtisans", "Courtisan"]);
+  const _civolutionId = _resolveGame(["Civolution", "civolution"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4698,6 +4716,12 @@ const computeAchievementStats = (pid) => {
   const carcassonnePlayed  = _byGame(_carcaId, playerMatches);
   const blackForestPlayed  = _byGame(_blackForestId, playerMatches);
   const barragePlayed      = _byGame(_barrageId, playerMatches);
+  const dewanPlayed        = _byGame(_dewanId, playerMatches);
+  const deadCellsPlayed    = _byGame(_deadCellsId, playerMatches);
+  const darwinsPlayed      = _byGame(_darwinsId, playerMatches);
+  const cyberTcgPlayed     = _byGame(_cyberTcgId, playerMatches);
+  const courtisansPlayed   = _byGame(_courtisansId, playerMatches);
+  const civolutionPlayed   = _byGame(_civolutionId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4833,6 +4857,12 @@ const computeAchievementStats = (pid) => {
     carcassonnePlayed,
     blackForestPlayed,
     barragePlayed,
+    dewanPlayed,
+    deadCellsPlayed,
+    darwinsPlayed,
+    cyberTcgPlayed,
+    courtisansPlayed,
+    civolutionPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4867,6 +4897,12 @@ const ACH_PROGRESS = {
   brass_play_15:        [(s) => s.brassPlayed, 15],
   blackforest_play_15:  [(s) => s.blackForestPlayed, 15],
   barrage_play_15:      [(s) => s.barragePlayed, 15],
+  dewan_play_15:        [(s) => s.dewanPlayed, 15],
+  deadcells_play_15:    [(s) => s.deadCellsPlayed, 15],
+  darwins_play_15:      [(s) => s.darwinsPlayed, 15],
+  cybertcg_play_15:     [(s) => s.cyberTcgPlayed, 15],
+  courtisans_play_15:   [(s) => s.courtisansPlayed, 15],
+  civolution_play_15:   [(s) => s.civolutionPlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],

@@ -244,7 +244,13 @@ const BACKGROUNDS = [
   { id: 20, label: 'Les Remparts de Carcassonne',src: 'assets/bg_carcassonne.webp',  reqAch: 'carcassonne_play_15' },
   { id: 21, label: 'Les Forges de Birmingham',   src: 'assets/bg_brass.webp',        reqAch: 'brass_play_15' },
   { id: 22, label: 'La Forêt-Noire',             src: 'assets/bg_blackforest.webp',  reqAch: 'blackforest_play_15' },
-  { id: 23, label: 'Le Grand Barrage',           src: 'assets/bg_barrage.webp',      reqAch: 'barrage_play_15' }
+  { id: 23, label: 'Le Grand Barrage',           src: 'assets/bg_barrage.webp',      reqAch: 'barrage_play_15' },
+  { id: 24, label: 'Les Terres de Dewan',        src: 'assets/bg_dewan.webp',        reqAch: 'dewan_play_15' },
+  { id: 25, label: 'L\'Île Maudite',             src: 'assets/bg_deadcells.webp',    reqAch: 'deadcells_play_15' },
+  { id: 26, label: 'L\'Archipel de Darwin',      src: 'assets/bg_darwins.webp',      reqAch: 'darwins_play_15' },
+  { id: 27, label: 'Néons de Night City',        src: 'assets/bg_cybertcg.webp',     reqAch: 'cybertcg_play_15' },
+  { id: 28, label: 'La Salle du Trône',          src: 'assets/bg_courtisans.webp',   reqAch: 'courtisans_play_15' },
+  { id: 29, label: 'L\'Aube des Civilisations',  src: 'assets/bg_civolution.webp',   reqAch: 'civolution_play_15' }
 ];
 
 // ─── Images décoratives ───
