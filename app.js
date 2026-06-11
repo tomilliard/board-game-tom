@@ -147,6 +147,14 @@ const GAME_BG_DEFS = [
   { src: 'assets/bg_senjutsu.webp',     names: ['Senjutsu', 'senjutsu'] },
   { src: 'assets/bg_scythe.webp',       names: ['Scythe', 'scythe'] },
   { src: 'assets/bg_sankore.webp',      names: ['Sankoré', 'Sankore', 'sankore'] },
+  { src: 'assets/bg_worldwonders.webp',   names: ['World Wonders', 'WorldWonders', 'world wonders'] },
+  { src: 'assets/bg_worldorder.webp',     names: ['World Order', 'WorldOrder', 'world order'] },
+  { src: 'assets/bg_wonderlandswar.webp', names: ["Wonderland's War", 'Wonderlands War', 'Wonderland War', 'wonderland'] },
+  { src: 'assets/bg_virtu.webp',          names: ['Virtù', 'Virtu', 'virtù', 'virtu'] },
+  { src: 'assets/bg_towerup.webp',        names: ['Tower Up', 'TowerUp', 'tower up'] },
+  { src: 'assets/bg_throughtheages.webp', names: ['Through the Ages', 'Through The Ages', 'through the ages'] },
+  { src: 'assets/bg_witcher.webp',        names: ['The Witcher', 'The Witcher Le Vieux Monde', 'The Witcher: Old World', 'Witcher', 'witcher'] },
+  { src: 'assets/bg_terraforming.webp',   names: ['Terraforming Mars', 'TerraformingMars', 'terraforming mars', 'terraforming'] },
 ];
 const gameBgSrc = (g) => {
   if (!g || !g.name) return null;
@@ -4765,6 +4773,14 @@ const ACHIEVEMENTS = [
   { id:'senjutsu_play_15',     icon:'🥷', name:'Duelliste Senjutsu',        desc:'Jouer 15 parties de Senjutsu',        check: (s) => (s.senjutsuPlayed || 0) >= 15 },
   { id:'scythe_play_15',       icon:'🌾', name:'Faucheur de Scythe',        desc:'Jouer 15 parties de Scythe',          check: (s) => (s.scythePlayed || 0) >= 15 },
   { id:'sankore_play_15',      icon:'📚', name:'Érudit de Sankoré',         desc:'Jouer 15 parties de Sankoré',         check: (s) => (s.sankorePlayed || 0) >= 15 },
+  { id:'worldwonders_play_15',   icon:'🗽', name:'Bâtisseur de Merveilles',  desc:'Jouer 15 parties de World Wonders',     check: (s) => (s.worldWondersPlayed || 0) >= 15 },
+  { id:'worldorder_play_15',     icon:'🌐', name:'Grand Diplomate',          desc:'Jouer 15 parties de World Order',       check: (s) => (s.worldOrderPlayed || 0) >= 15 },
+  { id:'wonderlandswar_play_15', icon:'🫖', name:'Le Chapelier Fou',         desc:'Jouer 15 parties de Wonderland\'s War', check: (s) => (s.wonderlandsWarPlayed || 0) >= 15 },
+  { id:'virtu_play_15',          icon:'📜', name:'Prince de la Renaissance', desc:'Jouer 15 parties de Virtù',             check: (s) => (s.virtuPlayed || 0) >= 15 },
+  { id:'towerup_play_15',        icon:'🏗️', name:'Grutier en chef',          desc:'Jouer 15 parties de Tower Up',          check: (s) => (s.towerUpPlayed || 0) >= 15 },
+  { id:'throughtheages_play_15', icon:'🏺', name:'Voyageur des Âges',        desc:'Jouer 15 parties de Through the Ages',  check: (s) => (s.throughTheAgesPlayed || 0) >= 15 },
+  { id:'witcher_play_15',        icon:'🧙', name:'Sorceleur du Continent',   desc:'Jouer 15 parties de The Witcher',       check: (s) => (s.witcherPlayed || 0) >= 15 },
+  { id:'terraforming_play_15',   icon:'🌡️', name:'Terraformeur de Mars',     desc:'Jouer 15 parties de Terraforming Mars', check: (s) => (s.terraformingPlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4902,6 +4918,14 @@ const computeAchievementStats = (pid) => {
   const _senjutsuId     = _resolveGame(["Senjutsu", "senjutsu"]);
   const _scytheId       = _resolveGame(["Scythe", "scythe"]);
   const _sankoreId      = _resolveGame(["Sankoré", "Sankore", "sankoré", "sankore"]);
+  const _worldWondersId   = _resolveGame(["World Wonders", "WorldWonders", "world wonders"]);
+  const _worldOrderId     = _resolveGame(["World Order", "WorldOrder", "world order"]);
+  const _wonderlandsWarId = _resolveGame(["Wonderland's War", "Wonderlands War", "Wonderland War", "wonderland"]);
+  const _virtuId          = _resolveGame(["Virtù", "Virtu", "virtù", "virtu"]);
+  const _towerUpId        = _resolveGame(["Tower Up", "TowerUp", "tower up"]);
+  const _throughTheAgesId = _resolveGame(["Through the Ages", "Through The Ages", "through the ages"]);
+  const _witcherId        = _resolveGame(["The Witcher", "The Witcher Le Vieux Monde", "The Witcher: Old World", "Witcher", "witcher"]);
+  const _terraformingId   = _resolveGame(["Terraforming Mars", "TerraformingMars", "terraforming mars", "terraforming"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4986,6 +5010,14 @@ const computeAchievementStats = (pid) => {
   const senjutsuPlayed     = _byGame(_senjutsuId, playerMatches);
   const scythePlayed       = _byGame(_scytheId, playerMatches);
   const sankorePlayed      = _byGame(_sankoreId, playerMatches);
+  const worldWondersPlayed   = _byGame(_worldWondersId, playerMatches);
+  const worldOrderPlayed     = _byGame(_worldOrderId, playerMatches);
+  const wonderlandsWarPlayed = _byGame(_wonderlandsWarId, playerMatches);
+  const virtuPlayed          = _byGame(_virtuId, playerMatches);
+  const towerUpPlayed        = _byGame(_towerUpId, playerMatches);
+  const throughTheAgesPlayed = _byGame(_throughTheAgesId, playerMatches);
+  const witcherPlayed        = _byGame(_witcherId, playerMatches);
+  const terraformingPlayed   = _byGame(_terraformingId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -5177,6 +5209,14 @@ const computeAchievementStats = (pid) => {
     senjutsuPlayed,
     scythePlayed,
     sankorePlayed,
+    worldWondersPlayed,
+    worldOrderPlayed,
+    wonderlandsWarPlayed,
+    virtuPlayed,
+    towerUpPlayed,
+    throughTheAgesPlayed,
+    witcherPlayed,
+    terraformingPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -5269,6 +5309,14 @@ const ACH_PROGRESS = {
   senjutsu_play_15:     [(s) => s.senjutsuPlayed, 15],
   scythe_play_15:       [(s) => s.scythePlayed, 15],
   sankore_play_15:      [(s) => s.sankorePlayed, 15],
+  worldwonders_play_15:   [(s) => s.worldWondersPlayed, 15],
+  worldorder_play_15:     [(s) => s.worldOrderPlayed, 15],
+  wonderlandswar_play_15: [(s) => s.wonderlandsWarPlayed, 15],
+  virtu_play_15:          [(s) => s.virtuPlayed, 15],
+  towerup_play_15:        [(s) => s.towerUpPlayed, 15],
+  throughtheages_play_15: [(s) => s.throughTheAgesPlayed, 15],
+  witcher_play_15:        [(s) => s.witcherPlayed, 15],
+  terraforming_play_15:   [(s) => s.terraformingPlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],

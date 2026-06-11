@@ -305,7 +305,15 @@ const BACKGROUNDS = [
   { id: 81, label: 'Le Signal des Étoiles',      src: 'assets/bg_seti.webp',         reqAch: 'seti_play_15' },
   { id: 82, label: 'Le Duel des Samouraïs',      src: 'assets/bg_senjutsu.webp',     reqAch: 'senjutsu_play_15' },
   { id: 83, label: 'Les Plaines de Scythe',      src: 'assets/bg_scythe.webp',       reqAch: 'scythe_play_15' },
-  { id: 84, label: 'L\'Université de Sankoré',   src: 'assets/bg_sankore.webp',      reqAch: 'sankore_play_15' }
+  { id: 84, label: 'L\'Université de Sankoré',   src: 'assets/bg_sankore.webp',      reqAch: 'sankore_play_15' },
+  { id: 85, label: 'Les Merveilles du Monde',    src: 'assets/bg_worldwonders.webp',   reqAch: 'worldwonders_play_15' },
+  { id: 86, label: 'La Table des Nations',       src: 'assets/bg_worldorder.webp',     reqAch: 'worldorder_play_15' },
+  { id: 87, label: 'Le Pays des Merveilles',     src: 'assets/bg_wonderlandswar.webp', reqAch: 'wonderlandswar_play_15' },
+  { id: 88, label: 'La Cité de la Renaissance',  src: 'assets/bg_virtu.webp',          reqAch: 'virtu_play_15' },
+  { id: 89, label: 'Le Chantier des Gratte-Ciels', src: 'assets/bg_towerup.webp',      reqAch: 'towerup_play_15' },
+  { id: 90, label: 'Le Fil des Âges',            src: 'assets/bg_throughtheages.webp', reqAch: 'throughtheages_play_15' },
+  { id: 91, label: 'Le Sentier du Sorceleur',    src: 'assets/bg_witcher.webp',        reqAch: 'witcher_play_15' },
+  { id: 92, label: 'Les Dômes de Mars',          src: 'assets/bg_terraforming.webp',   reqAch: 'terraforming_play_15' }
 ];
 
 // ─── Images décoratives ───
