@@ -120,6 +120,15 @@ const GAME_BG_DEFS = [
   { src: 'assets/bg_kronologicbabylon.webp', names: ['Kronologic Babylone', 'Kronologic Babylon', 'Kronologic : Babylone', 'Babylone', 'Babylon', 'babylone'] },
   { src: 'assets/bg_kronologicparis.webp',   names: ['Kronologic Paris 1920', 'Kronologic : Paris 1920', 'Kronologic Paris', 'Kronologic', 'kronologic'] },
   { src: 'assets/bg_ironwood.webp',          names: ['Ironwood', 'IronWood', 'Iron Wood', 'ironwood'] },
+  { src: 'assets/bg_now.webp',         names: ['Now !', 'Now!', 'Now'] },
+  { src: 'assets/bg_nidavellir.webp',  names: ['Nidavellir', 'nidavellir'] },
+  { src: 'assets/bg_nemesis.webp',     names: ['Nemesis', 'nemesis'] },
+  { src: 'assets/bg_narak.webp',       names: ['Les Ruines Perdues de Narak', 'Ruines Perdues de Narak', 'Narak', 'Lost Ruins of Arnak', 'Arnak', 'narak'] },
+  { src: 'assets/bg_naishi.webp',      names: ['Naishi', 'naishi'] },
+  { src: 'assets/bg_mytho.webp',       names: ['Mythologies', 'Mythology', 'mythologies'] },
+  { src: 'assets/bg_mooncolony.webp',  names: ['Moon Colony Bloodbath', 'Moon Colony', 'moon colony'] },
+  { src: 'assets/bg_monumental.webp',  names: ['Monumental', 'monumental'] },
+  { src: 'assets/bg_maracaibo.webp',   names: ['Maracaibo', 'Maracaïbo', 'maracaibo'] },
 ];
 const gameBgSrc = (g) => {
   if (!g || !g.name) return null;
@@ -4712,6 +4721,14 @@ const ACHIEVEMENTS = [
   { id:'kronologic_play_10',   icon:'🕵️', name:'Enquêteur temporel',     desc:'Jouer 10 parties de Kronologic',           check: (s) => (s.kronologicPlayed || 0) >= 10 },
   { id:'kronologic_play_15',   icon:'⏳', name:'Maître du Temps',        desc:'Jouer 15 parties de Kronologic',           check: (s) => (s.kronologicPlayed || 0) >= 15 },
   { id:'ironwood_play_15',     icon:'⚙️', name:'Forgeron d\'Ironwood',   desc:'Jouer 15 parties d\'Ironwood',             check: (s) => (s.ironwoodPlayed || 0) >= 15 },
+  { id:'now_play_15',        icon:'⚡', name:'Réflexes d\'acier',        desc:'Jouer 15 parties de Now !',                  check: (s) => (s.nowPlayed || 0) >= 15 },
+  { id:'nidavellir_play_15', icon:'🪓', name:'Recruteur de Nidavellir',  desc:'Jouer 15 parties de Nidavellir',             check: (s) => (s.nidavellirPlayed || 0) >= 15 },
+  { id:'nemesis_play_15',    icon:'👾', name:'Survivant du Nemesis',     desc:'Jouer 15 parties de Nemesis',                check: (s) => (s.nemesisPlayed || 0) >= 15 },
+  { id:'narak_play_15',      icon:'🐍', name:'Explorateur de Narak',     desc:'Jouer 15 parties des Ruines Perdues de Narak', check: (s) => (s.narakPlayed || 0) >= 15 },
+  { id:'naishi_play_15',     icon:'⛩️', name:'Conseiller du Naishi',     desc:'Jouer 15 parties de Naishi',                 check: (s) => (s.naishiPlayed || 0) >= 15 },
+  { id:'mooncolony_play_15', icon:'🌕', name:'Colon lunaire',            desc:'Jouer 15 parties de Moon Colony Bloodbath',  check: (s) => (s.moonColonyPlayed || 0) >= 15 },
+  { id:'monumental_play_15', icon:'🗿', name:'Bâtisseur Monumental',     desc:'Jouer 15 parties de Monumental',             check: (s) => (s.monumentalPlayed || 0) >= 15 },
+  { id:'maracaibo_play_15',  icon:'⛵', name:'Corsaire de Maracaïbo',    desc:'Jouer 15 parties de Maracaibo',              check: (s) => (s.maracaiboPlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4823,6 +4840,14 @@ const computeAchievementStats = (pid) => {
   const _krakenId       = _resolveGame(["L'Ombre du Kraken", "Ombre du Kraken", "L\u2019Ombre du Kraken", "Shadow of the Kraken", "kraken"]);
   const _kronologicId   = _resolveGame(["Kronologic", "Kronologic Paris 1920", "Kronologic : Paris 1920", "kronologic"]);
   const _ironwoodId     = _resolveGame(["Ironwood", "IronWood", "Iron Wood", "ironwood"]);
+  const _nowId        = _resolveGame(["Now !", "Now!", "Now"]);
+  const _nidavellirId = _resolveGame(["Nidavellir", "nidavellir"]);
+  const _nemesisId    = _resolveGame(["Nemesis", "nemesis"]);
+  const _narakId      = _resolveGame(["Les Ruines Perdues de Narak", "Ruines Perdues de Narak", "Narak", "Lost Ruins of Arnak", "Arnak", "narak"]);
+  const _naishiId     = _resolveGame(["Naishi", "naishi"]);
+  const _moonColonyId = _resolveGame(["Moon Colony Bloodbath", "Moon Colony", "moon colony"]);
+  const _monumentalId = _resolveGame(["Monumental", "monumental"]);
+  const _maracaiboId  = _resolveGame(["Maracaibo", "Maracaïbo", "maracaibo"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4882,6 +4907,14 @@ const computeAchievementStats = (pid) => {
   const krakenPlayed       = _byGame(_krakenId, playerMatches);
   const kronologicPlayed   = _byGame(_kronologicId, playerMatches);
   const ironwoodPlayed     = _byGame(_ironwoodId, playerMatches);
+  const nowPlayed        = _byGame(_nowId, playerMatches);
+  const nidavellirPlayed = _byGame(_nidavellirId, playerMatches);
+  const nemesisPlayed    = _byGame(_nemesisId, playerMatches);
+  const narakPlayed      = _byGame(_narakId, playerMatches);
+  const naishiPlayed     = _byGame(_naishiId, playerMatches);
+  const moonColonyPlayed = _byGame(_moonColonyId, playerMatches);
+  const monumentalPlayed = _byGame(_monumentalId, playerMatches);
+  const maracaiboPlayed  = _byGame(_maracaiboId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -5047,6 +5080,14 @@ const computeAchievementStats = (pid) => {
     krakenPlayed,
     kronologicPlayed,
     ironwoodPlayed,
+    nowPlayed,
+    nidavellirPlayed,
+    nemesisPlayed,
+    narakPlayed,
+    naishiPlayed,
+    moonColonyPlayed,
+    monumentalPlayed,
+    maracaiboPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -5113,6 +5154,14 @@ const ACH_PROGRESS = {
   kronologic_play_10:   [(s) => s.kronologicPlayed, 10],
   kronologic_play_15:   [(s) => s.kronologicPlayed, 15],
   ironwood_play_15:     [(s) => s.ironwoodPlayed, 15],
+  now_play_15:        [(s) => s.nowPlayed, 15],
+  nidavellir_play_15: [(s) => s.nidavellirPlayed, 15],
+  nemesis_play_15:    [(s) => s.nemesisPlayed, 15],
+  narak_play_15:      [(s) => s.narakPlayed, 15],
+  naishi_play_15:     [(s) => s.naishiPlayed, 15],
+  mooncolony_play_15: [(s) => s.moonColonyPlayed, 15],
+  monumental_play_15: [(s) => s.monumentalPlayed, 15],
+  maracaibo_play_15:  [(s) => s.maracaiboPlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],

@@ -278,7 +278,16 @@ const BACKGROUNDS = [
   { id: 54, label: 'Paris 1920',                 src: 'assets/bg_kronologicparis.webp',   reqAch: 'kronologic_play_5' },
   { id: 55, label: 'Les Cimes de Cuzco',         src: 'assets/bg_kronologiccuzco.webp',   reqAch: 'kronologic_play_10' },
   { id: 56, label: 'Les Jardins de Babylone',    src: 'assets/bg_kronologicbabylon.webp', reqAch: 'kronologic_play_15' },
-  { id: 57, label: 'La Forge d\'Ironwood',       src: 'assets/bg_ironwood.webp',          reqAch: 'ironwood_play_15' }
+  { id: 57, label: 'La Forge d\'Ironwood',       src: 'assets/bg_ironwood.webp',          reqAch: 'ironwood_play_15' },
+  { id: 58, label: 'Réglez vos comptes !',       src: 'assets/bg_now.webp',         reqAch: 'now_play_15' },
+  { id: 59, label: 'La Taverne de Nidavellir',   src: 'assets/bg_nidavellir.webp',  reqAch: 'nidavellir_play_15' },
+  { id: 60, label: 'Le Vaisseau Nemesis',        src: 'assets/bg_nemesis.webp',     reqAch: 'nemesis_play_15' },
+  { id: 61, label: 'Les Ruines de Narak',        src: 'assets/bg_narak.webp',       reqAch: 'narak_play_15' },
+  { id: 62, label: 'L\'Empire du Soleil Levant', src: 'assets/bg_naishi.webp',      reqAch: 'naishi_play_15' },
+  { id: 63, label: 'L\'Arbre des Mythes',        src: 'assets/bg_mytho.webp',       reqAch: 'mytho_play_20' },
+  { id: 64, label: 'La Colonie Lunaire',         src: 'assets/bg_mooncolony.webp',  reqAch: 'mooncolony_play_15' },
+  { id: 65, label: 'La Tour Monumentale',        src: 'assets/bg_monumental.webp',  reqAch: 'monumental_play_15' },
+  { id: 66, label: 'La Baie de Maracaïbo',       src: 'assets/bg_maracaibo.webp',   reqAch: 'maracaibo_play_15' }
 ];
 
 // ─── Images décoratives ───
