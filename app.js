@@ -3272,6 +3272,7 @@ const TIER_COLOR = {
   bois:'var(--t-bois)', bronze:'var(--t-bronze)', argent:'var(--t-argent)', or:'var(--t-or)',
   platine:'var(--t-platine)', diamant:'var(--t-diamant)', maitre:'var(--t-maitre)', challenger:'var(--t-chall)',
 };
+const tierColor = (rk) => TIER_COLOR[(rk && (rk.baseKey || rk.key))] || 'var(--text-muted)';
 const renderLeaderboard = () => {
   const els = document.querySelectorAll('.lboard');
   if (!els.length) return;
