@@ -1994,7 +1994,7 @@ const buildGameCard = (g) => {
 
   const gbg = gameBgSrc(g);
   return `<div class="game-card${gbg ? ' has-gbg' : ''}" id="gc-${g.id}">
-    ${gbg ? `<div class="gc-art" style="background-image:url('${gbg}')"></div>` : ''}
+    ${gbg ? `<div class="gc-art" data-bg="${gbg}"></div>` : ''}
     <div class="gc-cover">
       <div class="game-card-bg"></div>
       <span class="badge ${g.status === 'own' ? 'badge-own' : 'badge-wish'}">${g.status === 'own' ? 'Possédé' : 'Souhait'}</span>
@@ -2592,6 +2592,17 @@ const renderPlayers = () => {
   renderPlayerGrid();
 };
 
+// Charge le fond d'ambiance d'une carte de jeu uniquement au premier survol
+// (économise l'egress : l'image n'est téléchargée que si on la révèle).
+document.addEventListener('mouseover', (e) => {
+  const card = e.target.closest?.('.game-card.has-gbg');
+  if (!card) return;
+  const art = card.querySelector('.gc-art');
+  if (art && art.dataset.bg && !art.style.backgroundImage) {
+    art.style.backgroundImage = `url('${art.dataset.bg}')`;
+  }
+});
+
 const renderPlayerStats = () => {
   const best = players
     .map((p) => { const s = playerStats(p.id); return { ...p, rate: s.played > 0 ? Math.round(s.won / s.played * 100) : 0, played: s.played }; })
@@ -2830,76 +2841,6 @@ const openActivityFeed = () => {
        <div class="palmares-sub">${m.date ? fmtDate(m.date) : ''}</div></div></div>`;
   }).join('');
   openModal('modal-feed');
-};
-
-// ─── Recalcule TOUTES les notes Elo de la saison en cours
-// dans l'ordre chronologique (admin). Tout le monde repart de 1000 ; le facteur K
-// reflète l'expérience au moment de chaque partie.
-const recalcAllElo = async () => {
-  if (!isAdmin) return;
-  const ok = confirm(
-    `Recalculer toutes les notes Elo depuis l'historique complet ?\n\n` +
-    `Tout le monde repart de 1000, puis les ${seasonMatches().length} parties de ` +
-    `la saison en cours sont ` +
-    `rejouées dans l'ordre. Les notes Elo actuelles seront écrasées.`
-  );
-  if (!ok) return;
-
-  const btn = document.getElementById('recalc-elo-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Calcul en cours…'; }
-
-  try {
-    // Ordre chronologique : date, puis id pour départager une même journée.
-    const ordered = [...seasonMatches()].sort((a, b) => {
-      const da = String(a.date || ''), db = String(b.date || '');
-      if (da !== db) return da < db ? -1 : 1;
-      return (a.id || 0) - (b.id || 0);
-    });
-
-    const elo  = {};   // id → note courante
-    const gp   = {};   // id → parties jouées AVANT la partie en cours
-    const seen = new Set();
-    const ratingOf = (id) => (id in elo ? elo[id] : ELO_BASE);
-
-    for (const m of ordered) {
-      const ids = [...new Set((m.players || []).map((p) => p && p.id).filter(Boolean))];
-      if (ids.length < 2) continue;
-      const winnerIds = Array.isArray(m.winners) ? m.winners : [];
-      const losers    = sortedLosers(ids, winnerIds, m.scores || {});
-      const place     = (id) => winnerIds.includes(id) ? 1 : winnerIds.length + 1 + losers.indexOf(id);
-
-      ids.forEach((id) => { if (!(id in elo)) elo[id] = ELO_BASE; seen.add(id); });
-
-      const n = ids.length;
-      const delta = {};
-      ids.forEach((i) => {
-        let expected = 0, actual = 0;
-        ids.forEach((j) => {
-          if (i === j) return;
-          expected += 1 / (1 + Math.pow(10, (ratingOf(j) - ratingOf(i)) / 400));
-          actual   += place(i) < place(j) ? 1 : place(i) > place(j) ? 0 : 0.5;
-        });
-        delta[i] = Math.round(eloK(ratingOf(i), gp[i] || 0) * (actual - expected) / (n - 1));
-      });
-      ids.forEach((id) => { elo[id] = ratingOf(id) + (delta[id] || 0); gp[id] = (gp[id] || 0) + 1; });
-    }
-
-    // Écriture : uniquement les joueurs qui existent encore.
-    let written = 0;
-    for (const id of seen) {
-      if (!players.some((p) => p.id === id)) continue;
-      try { await sb.patch('players', { elo: Math.round(elo[id]) }, { id }); written++; }
-      catch (e) { console.warn('Elo patch error', id, e); }
-    }
-    await loadAll();
-    toast(`Elo recalculé pour ${written} joueur${written > 1 ? 's' : ''} ⚔️`);
-  } catch (e) {
-    console.error('recalcAllElo:', e);
-    toast('Erreur pendant le recalcul Elo', true);
-  } finally {
-    const b = document.getElementById('recalc-elo-btn');
-    if (b) { b.disabled = false; b.innerHTML = '&#9876;&#65039; Recalculer l\'Elo'; }
-  }
 };
 
 const buildPlayerCard = (p) => {
@@ -3242,31 +3183,6 @@ const renderMatchList = () => {
   el.innerHTML = pendingHtml + confirmedHtml;
 };
 
-const seasonBannerHtml = () => {
-  if (!currentSeason) return '';
-  let end;
-  if (currentSeason.ends_at) {
-    end = new Date(currentSeason.ends_at);
-  } else {
-    end = new Date(currentSeason.started_at); end.setMonth(end.getMonth() + 6);
-  }
-  const days  = Math.max(0, Math.ceil((end - new Date()) / 86400000));
-  const champ = throneId != null ? players.find((p) => p.id === throneId) : null;
-  const byPts = [...players].sort((a, b) => (b.points || 0) - (a.points || 0));
-  const gap   = (byPts[0] && byPts[1]) ? (byPts[0].points || 0) - (byPts[1].points || 0) : null;
-  const throneLine = champ
-    ? `👑 <strong>${esc(champ.name)}</strong> tient le trône${gap != null ? ` · +${gap} pts sur le 2ᵉ` : ''}`
-    : `👑 Trône vacant — premier à atteindre Maître le prend`;
-  return `<div style="background:linear-gradient(135deg,var(--surface),var(--bg));border:1px solid var(--gold);
-                      border-radius:12px;padding:12px 14px;margin-bottom:14px">
-      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
-        <span style="font-weight:700;font-size:14px;color:var(--text)">Saison ${currentSeason.number}</span>
-        <span style="font-size:12px;color:var(--gold);font-weight:600">${days} jour${days > 1 ? 's' : ''} restant${days > 1 ? 's' : ''}</span>
-      </div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:5px">${throneLine}</div>
-    </div>`;
-};
-
 // ── Page d'accueil « Classement » : hero + podium + leaderboard ──
 const renderHome = () => { renderHomeHero(); renderPodium(); renderLeaderboard(); };
 
@@ -3356,12 +3272,6 @@ const TIER_COLOR = {
   bois:'var(--t-bois)', bronze:'var(--t-bronze)', argent:'var(--t-argent)', or:'var(--t-or)',
   platine:'var(--t-platine)', diamant:'var(--t-diamant)', maitre:'var(--t-maitre)', challenger:'var(--t-chall)',
 };
-const TIER_EMOJI = {
-  bois:'🪵', bronze:'🥉', argent:'🥈', or:'🥇', platine:'💠', diamant:'💎', maitre:'👑', challenger:'🏆',
-};
-const tierColor = (rk) => TIER_COLOR[(rk && (rk.baseKey || rk.key))] || 'var(--text-muted)';
-const tierEmoji = (rk) => TIER_EMOJI[(rk && (rk.baseKey || rk.key))] || '•';
-
 const renderLeaderboard = () => {
   const els = document.querySelectorAll('.lboard');
   if (!els.length) return;
@@ -3375,7 +3285,7 @@ const renderLeaderboard = () => {
 
   const head = `<div class="lb-head">
       <div class="ctr">#</div><div>Joueur</div><div>Rang</div>
-      <div class="ctr">Parties</div><div class="ctr">V/D</div><div class="ctr">Winrate</div><div class="ctr">Série</div>
+      <div class="ctr">Parties</div><div class="ctr">V/D</div><div class="ctr">Winrate</div><div class="ctr">Forme</div>
     </div>`;
 
   const html = head + ranked.map((p, i) => {
@@ -3388,8 +3298,14 @@ const renderLeaderboard = () => {
     const avHtml = av ? `<img src="${av.src}" alt="">` : `<span style="color:${bg}">${ini(p.name)}</span>`;
     const fav = bestGame(p.id);
     const sub = fav ? `🎯 ${esc(fav.name)}` : `${p.played} parties`;
-    const streak = (p.streak || 0) >= 1
-      ? `<span class="lb-streak up">▲${p.streak}</span>`
+    const last5 = [...matches]
+      .filter((m) => m.players?.some((pp) => pp.id === p.id))
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || (b.id || 0) - (a.id || 0))
+      .slice(0, 5)
+      .map((m) => m.winners?.includes(p.id))
+      .reverse();   // gauche = la plus ancienne des 5, droite = la plus récente
+    const streak = last5.length
+      ? `<span class="lb-frm" title="${last5.map((w) => w ? 'V' : 'D').join(' ')}${(p.streak || 0) >= 3 ? ' · série de ' + p.streak : ''}">${last5.map((w) => `<i class="${w ? 'w' : 'l'}"></i>`).join('')}</span>`
       : `<span class="lb-streak flat">—</span>`;
     const gbg = fav ? gameBgSrc({ name: fav.name }) : null;
     const rowStyle = gbg
@@ -4937,6 +4853,19 @@ const computeAchievementStats = (pid) => {
 // Progression des succès chiffrés : [fonction(stats) → valeur courante, cible].
 // Les succès booléens (battre le meilleur, 5+ joueurs, 4 jeux/jour) n'ont pas de barre.
 const ACH_PROGRESS = {
+  azul_play_15:         [(s) => s.azulPlayed, 15],
+  arknova_play_15:      [(s) => s.arkNovaPlayed, 15],
+  arcs_play_15:         [(s) => s.arcsPlayed, 15],
+  akropolis_play_15:    [(s) => s.akropolisPlayed, 15],
+  abyss_play_15:        [(s) => s.abyssPlayed, 15],
+  citesroyales_play_15: [(s) => s.citesRoyalesPlayed, 15],
+  citadelles_play_15:   [(s) => s.citadellesPlayed, 15],
+  chateaucombo_play_15: [(s) => s.chateauComboPlayed, 15],
+  chateaublanc_play_15: [(s) => s.chateauBlancPlayed, 15],
+  carcassonne_play_15:  [(s) => s.carcassonnePlayed, 15],
+  brass_play_15:        [(s) => s.brassPlayed, 15],
+  blackforest_play_15:  [(s) => s.blackForestPlayed, 15],
+  barrage_play_15:      [(s) => s.barragePlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],
@@ -5013,6 +4942,9 @@ const announceAchievement = (a) => {
     document.body.appendChild(wrap);
   }
   const cos = _cosmeticForAch(a.id);
+  const cosLine = cos === 'fond de carte'
+    ? `<div class="at-cosmetic">🖼️ Nouveau fond disponible dans ton profil !</div>`
+    : (cos ? `<div class="at-cosmetic">🎁 Nouveau ${cos} à équiper</div>` : '');
   const el  = document.createElement('div');
   el.className = 'ach-toast';
   el.innerHTML =
@@ -5020,7 +4952,7 @@ const announceAchievement = (a) => {
      <div class="at-body">
        <div class="at-label">Succès débloqué</div>
        <div class="at-name">${esc(a.name)}</div>
-       ${cos ? `<div class="at-cosmetic">🎁 Nouveau ${cos} à équiper</div>` : ''}
+       ${cosLine}
      </div>`;
   wrap.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
