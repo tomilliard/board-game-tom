@@ -3106,12 +3106,17 @@ const buildMatchCard = (m) => {
        </div>`
     : '';
 
+  const cover = g && g.image_url
+    ? `<div class="hist-cover" style="background-image:url('${g.image_url}')"></div>`
+    : `<div class="hist-cover hist-cover-empty">🎲</div>`;
+
   return `<div class="hist-card">
     <div class="hist-hdr">
-      <div>
+      ${cover}
+      <div class="hist-hdr-main">
         <div class="hist-game">${g ? esc(g.name) : 'Jeu inconnu'}</div>
         ${m.date ? `<div class="hist-date">${fmtDate(m.date)}</div>` : ''}
-        ${m.notes ? `<div style="font-size:12px;color:var(--text-faint);margin-top:2px">${esc(m.notes)}</div>` : ''}
+        ${m.notes ? `<div class="hist-notes">${esc(m.notes)}</div>` : ''}
       </div>
       ${delBtn}
     </div>
