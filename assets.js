@@ -267,7 +267,9 @@ const BACKGROUNDS = [
   { id: 43, label: 'Le Port d\'Edo',             src: 'assets/bg_iki.webp',           reqAch: 'iki_play_15' },
   { id: 44, label: 'L\'Olympe Céleste',          src: 'assets/bg_hybris.webp',        reqAch: 'hybris_play_15' },
   { id: 45, label: 'Les Royaumes en Guerre',     src: 'assets/bg_gwent.webp',         reqAch: 'gwent_play_15' },
-  { id: 46, label: 'La Cité Sombre',             src: 'assets/bg_gloomhaven.webp',    reqAch: 'gloomhaven_play_15' }
+  { id: 46, label: 'La Cité Sombre',             src: 'assets/bg_gloomhaven.webp',    reqAch: 'gloomhaven_play_15' },
+  { id: 47, label: 'La Croisière Galactique',    src: 'assets/bg_galacticcruise.webp', reqAch: 'galacticcruise_play_15' },
+  { id: 48, label: 'La Cour du Royaume',         src: 'assets/bg_foracrown.webp',      reqAch: 'foracrown_play_15' }
 ];
 
 // ─── Images décoratives ───

@@ -4673,6 +4673,8 @@ const ACHIEVEMENTS = [
   { id:'hybris_play_15',     icon:'🏛️', name:'Défi aux Dieux',            desc:'Jouer 15 parties d\'Hybris',      check: (s) => (s.hybrisPlayed || 0) >= 15 },
   { id:'gwent_play_15',      icon:'🐺', name:'Maître du Gwent',           desc:'Jouer 15 parties de Gwent',       check: (s) => (s.gwentPlayed || 0) >= 15 },
   { id:'gloomhaven_play_15', icon:'🗡️', name:'Mercenaire de Gloomhaven',  desc:'Jouer 15 parties de Gloomhaven',  check: (s) => (s.gloomhavenPlayed || 0) >= 15 },
+  { id:'galacticcruise_play_15', icon:'🚀', name:'Croisiériste des étoiles', desc:'Jouer 15 parties de Galactic Cruise', check: (s) => (s.galacticCruisePlayed || 0) >= 15 },
+  { id:'foracrown_play_15',      icon:'👑', name:'Prétendant au Trône',      desc:'Jouer 15 parties de For a Crown',     check: (s) => (s.forACrownPlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4775,6 +4777,8 @@ const computeAchievementStats = (pid) => {
   const _hybrisId     = _resolveGame(["Hybris", "Hybris Disordered Cosmos", "Hybris : Disordered Cosmos", "hybris"]);
   const _gwentId      = _resolveGame(["Gwent", "Gwynt", "gwent"]);
   const _gloomhavenId = _resolveGame(["Gloomhaven", "Gloomhaven Les Mâchoires du Lion", "Gloomhaven: Jaws of the Lion", "gloomhaven"]);
+  const _galacticCruiseId = _resolveGame(["Galactic Cruise", "GalacticCruise", "galactic cruise"]);
+  const _forACrownId      = _resolveGame(["For a Crown", "For A Crown", "ForACrown", "for a crown"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4825,6 +4829,8 @@ const computeAchievementStats = (pid) => {
   const hybrisPlayed     = _byGame(_hybrisId, playerMatches);
   const gwentPlayed      = _byGame(_gwentId, playerMatches);
   const gloomhavenPlayed = _byGame(_gloomhavenId, playerMatches);
+  const galacticCruisePlayed = _byGame(_galacticCruiseId, playerMatches);
+  const forACrownPlayed      = _byGame(_forACrownId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4981,6 +4987,8 @@ const computeAchievementStats = (pid) => {
     hybrisPlayed,
     gwentPlayed,
     gloomhavenPlayed,
+    galacticCruisePlayed,
+    forACrownPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -5036,6 +5044,8 @@ const ACH_PROGRESS = {
   hybris_play_15:     [(s) => s.hybrisPlayed, 15],
   gwent_play_15:      [(s) => s.gwentPlayed, 15],
   gloomhaven_play_15: [(s) => s.gloomhavenPlayed, 15],
+  galacticcruise_play_15: [(s) => s.galacticCruisePlayed, 15],
+  foracrown_play_15:      [(s) => s.forACrownPlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],
