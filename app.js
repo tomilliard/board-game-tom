@@ -138,6 +138,15 @@ const GAME_BG_DEFS = [
   { src: 'assets/bg_rebirth.webp',    names: ['Rebirth', 'rebirth'] },
   { src: 'assets/bg_rauha.webp',      names: ['Rauha', 'rauha'] },
   { src: 'assets/bg_odin.webp',       names: ['Odin', 'odin'] },
+  { src: 'assets/bg_taketime.webp',     names: ['Take Time', 'TakeTime', 'take time'] },
+  { src: 'assets/bg_smallworld.webp',   names: ['Small World', 'SmallWorld', 'small world'] },
+  { src: 'assets/bg_slaythespire.webp', names: ['Slay the Spire', 'Slay The Spire', 'slay the spire'] },
+  { src: 'assets/bg_skyrise.webp',      names: ['Skyrise', 'skyrise'] },
+  { src: 'assets/bg_skullking.webp',    names: ['Skull King', 'SkullKing', 'skull king'] },
+  { src: 'assets/bg_seti.webp',         names: ['SETI', 'Seti', 'seti'] },
+  { src: 'assets/bg_senjutsu.webp',     names: ['Senjutsu', 'senjutsu'] },
+  { src: 'assets/bg_scythe.webp',       names: ['Scythe', 'scythe'] },
+  { src: 'assets/bg_sankore.webp',      names: ['Sankoré', 'Sankore', 'sankore'] },
 ];
 const gameBgSrc = (g) => {
   if (!g || !g.name) return null;
@@ -4747,6 +4756,15 @@ const ACHIEVEMENTS = [
   { id:'rebirth_play_15',   icon:'🌱', name:'Artisan de la Renaissance',desc:'Jouer 15 parties de Rebirth',        check: (s) => (s.rebirthPlayed || 0) >= 15 },
   { id:'rauha_play_15',     icon:'🍄', name:'Chaman de Rauha',          desc:'Jouer 15 parties de Rauha',          check: (s) => (s.rauhaPlayed || 0) >= 15 },
   { id:'odin_play_15',      icon:'📯', name:'Héritier d\'Odin',         desc:'Jouer 15 parties d\'Odin',           check: (s) => (s.odinPlayed || 0) >= 15 },
+  { id:'taketime_play_15',     icon:'⏱️', name:'Maître de l\'instant',      desc:'Jouer 15 parties de Take Time',       check: (s) => (s.takeTimePlayed || 0) >= 15 },
+  { id:'smallworld_play_15',   icon:'🗺️', name:'Conquérant du Petit Monde', desc:'Jouer 15 parties de Small World',     check: (s) => (s.smallWorldPlayed || 0) >= 15 },
+  { id:'slaythespire_play_15', icon:'🗼', name:'Pourfendeur de la Flèche',  desc:'Jouer 15 parties de Slay the Spire',  check: (s) => (s.slayTheSpirePlayed || 0) >= 15 },
+  { id:'skyrise_play_15',      icon:'🎈', name:'Architecte de Skyrise',     desc:'Jouer 15 parties de Skyrise',         check: (s) => (s.skyrisePlayed || 0) >= 15 },
+  { id:'skullking_play_15',    icon:'🏴‍☠️', name:'Pirate du Roi des Crânes',  desc:'Jouer 15 parties de Skull King',      check: (s) => (s.skullKingPlayed || 0) >= 15 },
+  { id:'seti_play_15',         icon:'📡', name:'Chercheur de signaux',      desc:'Jouer 15 parties de SETI',            check: (s) => (s.setiPlayed || 0) >= 15 },
+  { id:'senjutsu_play_15',     icon:'🥷', name:'Duelliste Senjutsu',        desc:'Jouer 15 parties de Senjutsu',        check: (s) => (s.senjutsuPlayed || 0) >= 15 },
+  { id:'scythe_play_15',       icon:'🌾', name:'Faucheur de Scythe',        desc:'Jouer 15 parties de Scythe',          check: (s) => (s.scythePlayed || 0) >= 15 },
+  { id:'sankore_play_15',      icon:'📚', name:'Érudit de Sankoré',         desc:'Jouer 15 parties de Sankoré',         check: (s) => (s.sankorePlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4783,6 +4801,7 @@ const computeAchievementStats = (pid) => {
   const _skGame = games.find((g) => g.name === 'Skull King');
   const _skId   = _skGame ? _skGame.id : 35;
   const skullKingWins = won.filter((m) => m.game_id === _skId).length;
+  const skullKingPlayed = playerMatches.filter((m) => m.game_id === _skId).length;
 
   // Parties de 7 Wonders (résolu par nom, repli id 4)
   const _7wGame = games.find((g) => g.name === '7 Wonders');
@@ -4875,6 +4894,14 @@ const computeAchievementStats = (pid) => {
   const _rebirthId   = _resolveGame(["Rebirth", "rebirth"]);
   const _rauhaId     = _resolveGame(["Rauha", "rauha"]);
   const _odinId      = _resolveGame(["Odin", "odin"]);
+  const _takeTimeId     = _resolveGame(["Take Time", "TakeTime", "take time"]);
+  const _smallWorldId   = _resolveGame(["Small World", "SmallWorld", "small world"]);
+  const _slayTheSpireId = _resolveGame(["Slay the Spire", "Slay The Spire", "slay the spire"]);
+  const _skyriseId      = _resolveGame(["Skyrise", "skyrise"]);
+  const _setiId         = _resolveGame(["SETI", "Seti", "seti"]);
+  const _senjutsuId     = _resolveGame(["Senjutsu", "senjutsu"]);
+  const _scytheId       = _resolveGame(["Scythe", "scythe"]);
+  const _sankoreId      = _resolveGame(["Sankoré", "Sankore", "sankoré", "sankore"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4951,6 +4978,14 @@ const computeAchievementStats = (pid) => {
   const rebirthPlayed   = _byGame(_rebirthId, playerMatches);
   const rauhaPlayed     = _byGame(_rauhaId, playerMatches);
   const odinPlayed      = _byGame(_odinId, playerMatches);
+  const takeTimePlayed     = _byGame(_takeTimeId, playerMatches);
+  const smallWorldPlayed   = _byGame(_smallWorldId, playerMatches);
+  const slayTheSpirePlayed = _byGame(_slayTheSpireId, playerMatches);
+  const skyrisePlayed      = _byGame(_skyriseId, playerMatches);
+  const setiPlayed         = _byGame(_setiId, playerMatches);
+  const senjutsuPlayed     = _byGame(_senjutsuId, playerMatches);
+  const scythePlayed       = _byGame(_scytheId, playerMatches);
+  const sankorePlayed      = _byGame(_sankoreId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -5055,6 +5090,7 @@ const computeAchievementStats = (pid) => {
     duneWins,
     dunePlayed,
     skullKingWins,
+    skullKingPlayed,
     sevenWondersWins,
     sevenWondersPlayed,
     foretMixtePlayed,
@@ -5133,6 +5169,14 @@ const computeAchievementStats = (pid) => {
     rebirthPlayed,
     rauhaPlayed,
     odinPlayed,
+    takeTimePlayed,
+    smallWorldPlayed,
+    slayTheSpirePlayed,
+    skyrisePlayed,
+    setiPlayed,
+    senjutsuPlayed,
+    scythePlayed,
+    sankorePlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -5216,6 +5260,15 @@ const ACH_PROGRESS = {
   rebirth_play_15:   [(s) => s.rebirthPlayed, 15],
   rauha_play_15:     [(s) => s.rauhaPlayed, 15],
   odin_play_15:      [(s) => s.odinPlayed, 15],
+  taketime_play_15:     [(s) => s.takeTimePlayed, 15],
+  smallworld_play_15:   [(s) => s.smallWorldPlayed, 15],
+  slaythespire_play_15: [(s) => s.slayTheSpirePlayed, 15],
+  skyrise_play_15:      [(s) => s.skyrisePlayed, 15],
+  skullking_play_15:    [(s) => s.skullKingPlayed, 15],
+  seti_play_15:         [(s) => s.setiPlayed, 15],
+  senjutsu_play_15:     [(s) => s.senjutsuPlayed, 15],
+  scythe_play_15:       [(s) => s.scythePlayed, 15],
+  sankore_play_15:      [(s) => s.sankorePlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],

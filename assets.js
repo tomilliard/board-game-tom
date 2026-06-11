@@ -296,7 +296,16 @@ const BACKGROUNDS = [
   { id: 72, label: 'L\'Œil du Souvenir',         src: 'assets/bg_recall.webp',     reqAch: 'recall_play_15' },
   { id: 73, label: 'La Citadelle Verdoyante',    src: 'assets/bg_rebirth.webp',    reqAch: 'rebirth_play_15' },
   { id: 74, label: 'La Clairière de Rauha',      src: 'assets/bg_rauha.webp',      reqAch: 'rauha_play_15' },
-  { id: 75, label: 'Le Village d\'Odin',         src: 'assets/bg_odin.webp',       reqAch: 'odin_play_15' }
+  { id: 75, label: 'Le Village d\'Odin',         src: 'assets/bg_odin.webp',       reqAch: 'odin_play_15' },
+  { id: 76, label: 'Le Sanctuaire du Temps',     src: 'assets/bg_taketime.webp',     reqAch: 'taketime_play_15' },
+  { id: 77, label: 'Le Petit Monde',             src: 'assets/bg_smallworld.webp',   reqAch: 'smallworld_play_15' },
+  { id: 78, label: 'La Flèche Maudite',          src: 'assets/bg_slaythespire.webp', reqAch: 'slaythespire_play_15' },
+  { id: 79, label: 'La Cité dans les Nuages',    src: 'assets/bg_skyrise.webp',      reqAch: 'skyrise_play_15' },
+  { id: 80, label: 'Le Pavillon Noir',           src: 'assets/bg_skullking.webp',    reqAch: 'skullking_play_15' },
+  { id: 81, label: 'Le Signal des Étoiles',      src: 'assets/bg_seti.webp',         reqAch: 'seti_play_15' },
+  { id: 82, label: 'Le Duel des Samouraïs',      src: 'assets/bg_senjutsu.webp',     reqAch: 'senjutsu_play_15' },
+  { id: 83, label: 'Les Plaines de Scythe',      src: 'assets/bg_scythe.webp',       reqAch: 'scythe_play_15' },
+  { id: 84, label: 'L\'Université de Sankoré',   src: 'assets/bg_sankore.webp',      reqAch: 'sankore_play_15' }
 ];
 
 // ─── Images décoratives ───
