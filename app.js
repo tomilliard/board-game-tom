@@ -4658,6 +4658,12 @@ const ACHIEVEMENTS = [
   { id:'cybertcg_play_15',   icon:'🎴', name:'Duelliste de Night City',  desc:'Jouer 15 parties de Cyberpunk TCG',    check: (s) => (s.cyberTcgPlayed || 0) >= 15 },
   { id:'courtisans_play_15', icon:'🎭', name:'Intrigant de la cour',     desc:'Jouer 15 parties de Courtisans',       check: (s) => (s.courtisansPlayed || 0) >= 15 },
   { id:'civolution_play_15', icon:'🧬', name:'Architecte des civilisations', desc:'Jouer 15 parties de Civolution',   check: (s) => (s.civolutionPlayed || 0) >= 15 },
+  { id:'eternaldecks_play_15',  icon:'🎴', name:'Gardien des Decks Éternels', desc:'Jouer 15 parties d\'Eternal Decks',              check: (s) => (s.eternalDecksPlayed || 0) >= 15 },
+  { id:'endeavor_play_15',      icon:'🌊', name:'Explorateur des profondeurs', desc:'Jouer 15 parties d\'Endeavor : Eaux Profondes',  check: (s) => (s.endeavorPlayed || 0) >= 15 },
+  { id:'terredumilieu_play_15', icon:'💍', name:'Porteur de l\'Anneau',        desc:'Jouer 15 parties de Duel pour la Terre du Milieu', check: (s) => (s.terreDuMilieuPlayed || 0) >= 15 },
+  { id:'dorfromantik_play_15',  icon:'🌸', name:'Peintre des cerisiers',       desc:'Jouer 15 parties de Dorfromantik Sakura',        check: (s) => (s.dorfromantikPlayed || 0) >= 15 },
+  { id:'dilemmeduroi_play_15',  icon:'👑', name:'Conseiller du Roi',           desc:'Jouer 15 parties du Dilemme du Roi',             check: (s) => (s.dilemmeDuRoiPlayed || 0) >= 15 },
+  { id:'diceforge_play_15',     icon:'⚒️', name:'Forgeron divin',              desc:'Jouer 15 parties de Dice Forge',                 check: (s) => (s.diceForgePlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4745,6 +4751,12 @@ const computeAchievementStats = (pid) => {
   const _cyberTcgId   = _resolveGame(["Cyberpunk TCG", "Cyberpunk 2077 TCG"]);
   const _courtisansId = _resolveGame(["Courtisans", "Courtisan"]);
   const _civolutionId = _resolveGame(["Civolution", "civolution"]);
+  const _eternalDecksId  = _resolveGame(["Eternal Decks", "EternalDecks", "eternal decks"]);
+  const _endeavorId      = _resolveGame(["Endeavor Eaux Profondes", "Endeavor : Eaux Profondes", "Endeavor: Deep Sea", "Endeavor Deep Sea", "Endeavor", "eaux profondes"]);
+  const _terreDuMilieuId = _resolveGame(["Duel pour la Terre du Milieu", "Duel pour la terre du milieu", "Terre du Milieu", "Duel for Middle-earth", "Middle Earth"]);
+  const _dorfromantikId  = _resolveGame(["Dorfromantik Sakura", "Dorfromantik : Sakura", "Dorfromantik", "Sakura"]);
+  const _dilemmeDuRoiId  = _resolveGame(["Le Dilemme du Roi", "Dilemme du Roi", "Dilemme du roi", "Dillemme du roi", "The King's Dilemma", "King's Dilemma"]);
+  const _diceForgeId     = _resolveGame(["Dice Forge", "DiceForge", "dice forge"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4780,6 +4792,12 @@ const computeAchievementStats = (pid) => {
   const cyberTcgPlayed     = _byGame(_cyberTcgId, playerMatches);
   const courtisansPlayed   = _byGame(_courtisansId, playerMatches);
   const civolutionPlayed   = _byGame(_civolutionId, playerMatches);
+  const eternalDecksPlayed  = _byGame(_eternalDecksId, playerMatches);
+  const endeavorPlayed      = _byGame(_endeavorId, playerMatches);
+  const terreDuMilieuPlayed = _byGame(_terreDuMilieuId, playerMatches);
+  const dorfromantikPlayed  = _byGame(_dorfromantikId, playerMatches);
+  const dilemmeDuRoiPlayed  = _byGame(_dilemmeDuRoiId, playerMatches);
+  const diceForgePlayed     = _byGame(_diceForgeId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4921,6 +4939,12 @@ const computeAchievementStats = (pid) => {
     cyberTcgPlayed,
     courtisansPlayed,
     civolutionPlayed,
+    eternalDecksPlayed,
+    endeavorPlayed,
+    terreDuMilieuPlayed,
+    dorfromantikPlayed,
+    dilemmeDuRoiPlayed,
+    diceForgePlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -4961,6 +4985,12 @@ const ACH_PROGRESS = {
   cybertcg_play_15:     [(s) => s.cyberTcgPlayed, 15],
   courtisans_play_15:   [(s) => s.courtisansPlayed, 15],
   civolution_play_15:   [(s) => s.civolutionPlayed, 15],
+  eternaldecks_play_15:  [(s) => s.eternalDecksPlayed, 15],
+  endeavor_play_15:      [(s) => s.endeavorPlayed, 15],
+  terredumilieu_play_15: [(s) => s.terreDuMilieuPlayed, 15],
+  dorfromantik_play_15:  [(s) => s.dorfromantikPlayed, 15],
+  dilemmeduroi_play_15:  [(s) => s.dilemmeDuRoiPlayed, 15],
+  diceforge_play_15:     [(s) => s.diceForgePlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],

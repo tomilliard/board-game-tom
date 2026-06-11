@@ -250,7 +250,15 @@ const BACKGROUNDS = [
   { id: 26, label: 'L\'Archipel de Darwin',      src: 'assets/bg_darwins.webp',      reqAch: 'darwins_play_15' },
   { id: 27, label: 'Néons de Night City',        src: 'assets/bg_cybertcg.webp',     reqAch: 'cybertcg_play_15' },
   { id: 28, label: 'La Salle du Trône',          src: 'assets/bg_courtisans.webp',   reqAch: 'courtisans_play_15' },
-  { id: 29, label: 'L\'Aube des Civilisations',  src: 'assets/bg_civolution.webp',   reqAch: 'civolution_play_15' }
+  { id: 29, label: 'L\'Aube des Civilisations',  src: 'assets/bg_civolution.webp',   reqAch: 'civolution_play_15' },
+  { id: 30, label: 'Les Royaumes Éternels',      src: 'assets/bg_eternaldecks.webp',  reqAch: 'eternaldecks_play_15' },
+  { id: 31, label: 'Les Eaux Profondes',         src: 'assets/bg_endeavor.webp',      reqAch: 'endeavor_play_15' },
+  { id: 32, label: 'La Terre du Milieu',         src: 'assets/bg_terredumilieu.webp', reqAch: 'terredumilieu_play_15' },
+  { id: 33, label: 'Le Conseil des Mages',       src: 'assets/bg_cardia.webp',        reqAch: 'cardia_win_25' },
+  { id: 34, label: 'La Vallée des Cerisiers',    src: 'assets/bg_dorfromantik.webp',  reqAch: 'dorfromantik_play_15' },
+  { id: 35, label: 'Le Panthéon de Divinus',     src: 'assets/bg_divinus.webp',       reqAch: 'divinus_win_10' },
+  { id: 36, label: 'La Table du Royaume',        src: 'assets/bg_dilemmeduroi.webp',  reqAch: 'dilemmeduroi_play_15' },
+  { id: 37, label: 'La Forge des Dieux',         src: 'assets/bg_diceforge.webp',     reqAch: 'diceforge_play_15' }
 ];
 
 // ─── Images décoratives ───
