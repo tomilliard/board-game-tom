@@ -313,7 +313,8 @@ const BACKGROUNDS = [
   { id: 89, label: 'Le Chantier des Gratte-Ciels', src: 'assets/bg_towerup.webp',      reqAch: 'towerup_play_15' },
   { id: 90, label: 'Le Fil des Âges',            src: 'assets/bg_throughtheages.webp', reqAch: 'throughtheages_play_15' },
   { id: 91, label: 'Le Sentier du Sorceleur',    src: 'assets/bg_witcher.webp',        reqAch: 'witcher_play_15' },
-  { id: 92, label: 'Les Dômes de Mars',          src: 'assets/bg_terraforming.webp',   reqAch: 'terraforming_play_15' }
+  { id: 92, label: 'Les Dômes de Mars',          src: 'assets/bg_terraforming.webp',   reqAch: 'terraforming_play_15' },
+  { id: 93, label: 'Les Mines d\'Argent',        src: 'assets/bg_kutnahora.webp',      reqAch: 'kutnahora_play_15' }
 ];
 
 // ─── Images décoratives ───

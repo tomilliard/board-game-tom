@@ -155,6 +155,7 @@ const GAME_BG_DEFS = [
   { src: 'assets/bg_throughtheages.webp', names: ['Through the Ages', 'Through The Ages', 'through the ages'] },
   { src: 'assets/bg_witcher.webp',        names: ['The Witcher', 'The Witcher Le Vieux Monde', 'The Witcher: Old World', 'Witcher', 'witcher'] },
   { src: 'assets/bg_terraforming.webp',   names: ['Terraforming Mars', 'TerraformingMars', 'terraforming mars', 'terraforming'] },
+  { src: 'assets/bg_kutnahora.webp',      names: ['Kutná Hora', 'Kutna Hora', 'Kunta Hora', 'kutna hora', 'kunta hora'] },
 ];
 const gameBgSrc = (g) => {
   if (!g || !g.name) return null;
@@ -4781,6 +4782,7 @@ const ACHIEVEMENTS = [
   { id:'throughtheages_play_15', icon:'🏺', name:'Voyageur des Âges',        desc:'Jouer 15 parties de Through the Ages',  check: (s) => (s.throughTheAgesPlayed || 0) >= 15 },
   { id:'witcher_play_15',        icon:'🧙', name:'Sorceleur du Continent',   desc:'Jouer 15 parties de The Witcher',       check: (s) => (s.witcherPlayed || 0) >= 15 },
   { id:'terraforming_play_15',   icon:'🌡️', name:'Terraformeur de Mars',     desc:'Jouer 15 parties de Terraforming Mars', check: (s) => (s.terraformingPlayed || 0) >= 15 },
+  { id:'kutnahora_play_15',      icon:'⛏️', name:'Maître des Mines d\'Argent', desc:'Jouer 15 parties de Kutná Hora',       check: (s) => (s.kutnaHoraPlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4926,6 +4928,7 @@ const computeAchievementStats = (pid) => {
   const _throughTheAgesId = _resolveGame(["Through the Ages", "Through The Ages", "through the ages"]);
   const _witcherId        = _resolveGame(["The Witcher", "The Witcher Le Vieux Monde", "The Witcher: Old World", "Witcher", "witcher"]);
   const _terraformingId   = _resolveGame(["Terraforming Mars", "TerraformingMars", "terraforming mars", "terraforming"]);
+  const _kutnaHoraId      = _resolveGame(["Kutná Hora", "Kutna Hora", "Kunta Hora", "kutná hora", "kutna hora", "kunta hora"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -5018,6 +5021,7 @@ const computeAchievementStats = (pid) => {
   const throughTheAgesPlayed = _byGame(_throughTheAgesId, playerMatches);
   const witcherPlayed        = _byGame(_witcherId, playerMatches);
   const terraformingPlayed   = _byGame(_terraformingId, playerMatches);
+  const kutnaHoraPlayed      = _byGame(_kutnaHoraId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -5217,6 +5221,7 @@ const computeAchievementStats = (pid) => {
     throughTheAgesPlayed,
     witcherPlayed,
     terraformingPlayed,
+    kutnaHoraPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -5317,6 +5322,7 @@ const ACH_PROGRESS = {
   throughtheages_play_15: [(s) => s.throughTheAgesPlayed, 15],
   witcher_play_15:        [(s) => s.witcherPlayed, 15],
   terraforming_play_15:   [(s) => s.terraformingPlayed, 15],
+  kutnahora_play_15:      [(s) => s.kutnaHoraPlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],
