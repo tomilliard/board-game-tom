@@ -3300,7 +3300,7 @@ const renderHomeHero = () => {
   if (snum) snum.textContent = currentSeason ? currentSeason.number : 1;
   const sub = document.getElementById('home-hero-sub');
   if (sub) sub.textContent =
-    `${matches.length} parties jouées · ${players.length} membre${players.length > 1 ? 's' : ''} · termine n°1 pour décrocher le titre de Challenger`;
+    `${players.length} membre${players.length > 1 ? 's' : ''} · termine n°1 pour décrocher le titre de Challenger`;
   const meta = document.getElementById('home-hero-meta');
   if (!meta) return;
   const leader = [...players].sort((a, b) => (b.points || 0) - (a.points || 0))[0];
@@ -3328,7 +3328,7 @@ const buildPodiumCard = (p) => {
   const _cbg = cosmeticBg(p);
   const rd   = RANK_ASSETS_DESKTOP[rk.baseKey || rk.key] || {};
 
-  const bgImg = _cbg ? _cbg.src : (RANK_AVATAR_BG[rk.baseKey || rk.key] || null);
+  const bgImg = (_cbg && _cbg.src) || rd.banner || RANK_AVATAR_BG[rk.baseKey || rk.key] || null;
   const bgStyle = bgImg
     ? `background:linear-gradient(180deg,rgba(8,11,20,.35),rgba(8,11,20,.84) 60%,rgba(8,11,20,.95)),url('${bgImg}') center/cover;`
     : `background:linear-gradient(160deg,${(p.color || '#4ade80')}22,var(--surface-2));`;
@@ -3352,14 +3352,6 @@ const buildPodiumCard = (p) => {
     avatarBlock = `<div style="width:88px;height:88px;border-radius:50%;overflow:hidden;margin:14px auto 0;border:3px solid ${tc};box-shadow:0 0 0 3px rgba(0,0,0,.4)">${avInner}</div>`;
   }
 
-  const cnt = {};
-  matches.forEach((m) => { if (m.players?.some((x) => x.id === p.id)) cnt[m.game_id] = (cnt[m.game_id] || 0) + 1; });
-  const topGames = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 3)
-    .map(([gid]) => games.find((g) => g.id === parseInt(gid))).filter((g) => g && g.image_url);
-  const gamesRow = topGames.length
-    ? `<div class="pod-games">${topGames.map((g) => `<img src="${g.image_url}" alt="" title="${esc(g.name)}">`).join('')}</div>`
-    : '';
-
   return `<div class="pod-card" onclick="openPlayerProfile(${p.id})" style="${bgStyle}">
     <div class="pod-in">
       ${avatarBlock}
@@ -3367,7 +3359,6 @@ const buildPodiumCard = (p) => {
       <div class="pod-tier" style="color:${tc};border-color:${tc}55;background:${tc}1f">${rankImg(rk, 15)} ${rk.name}</div>
       <div class="pod-pts">${p.points || 0}<small> pts</small></div>
       <div class="pod-wl"><span><b>${s.won}</b>V</span><span><b>${s.lost}</b>D</span><span><b>${rate}%</b>WR</span></div>
-      ${gamesRow}
     </div>
   </div>`;
 };
