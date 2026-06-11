@@ -3281,6 +3281,12 @@ const seasonBannerHtml = () => {
     </div>`;
 };
 
+const TIER_COLOR = {
+  bois:'var(--t-bois)', bronze:'var(--t-bronze)', argent:'var(--t-argent)', or:'var(--t-or)',
+  platine:'var(--t-platine)', diamant:'var(--t-diamant)', maitre:'var(--t-maitre)', challenger:'var(--t-chall)',
+};
+const tierColor = (rk) => TIER_COLOR[(rk && (rk.baseKey || rk.key))] || 'var(--text-muted)';
+
 const renderLeaderboard = () => {
   const el = document.getElementById('lboard');
   if (!players.length) {
@@ -3290,33 +3296,36 @@ const renderLeaderboard = () => {
   const ranked = players
     .map((p) => { const s = playerStats(p.id); return { ...p, ...s, rate: s.played > 0 ? Math.round(s.won / s.played * 100) : 0 }; })
     .sort((a, b) => b.rate - a.rate || b.won - a.won);
-  const mx = ranked[0]?.rate || 1;
 
-  el.innerHTML = seasonBannerHtml() + ranked.map((p, i) => {
-    const rc  = i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '';
-    const md  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
-    const bg  = p.color || '#4ade80';
-    const rk  = displayRank(p);
-    return `<div class="lb-row">
-      <div class="lb-rank ${rc}">${md}</div>
-      <div class="lb-av" style="background:${bg}22;color:${bg}">${ini(p.name)}</div>
-      <div class="lb-info">
-        <div class="lb-name">
-          ${esc(p.name)}
-          <span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:${rk.color}">
-            ${rankImg(rk, 14)} ${rk.name}
-          </span>
-        </div>
-        <div class="lb-sub">
-          ${p.won}V · ${p.lost}D · ${p.played}p
-          ${(p.points || 0) > 0 ? ` · &#11088;${p.points}pts` : ''}
-          ${isAdmin ? ` · &#9876;&#65039;${getElo(p)}` : ''}
-        </div>
+  const head = `<div class="lb-head">
+      <div class="ctr">#</div><div>Joueur</div><div>Rang</div>
+      <div class="ctr">V/D</div><div class="ctr">Winrate</div><div class="ctr">Série</div>
+    </div>`;
+
+  el.innerHTML = seasonBannerHtml() + head + ranked.map((p, i) => {
+    const md = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+    const mc = i === 0 ? 'm1' : i === 1 ? 'm2' : i === 2 ? 'm3' : '';
+    const bg = p.color || '#4ade80';
+    const rk = displayRank(p);
+    const tc = tierColor(rk);
+    const av = AVATARS.find((a) => a.id === (p.avatar || 1));
+    const avHtml = av ? `<img src="${av.src}" alt="">` : `<span style="color:${bg}">${ini(p.name)}</span>`;
+    const streak = (p.streak || 0) >= 1
+      ? `<span class="lb-streak up">🔥${p.streak}</span>`
+      : `<span class="lb-streak flat">—</span>`;
+    return `<div class="lb-row" onclick="openPlayerProfile(${p.id})">
+      <div class="lb-rank ${mc}">${md}</div>
+      <div class="lb-pl">
+        <div class="lb-av">${avHtml}</div>
+        <div class="lb-nm"><b>${esc(p.name)}</b><span>${p.played} parties${isAdmin ? ' · ⚔️' + getElo(p) : ''}</span></div>
       </div>
-      <div class="lb-bar">
-        <div class="lb-bar-fill" style="width:${Math.round(p.rate / mx * 100)}%"></div>
+      <div class="lb-tier">
+        <span class="lb-emblem">${rankImg(rk, 22)}</span>
+        <div class="lb-tinfo"><b style="color:${tc}">${rk.name}</b><span>${p.points || 0} pts</span></div>
       </div>
-      <div class="lb-rate">${p.rate}%</div>
+      <div class="lb-vd ctr"><b class="w">${p.won}</b>/<span class="l">${p.lost}</span></div>
+      <div class="lb-wr"><b>${p.rate}%</b><div class="lb-bar"><i style="width:${p.rate}%"></i></div></div>
+      <div class="lb-strk ctr">${streak}</div>
     </div>`;
   }).join('');
 };
