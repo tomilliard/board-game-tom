@@ -68,6 +68,14 @@ const GAME_BG_DEFS = [
   { src: 'assets/bg_arcs.webp',      names: ['Arcs', 'arcs'] },
   { src: 'assets/bg_akropolis.webp', names: ['Akropolis', 'Acropolis', 'akropolis'] },
   { src: 'assets/bg_abyss.webp',     names: ['Abyss', 'abyss'] },
+  { src: 'assets/bg_citesroyales.webp', names: ['Cités Royales', 'Cites Royales', 'cités royales', 'cites royales'] },
+  { src: 'assets/bg_citadelles.webp',   names: ['Citadelles', 'Citadelle', 'Citadels', 'citadelle'] },
+  { src: 'assets/bg_chateaucombo.webp', names: ['Château Combo', 'Chateau Combo', 'chateau combo'] },
+  { src: 'assets/bg_chateaublanc.webp', names: ['Le Château Blanc', 'Château Blanc', 'Chateau Blanc', 'The White Castle', 'White Castle', 'chateau blanc'] },
+  { src: 'assets/bg_carcassonne.webp',  names: ['Carcassonne', 'Carcassone', 'carcassonne'] },
+  { src: 'assets/bg_brass.webp',        names: ['Brass Birmingham', 'Brass: Birmingham', 'Brass', 'brass'] },
+  { src: 'assets/bg_blackforest.webp',  names: ['Black Forest', 'BlackForest', 'black forest'] },
+  { src: 'assets/bg_barrage.webp',      names: ['Barrage', 'barrage'] },
   { src: 'assets/bg_dune.webp',      names: ['Dune Imperium Insurrection', 'Dune Imperium', 'Dune', 'dune'] },
   { src: 'assets/bg_7wonders.webp',  names: ['7 Wonders', '7wonders', 'seven wonders'] },
   { src: 'assets/bg_foret.webp',     names: ['foret mixte', 'forêt mixte', 'foret'] },
@@ -4655,6 +4663,14 @@ const ACHIEVEMENTS = [
   { id:'arcs_play_15',    icon:'🌌', name:'Seigneur stellaire',       desc:'Jouer 15 parties d\'Arcs',    check: (s) => (s.arcsPlayed || 0) >= 15 },
   { id:'akropolis_play_15',icon:'🏛️', name:'Urbaniste d\'Akropolis',  desc:'Jouer 15 parties d\'Akropolis',check: (s) => (s.akropolisPlayed || 0) >= 15 },
   { id:'abyss_play_15',   icon:'🔱', name:'Souverain des Abysses',    desc:'Jouer 15 parties d\'Abyss',   check: (s) => (s.abyssPlayed || 0) >= 15 },
+  { id:'citesroyales_play_15', icon:'👑', name:'Bâtisseur royal',     desc:'Jouer 15 parties de Cités Royales',   check: (s) => (s.citesRoyalesPlayed || 0) >= 15 },
+  { id:'citadelles_play_15',   icon:'🏰', name:'Maître des intrigues', desc:'Jouer 15 parties de Citadelles',     check: (s) => (s.citadellesPlayed || 0) >= 15 },
+  { id:'chateaucombo_play_15', icon:'🃏', name:'Châtelain combo',      desc:'Jouer 15 parties de Château Combo',  check: (s) => (s.chateauComboPlayed || 0) >= 15 },
+  { id:'chateaublanc_play_15', icon:'🏯', name:'Daimyo du Château Blanc', desc:'Jouer 15 parties du Château Blanc', check: (s) => (s.chateauBlancPlayed || 0) >= 15 },
+  { id:'carcassonne_play_15',  icon:'🧱', name:'Meeple d\'or',         desc:'Jouer 15 parties de Carcassonne',    check: (s) => (s.carcassonnePlayed || 0) >= 15 },
+  { id:'brass_play_15',        icon:'🚂', name:'Baron du charbon',     desc:'Jouer 15 parties de Brass Birmingham', check: (s) => (s.brassPlayed || 0) >= 15 },
+  { id:'blackforest_play_15',  icon:'🌑', name:'Alchimiste de la Forêt-Noire', desc:'Jouer 15 parties de Black Forest', check: (s) => (s.blackForestPlayed || 0) >= 15 },
+  { id:'barrage_play_15',      icon:'💧', name:'Ingénieur hydraulique', desc:'Jouer 15 parties de Barrage',       check: (s) => (s.barragePlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4729,6 +4745,13 @@ const computeAchievementStats = (pid) => {
   const _arkNovaId = _resolveGame(["Ark Nova", "ark nova"]);
   const _arcsId    = _resolveGame(["Arcs", "arcs"]);
   const _abyssId   = _resolveGame(["Abyss", "abyss"]);
+  const _citesRoyId = _resolveGame(["Cités Royales", "Cites Royales", "cités royales"]);
+  const _citadellesId = _resolveGame(["Citadelles", "Citadelle", "Citadels"]);
+  const _chatComboId = _resolveGame(["Château Combo", "Chateau Combo"]);
+  const _chatBlancId = _resolveGame(["Le Château Blanc", "Château Blanc", "Chateau Blanc", "The White Castle", "White Castle"]);
+  const _carcaId     = _resolveGame(["Carcassonne", "Carcassone"]);
+  const _blackForestId = _resolveGame(["Black Forest", "BlackForest"]);
+  const _barrageId   = _resolveGame(["Barrage", "barrage"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4751,6 +4774,13 @@ const computeAchievementStats = (pid) => {
   const arkNovaPlayed   = _byGame(_arkNovaId, playerMatches);
   const arcsPlayed      = _byGame(_arcsId, playerMatches);
   const abyssPlayed     = _byGame(_abyssId, playerMatches);
+  const citesRoyalesPlayed = _byGame(_citesRoyId, playerMatches);
+  const citadellesPlayed   = _byGame(_citadellesId, playerMatches);
+  const chateauComboPlayed = _byGame(_chatComboId, playerMatches);
+  const chateauBlancPlayed = _byGame(_chatBlancId, playerMatches);
+  const carcassonnePlayed  = _byGame(_carcaId, playerMatches);
+  const blackForestPlayed  = _byGame(_blackForestId, playerMatches);
+  const barragePlayed      = _byGame(_barrageId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4879,6 +4909,13 @@ const computeAchievementStats = (pid) => {
     arkNovaPlayed,
     arcsPlayed,
     abyssPlayed,
+    citesRoyalesPlayed,
+    citadellesPlayed,
+    chateauComboPlayed,
+    chateauBlancPlayed,
+    carcassonnePlayed,
+    blackForestPlayed,
+    barragePlayed,
     diffGames,
     sentChallenges,
     wonChallenges,

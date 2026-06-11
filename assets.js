@@ -236,7 +236,15 @@ const BACKGROUNDS = [
   { id: 12, label: 'Le Parc d\'Ark Nova',       src: 'assets/bg_arknova.webp',   reqAch: 'arknova_play_15' },
   { id: 13, label: 'La Cité Stellaire d\'Arcs', src: 'assets/bg_arcs.webp',      reqAch: 'arcs_play_15' },
   { id: 14, label: 'Les Hauteurs d\'Akropolis', src: 'assets/bg_akropolis.webp', reqAch: 'akropolis_play_15' },
-  { id: 15, label: 'Le Palais des Abysses',     src: 'assets/bg_abyss.webp',     reqAch: 'abyss_play_15' }
+  { id: 15, label: 'Le Palais des Abysses',     src: 'assets/bg_abyss.webp',     reqAch: 'abyss_play_15' },
+  { id: 16, label: 'Les Cités Royales',          src: 'assets/bg_citesroyales.webp', reqAch: 'citesroyales_play_15' },
+  { id: 17, label: 'La Cité des Intrigues',      src: 'assets/bg_citadelles.webp',   reqAch: 'citadelles_play_15' },
+  { id: 18, label: 'Le Royaume Combo',           src: 'assets/bg_chateaucombo.webp', reqAch: 'chateaucombo_play_15' },
+  { id: 19, label: 'Le Château Blanc',           src: 'assets/bg_chateaublanc.webp', reqAch: 'chateaublanc_play_15' },
+  { id: 20, label: 'Les Remparts de Carcassonne',src: 'assets/bg_carcassonne.webp',  reqAch: 'carcassonne_play_15' },
+  { id: 21, label: 'Les Forges de Birmingham',   src: 'assets/bg_brass.webp',        reqAch: 'brass_play_15' },
+  { id: 22, label: 'La Forêt-Noire',             src: 'assets/bg_blackforest.webp',  reqAch: 'blackforest_play_15' },
+  { id: 23, label: 'Le Grand Barrage',           src: 'assets/bg_barrage.webp',      reqAch: 'barrage_play_15' }
 ];
 
 // ─── Images décoratives ───
