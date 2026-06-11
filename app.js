@@ -5134,24 +5134,19 @@ const openPlayerProfile = (pid) => {
           })()}
           ${(_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || ra2.profile_frame)) ? `<img src="${_cf ? _cf.src : (FRAME_BY_DIV[rk.key] || ra2.profile_frame)}" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${fb}px;height:${fb}px;object-fit:contain;pointer-events:none;z-index:2">` : ''}
         </div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px">
-          <span style="font-size:${nf}px;font-weight:700;color:var(--text)">${esc(p.name)}</span>
-          ${ra2.emblem ? `<img src="${ra2.emblem}" style="width:${emb}px;height:${emb}px;object-fit:contain">` : ''}
-          <span style="font-size:13px;color:${rk.color};font-weight:600">${rk.name}</span>
+        <div class="pp-name-row">
+          <span class="pp-name">${esc(p.name)}</span>
+          <span class="pp-tier" style="color:${rk.color};border-color:${rk.color}55;background:${rk.color}1f">${rankImg(rk, 15)} ${rk.name}</span>
         </div>
-        <div style="display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:12px;color:var(--text-muted);flex-wrap:wrap">
-          <span style="color:var(--gold)">⭐ ${p.points || 0} pts</span>
-          <span>🏆 ${s.won}V</span>
-          <span>💔 ${s.lost}D</span>
-          <span>🎮 ${s.played}p</span>
-          <span>📊 ${rate}%</span>
+        <div class="pp-tiles">
+          <div class="pp-tile"><b style="color:var(--gold)">${p.points || 0}</b><span>Points</span></div>
+          <div class="pp-tile"><b style="color:var(--accent)">${s.won}</b><span>Victoires</span></div>
+          <div class="pp-tile"><b>${s.lost}</b><span>Défaites</span></div>
+          <div class="pp-tile"><b>${rate}%</b><span>Winrate</span></div>
         </div>
       </div>
     </div>
-    <button onclick="openPlayerHistory(${pid})"
-            style="width:100%;margin-bottom:4px;padding:11px;border-radius:10px;border:1px solid var(--border);
-                   background:var(--bg);color:var(--text);font-family:inherit;font-size:14px;font-weight:600;
-                   cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+    <button class="pp-history-btn" onclick="openPlayerHistory(${pid})">
       🎲 Voir l'historique des parties
     </button>`;
 

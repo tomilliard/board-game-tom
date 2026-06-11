@@ -685,3 +685,18 @@ select:focus{border-color:var(--accent);outline:none}
   .hist-cover{width:42px;height:42px}
   .hist-game{font-size:14px}
 }
+
+/* ─── Modale Profil détaillé (refonte) ─── */
+.pp-name-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.pp-name{font-family:'Chakra Petch',sans-serif;font-size:20px;font-weight:700;color:var(--text)}
+.pp-tier{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px;border:1px solid}
+.pp-tier img{vertical-align:middle}
+.pp-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px auto 2px;max-width:380px}
+.pp-tile{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:9px 4px;text-align:center}
+.pp-tile b{display:block;font-family:'Chakra Petch',sans-serif;font-size:19px;color:var(--text)}
+.pp-tile span{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em}
+.pp-history-btn{width:100%;margin-bottom:4px;padding:11px;border-radius:10px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent-text);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,color .15s}
+.pp-history-btn:hover{background:var(--accent);color:#0a0f18}
+.ach-card{transition:border-color .15s,transform .15s}
+.ach-card.unlocked:hover{transform:translateY(-1px);border-color:var(--border-strong)}
+@media(max-width:520px){.pp-tiles{grid-template-columns:repeat(2,1fr)}}
