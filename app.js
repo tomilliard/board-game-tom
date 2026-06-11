@@ -3298,6 +3298,9 @@ const renderHome = () => { renderHomeHero(); renderPodium(); renderLeaderboard()
 const renderHomeHero = () => {
   const snum = document.getElementById('home-season-num');
   if (snum) snum.textContent = currentSeason ? currentSeason.number : 1;
+  const sub = document.getElementById('home-hero-sub');
+  if (sub) sub.textContent =
+    `${matches.length} parties jouées · ${players.length} membre${players.length > 1 ? 's' : ''} · termine n°1 pour décrocher le titre de Challenger`;
   const meta = document.getElementById('home-hero-meta');
   if (!meta) return;
   const leader = [...players].sort((a, b) => (b.points || 0) - (a.points || 0))[0];
@@ -3307,13 +3310,66 @@ const renderHomeHero = () => {
     if (currentSeason.ends_at) end = new Date(currentSeason.ends_at);
     else { end = new Date(currentSeason.started_at); end.setMonth(end.getMonth() + 6); }
     const days = Math.max(0, Math.ceil((end - new Date()) / 86400000));
-    daysHtml = `<div><b>${days}</b>jour${days > 1 ? 's' : ''} restant${days > 1 ? 's' : ''}</div>`;
+    daysHtml = `<div><b>${days} j.</b>avant clôture</div>`;
   }
   meta.innerHTML =
     `<div><b>${seasonMatches().length}</b>parties cette saison</div>` +
-    daysHtml +
     `<div><b>${leader ? esc(leader.name) : '—'}</b>en tête</div>` +
-    `<div><b>${players.length}</b>membres</div>`;
+    daysHtml;
+};
+
+// Fiche podium ÉPURÉE (fond cosmétique + avatar cadré + nom + tier + points + V/D/WR + jeux).
+const buildPodiumCard = (p) => {
+  const s    = playerStats(p.id);
+  const rate = s.played > 0 ? Math.round(s.won / s.played * 100) : 0;
+  const rk   = displayRank(p);
+  const tc   = tierColor(rk);
+  const _cf  = cosmeticFrame(p);
+  const _cbg = cosmeticBg(p);
+  const rd   = RANK_ASSETS_DESKTOP[rk.baseKey || rk.key] || {};
+
+  const bgImg = _cbg ? _cbg.src : (RANK_AVATAR_BG[rk.baseKey || rk.key] || null);
+  const bgStyle = bgImg
+    ? `background:linear-gradient(180deg,rgba(8,11,20,.35),rgba(8,11,20,.84) 60%,rgba(8,11,20,.95)),url('${bgImg}') center/cover;`
+    : `background:linear-gradient(160deg,${(p.color || '#4ade80')}22,var(--surface-2));`;
+
+  const avImg   = AVATARS.find((a) => a.id === (p.avatar || 1));
+  const avInner = avImg
+    ? `<img src="${avImg.src}" style="width:100%;height:100%;object-fit:cover;display:block">`
+    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff">${ini(p.name)}</div>`;
+  const frameSrc = _cf ? _cf.src : (FRAME_BY_DIV[rk.key] || rd.player_frame);
+
+  let avatarBlock;
+  if (frameSrc) {
+    const S = 132, k = S / 150;
+    const h = _cf ? _cf.hole : (FRAME_HOLES[rk.key] || FRAME_HOLES[rk.baseKey || rk.key] || { top: 32, left: 32, size: 86 });
+    const aL = h.left * k, aT = h.top * k, aS = h.size * k;
+    avatarBlock = `<div style="position:relative;width:${S}px;height:${S}px;margin:0 auto">
+        <div style="position:absolute;left:${aL}px;top:${aT}px;width:${aS}px;height:${aS}px;border-radius:50%;overflow:hidden;z-index:1">${avInner}</div>
+        <img src="${frameSrc}" style="position:absolute;inset:0;width:${S}px;height:${S}px;object-fit:contain;pointer-events:none;z-index:2">
+      </div>`;
+  } else {
+    avatarBlock = `<div style="width:88px;height:88px;border-radius:50%;overflow:hidden;margin:14px auto 0;border:3px solid ${tc};box-shadow:0 0 0 3px rgba(0,0,0,.4)">${avInner}</div>`;
+  }
+
+  const cnt = {};
+  matches.forEach((m) => { if (m.players?.some((x) => x.id === p.id)) cnt[m.game_id] = (cnt[m.game_id] || 0) + 1; });
+  const topGames = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 3)
+    .map(([gid]) => games.find((g) => g.id === parseInt(gid))).filter((g) => g && g.image_url);
+  const gamesRow = topGames.length
+    ? `<div class="pod-games">${topGames.map((g) => `<img src="${g.image_url}" alt="" title="${esc(g.name)}">`).join('')}</div>`
+    : '';
+
+  return `<div class="pod-card" onclick="openPlayerProfile(${p.id})" style="${bgStyle}">
+    <div class="pod-in">
+      ${avatarBlock}
+      <div class="pod-name">${esc(p.name)}</div>
+      <div class="pod-tier" style="color:${tc};border-color:${tc}55;background:${tc}1f">${rankImg(rk, 15)} ${rk.name}</div>
+      <div class="pod-pts">${p.points || 0}<small> pts</small></div>
+      <div class="pod-wl"><span><b>${s.won}</b>V</span><span><b>${s.lost}</b>D</span><span><b>${rate}%</b>WR</span></div>
+      ${gamesRow}
+    </div>
+  </div>`;
 };
 
 const renderPodium = () => {
@@ -3326,7 +3382,7 @@ const renderPodium = () => {
     .slice(0, 3);
   const medals = ['🥇', '🥈', '🥉'];
   el.innerHTML = top.map((p, i) =>
-    `<div class="podium-slot pos-${i + 1}"><div class="podium-medal">${medals[i]}</div>${buildPlayerCard(p)}</div>`
+    `<div class="podium-slot pos-${i + 1}"><div class="podium-medal">${medals[i]}</div>${buildPodiumCard(p)}</div>`
   ).join('');
 };
 
