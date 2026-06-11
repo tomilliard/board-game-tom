@@ -698,5 +698,5 @@ select:focus{border-color:var(--accent);outline:none}
 .lb-frm{display:inline-flex;gap:3px;align-items:center;justify-content:center}
 .lb-frm i{width:9px;height:9px;border-radius:50%;display:block}
 .lb-frm i.w{background:var(--accent);box-shadow:0 0 5px rgba(74,222,128,.45)}
-.lb-frm i.l{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.14)}
-.lb-row.has-bg .lb-frm i.l{background:rgba(255,255,255,.22)}
+.lb-frm i.l{background:var(--danger);box-shadow:0 0 5px rgba(248,113,113,.4)}
+.lb-row.has-bg .lb-frm i.l{background:var(--danger)}
