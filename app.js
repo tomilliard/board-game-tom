@@ -3383,7 +3383,11 @@ const renderLeaderboard = () => {
     const streak = (p.streak || 0) >= 1
       ? `<span class="lb-streak up">▲${p.streak}</span>`
       : `<span class="lb-streak flat">—</span>`;
-    return `<div class="lb-row" onclick="openPlayerProfile(${p.id})">
+    const gbg = fav ? gameBgSrc({ name: fav.name }) : null;
+    const rowStyle = gbg
+      ? ` style="background:linear-gradient(90deg,rgba(12,17,26,.93) 0%,rgba(12,17,26,.8) 38%,rgba(12,17,26,.58) 72%,rgba(12,17,26,.5) 100%),url('${gbg}') center/cover"`
+      : '';
+    return `<div class="lb-row${gbg ? ' has-bg' : ''}"${rowStyle} onclick="openPlayerProfile(${p.id})">
       <div class="lb-rank ${mc}">${md}</div>
       <div class="lb-pl">
         <div class="lb-av">${avHtml}</div>

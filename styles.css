@@ -714,3 +714,11 @@ select:focus{border-color:var(--accent);outline:none}
 .hist-card.has-gbg .hist-date,.hist-card.has-gbg .hist-notes{color:rgba(255,255,255,.72)}
 .hist-card.has-gbg .pr.lose{background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.18)}
 .hist-card.has-gbg .sc-chip{background:rgba(0,0,0,.35);border-color:rgba(255,255,255,.18);color:rgba(255,255,255,.85)}
+
+/* ─── Classement : fond du meilleur jeu par ligne (voile dégradé) ─── */
+.lb-row.has-bg{border-top-color:var(--border-strong)}
+.lb-row.has-bg .lb-nm b{text-shadow:0 1px 4px rgba(0,0,0,.75)}
+.lb-row.has-bg .lb-nm span,.lb-row.has-bg .lb-tinfo,.lb-row.has-bg .lb-col{color:rgba(232,239,248,.82)}
+.lb-row.has-bg .lb-col .lose{color:rgba(232,239,248,.62)}
+.lb-row.has-bg .lb-bar{background:rgba(255,255,255,.22)}
+.lb-row.has-bg:hover{filter:brightness(1.13)}
