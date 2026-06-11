@@ -129,6 +129,15 @@ const GAME_BG_DEFS = [
   { src: 'assets/bg_mooncolony.webp',  names: ['Moon Colony Bloodbath', 'Moon Colony', 'moon colony'] },
   { src: 'assets/bg_monumental.webp',  names: ['Monumental', 'monumental'] },
   { src: 'assets/bg_maracaibo.webp',   names: ['Maracaibo', 'Maracaïbo', 'maracaibo'] },
+  { src: 'assets/bg_root.webp',       names: ['Root', 'root'] },
+  { src: 'assets/bg_rivals.webp',     names: ['Rivals', 'rivals'] },
+  { src: 'assets/bg_risingsun.webp',  names: ['Rising Sun', 'RisingSun', 'rising sun'] },
+  { src: 'assets/bg_riftbound.webp',  names: ['Riftbound', 'Riftbound TCG', 'Riftbound League of Legends', 'riftbound'] },
+  { src: 'assets/bg_resarcana.webp',  names: ['Res Arcana', 'ResArcana', 'res arcana'] },
+  { src: 'assets/bg_recall.webp',     names: ['Recall', 'recall'] },
+  { src: 'assets/bg_rebirth.webp',    names: ['Rebirth', 'rebirth'] },
+  { src: 'assets/bg_rauha.webp',      names: ['Rauha', 'rauha'] },
+  { src: 'assets/bg_odin.webp',       names: ['Odin', 'odin'] },
 ];
 const gameBgSrc = (g) => {
   if (!g || !g.name) return null;
@@ -4729,6 +4738,15 @@ const ACHIEVEMENTS = [
   { id:'mooncolony_play_15', icon:'🌕', name:'Colon lunaire',            desc:'Jouer 15 parties de Moon Colony Bloodbath',  check: (s) => (s.moonColonyPlayed || 0) >= 15 },
   { id:'monumental_play_15', icon:'🗿', name:'Bâtisseur Monumental',     desc:'Jouer 15 parties de Monumental',             check: (s) => (s.monumentalPlayed || 0) >= 15 },
   { id:'maracaibo_play_15',  icon:'⛵', name:'Corsaire de Maracaïbo',    desc:'Jouer 15 parties de Maracaibo',              check: (s) => (s.maracaiboPlayed || 0) >= 15 },
+  { id:'root_play_15',      icon:'🐾', name:'Seigneur des Sous-Bois',   desc:'Jouer 15 parties de Root',           check: (s) => (s.rootPlayed || 0) >= 15 },
+  { id:'rivals_play_15',    icon:'💥', name:'Champion de l\'Arène',     desc:'Jouer 15 parties de Rivals',         check: (s) => (s.rivalsPlayed || 0) >= 15 },
+  { id:'risingsun_play_15', icon:'🌅', name:'Daimyo du Soleil Levant',  desc:'Jouer 15 parties de Rising Sun',     check: (s) => (s.risingSunPlayed || 0) >= 15 },
+  { id:'riftbound_play_15', icon:'🌀', name:'Invocateur de la Faille',  desc:'Jouer 15 parties de Riftbound',      check: (s) => (s.riftboundPlayed || 0) >= 15 },
+  { id:'resarcana_play_15', icon:'🔮', name:'Mage des Arcanes',         desc:'Jouer 15 parties de Res Arcana',     check: (s) => (s.resArcanaPlayed || 0) >= 15 },
+  { id:'recall_play_15',    icon:'👁️', name:'Mémoire parfaite',         desc:'Jouer 15 parties de Recall',         check: (s) => (s.recallPlayed || 0) >= 15 },
+  { id:'rebirth_play_15',   icon:'🌱', name:'Artisan de la Renaissance',desc:'Jouer 15 parties de Rebirth',        check: (s) => (s.rebirthPlayed || 0) >= 15 },
+  { id:'rauha_play_15',     icon:'🍄', name:'Chaman de Rauha',          desc:'Jouer 15 parties de Rauha',          check: (s) => (s.rauhaPlayed || 0) >= 15 },
+  { id:'odin_play_15',      icon:'📯', name:'Héritier d\'Odin',         desc:'Jouer 15 parties d\'Odin',           check: (s) => (s.odinPlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4848,6 +4866,15 @@ const computeAchievementStats = (pid) => {
   const _moonColonyId = _resolveGame(["Moon Colony Bloodbath", "Moon Colony", "moon colony"]);
   const _monumentalId = _resolveGame(["Monumental", "monumental"]);
   const _maracaiboId  = _resolveGame(["Maracaibo", "Maracaïbo", "maracaibo"]);
+  const _rootId      = _resolveGame(["Root", "root"]);
+  const _rivalsId    = _resolveGame(["Rivals", "rivals"]);
+  const _risingSunId = _resolveGame(["Rising Sun", "RisingSun", "rising sun"]);
+  const _riftboundId = _resolveGame(["Riftbound", "Riftbound TCG", "Riftbound League of Legends", "riftbound"]);
+  const _resArcanaId = _resolveGame(["Res Arcana", "ResArcana", "res arcana"]);
+  const _recallId    = _resolveGame(["Recall", "recall"]);
+  const _rebirthId   = _resolveGame(["Rebirth", "rebirth"]);
+  const _rauhaId     = _resolveGame(["Rauha", "rauha"]);
+  const _odinId      = _resolveGame(["Odin", "odin"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4915,6 +4942,15 @@ const computeAchievementStats = (pid) => {
   const moonColonyPlayed = _byGame(_moonColonyId, playerMatches);
   const monumentalPlayed = _byGame(_monumentalId, playerMatches);
   const maracaiboPlayed  = _byGame(_maracaiboId, playerMatches);
+  const rootPlayed      = _byGame(_rootId, playerMatches);
+  const rivalsPlayed    = _byGame(_rivalsId, playerMatches);
+  const risingSunPlayed = _byGame(_risingSunId, playerMatches);
+  const riftboundPlayed = _byGame(_riftboundId, playerMatches);
+  const resArcanaPlayed = _byGame(_resArcanaId, playerMatches);
+  const recallPlayed    = _byGame(_recallId, playerMatches);
+  const rebirthPlayed   = _byGame(_rebirthId, playerMatches);
+  const rauhaPlayed     = _byGame(_rauhaId, playerMatches);
+  const odinPlayed      = _byGame(_odinId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -5088,6 +5124,15 @@ const computeAchievementStats = (pid) => {
     moonColonyPlayed,
     monumentalPlayed,
     maracaiboPlayed,
+    rootPlayed,
+    rivalsPlayed,
+    risingSunPlayed,
+    riftboundPlayed,
+    resArcanaPlayed,
+    recallPlayed,
+    rebirthPlayed,
+    rauhaPlayed,
+    odinPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -5162,6 +5207,15 @@ const ACH_PROGRESS = {
   mooncolony_play_15: [(s) => s.moonColonyPlayed, 15],
   monumental_play_15: [(s) => s.monumentalPlayed, 15],
   maracaibo_play_15:  [(s) => s.maracaiboPlayed, 15],
+  root_play_15:      [(s) => s.rootPlayed, 15],
+  rivals_play_15:    [(s) => s.rivalsPlayed, 15],
+  risingsun_play_15: [(s) => s.risingSunPlayed, 15],
+  riftbound_play_15: [(s) => s.riftboundPlayed, 15],
+  resarcana_play_15: [(s) => s.resArcanaPlayed, 15],
+  recall_play_15:    [(s) => s.recallPlayed, 15],
+  rebirth_play_15:   [(s) => s.rebirthPlayed, 15],
+  rauha_play_15:     [(s) => s.rauhaPlayed, 15],
+  odin_play_15:      [(s) => s.odinPlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],

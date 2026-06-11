@@ -287,7 +287,16 @@ const BACKGROUNDS = [
   { id: 63, label: 'L\'Arbre des Mythes',        src: 'assets/bg_mytho.webp',       reqAch: 'mytho_play_20' },
   { id: 64, label: 'La Colonie Lunaire',         src: 'assets/bg_mooncolony.webp',  reqAch: 'mooncolony_play_15' },
   { id: 65, label: 'La Tour Monumentale',        src: 'assets/bg_monumental.webp',  reqAch: 'monumental_play_15' },
-  { id: 66, label: 'La Baie de Maracaïbo',       src: 'assets/bg_maracaibo.webp',   reqAch: 'maracaibo_play_15' }
+  { id: 66, label: 'La Baie de Maracaïbo',       src: 'assets/bg_maracaibo.webp',   reqAch: 'maracaibo_play_15' },
+  { id: 67, label: 'La Guerre des Sous-Bois',    src: 'assets/bg_root.webp',       reqAch: 'root_play_15' },
+  { id: 68, label: 'L\'Arène des Rivaux',        src: 'assets/bg_rivals.webp',     reqAch: 'rivals_play_15' },
+  { id: 69, label: 'Le Soleil Levant',           src: 'assets/bg_risingsun.webp',  reqAch: 'risingsun_play_15' },
+  { id: 70, label: 'La Faille de Runeterra',     src: 'assets/bg_riftbound.webp',  reqAch: 'riftbound_play_15' },
+  { id: 71, label: 'L\'Atelier des Arcanes',     src: 'assets/bg_resarcana.webp',  reqAch: 'resarcana_play_15' },
+  { id: 72, label: 'L\'Œil du Souvenir',         src: 'assets/bg_recall.webp',     reqAch: 'recall_play_15' },
+  { id: 73, label: 'La Citadelle Verdoyante',    src: 'assets/bg_rebirth.webp',    reqAch: 'rebirth_play_15' },
+  { id: 74, label: 'La Clairière de Rauha',      src: 'assets/bg_rauha.webp',      reqAch: 'rauha_play_15' },
+  { id: 75, label: 'Le Village d\'Odin',         src: 'assets/bg_odin.webp',       reqAch: 'odin_play_15' }
 ];
 
 // ─── Images décoratives ───
