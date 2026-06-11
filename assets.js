@@ -269,7 +269,16 @@ const BACKGROUNDS = [
   { id: 45, label: 'Les Royaumes en Guerre',     src: 'assets/bg_gwent.webp',         reqAch: 'gwent_play_15' },
   { id: 46, label: 'La Cité Sombre',             src: 'assets/bg_gloomhaven.webp',    reqAch: 'gloomhaven_play_15' },
   { id: 47, label: 'La Croisière Galactique',    src: 'assets/bg_galacticcruise.webp', reqAch: 'galacticcruise_play_15' },
-  { id: 48, label: 'La Cour du Royaume',         src: 'assets/bg_foracrown.webp',      reqAch: 'foracrown_play_15' }
+  { id: 48, label: 'La Cour du Royaume',         src: 'assets/bg_foracrown.webp',      reqAch: 'foracrown_play_15' },
+  { id: 49, label: 'La Forêt Vivante',           src: 'assets/bg_livingforest.webp',      reqAch: 'livingforest_play_15' },
+  { id: 50, label: 'La Villa de la Famiglia',    src: 'assets/bg_lafamiglia.webp',        reqAch: 'lafamiglia_play_15' },
+  { id: 51, label: 'Le Royaume de Dominion',     src: 'assets/bg_dominion.webp',          reqAch: 'dominion_play_15' },
+  { id: 52, label: 'La Bataille de Hoth',        src: 'assets/bg_hoth.webp',              reqAch: 'hoth_play_15' },
+  { id: 53, label: 'L\'Ombre du Kraken',         src: 'assets/bg_kraken.webp',            reqAch: 'kraken_play_15' },
+  { id: 54, label: 'Paris 1920',                 src: 'assets/bg_kronologicparis.webp',   reqAch: 'kronologic_play_5' },
+  { id: 55, label: 'Les Cimes de Cuzco',         src: 'assets/bg_kronologiccuzco.webp',   reqAch: 'kronologic_play_10' },
+  { id: 56, label: 'Les Jardins de Babylone',    src: 'assets/bg_kronologicbabylon.webp', reqAch: 'kronologic_play_15' },
+  { id: 57, label: 'La Forge d\'Ironwood',       src: 'assets/bg_ironwood.webp',          reqAch: 'ironwood_play_15' }
 ];
 
 // ─── Images décoratives ───

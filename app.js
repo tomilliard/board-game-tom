@@ -111,6 +111,15 @@ const GAME_BG_DEFS = [
   { src: 'assets/bg_gloomhaven.webp',    names: ['Gloomhaven', 'Gloomhaven Les Mâchoires du Lion', 'Gloomhaven: Jaws of the Lion', 'gloomhaven'] },
   { src: 'assets/bg_galacticcruise.webp', names: ['Galactic Cruise', 'GalacticCruise', 'galactic cruise'] },
   { src: 'assets/bg_foracrown.webp',      names: ['For a Crown', 'For A Crown', 'for a crown'] },
+  { src: 'assets/bg_livingforest.webp',      names: ['Living Forest', 'LivingForest', 'living forest'] },
+  { src: 'assets/bg_lafamiglia.webp',        names: ['La Famiglia', 'Famiglia', 'la famiglia'] },
+  { src: 'assets/bg_dominion.webp',          names: ['Dominion', 'dominion'] },
+  { src: 'assets/bg_hoth.webp',              names: ['La Bataille de Hoth', 'Bataille de Hoth', 'Star Wars La Bataille de Hoth', 'Star Wars : La Bataille de Hoth', 'Battle of Hoth', 'hoth'] },
+  { src: 'assets/bg_kraken.webp',            names: ["L'Ombre du Kraken", 'Ombre du Kraken', 'Shadow of the Kraken', 'kraken'] },
+  { src: 'assets/bg_kronologiccuzco.webp',   names: ['Kronologic Cuzco', 'Kronologic : Cuzco', 'Cuzco', 'cuzco'] },
+  { src: 'assets/bg_kronologicbabylon.webp', names: ['Kronologic Babylone', 'Kronologic Babylon', 'Kronologic : Babylone', 'Babylone', 'Babylon', 'babylone'] },
+  { src: 'assets/bg_kronologicparis.webp',   names: ['Kronologic Paris 1920', 'Kronologic : Paris 1920', 'Kronologic Paris', 'Kronologic', 'kronologic'] },
+  { src: 'assets/bg_ironwood.webp',          names: ['Ironwood', 'IronWood', 'Iron Wood', 'ironwood'] },
 ];
 const gameBgSrc = (g) => {
   if (!g || !g.name) return null;
@@ -4694,6 +4703,15 @@ const ACHIEVEMENTS = [
   { id:'gloomhaven_play_15', icon:'🗡️', name:'Mercenaire de Gloomhaven',  desc:'Jouer 15 parties de Gloomhaven',  check: (s) => (s.gloomhavenPlayed || 0) >= 15 },
   { id:'galacticcruise_play_15', icon:'🚀', name:'Croisiériste des étoiles', desc:'Jouer 15 parties de Galactic Cruise', check: (s) => (s.galacticCruisePlayed || 0) >= 15 },
   { id:'foracrown_play_15',      icon:'👑', name:'Prétendant au Trône',      desc:'Jouer 15 parties de For a Crown',     check: (s) => (s.forACrownPlayed || 0) >= 15 },
+  { id:'livingforest_play_15', icon:'🌳', name:'Esprit de la Forêt',     desc:'Jouer 15 parties de Living Forest',        check: (s) => (s.livingForestPlayed || 0) >= 15 },
+  { id:'lafamiglia_play_15',   icon:'🍷', name:'Parrain de la Famiglia', desc:'Jouer 15 parties de La Famiglia',          check: (s) => (s.laFamigliaPlayed || 0) >= 15 },
+  { id:'dominion_play_15',     icon:'🏰', name:'Seigneur du Dominion',   desc:'Jouer 15 parties de Dominion',             check: (s) => (s.dominionPlayed || 0) >= 15 },
+  { id:'hoth_play_15',         icon:'❄️', name:'Vétéran de Hoth',        desc:'Jouer 15 parties de La Bataille de Hoth',  check: (s) => (s.hothPlayed || 0) >= 15 },
+  { id:'kraken_play_15',       icon:'🐙', name:'Dompteur du Kraken',     desc:'Jouer 15 parties de L\'Ombre du Kraken',   check: (s) => (s.krakenPlayed || 0) >= 15 },
+  { id:'kronologic_play_5',    icon:'🕰️', name:'Apprenti détective',     desc:'Jouer 5 parties de Kronologic',            check: (s) => (s.kronologicPlayed || 0) >= 5 },
+  { id:'kronologic_play_10',   icon:'🕵️', name:'Enquêteur temporel',     desc:'Jouer 10 parties de Kronologic',           check: (s) => (s.kronologicPlayed || 0) >= 10 },
+  { id:'kronologic_play_15',   icon:'⏳', name:'Maître du Temps',        desc:'Jouer 15 parties de Kronologic',           check: (s) => (s.kronologicPlayed || 0) >= 15 },
+  { id:'ironwood_play_15',     icon:'⚙️', name:'Forgeron d\'Ironwood',   desc:'Jouer 15 parties d\'Ironwood',             check: (s) => (s.ironwoodPlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4798,6 +4816,13 @@ const computeAchievementStats = (pid) => {
   const _gloomhavenId = _resolveGame(["Gloomhaven", "Gloomhaven Les Mâchoires du Lion", "Gloomhaven: Jaws of the Lion", "gloomhaven"]);
   const _galacticCruiseId = _resolveGame(["Galactic Cruise", "GalacticCruise", "galactic cruise"]);
   const _forACrownId      = _resolveGame(["For a Crown", "For A Crown", "ForACrown", "for a crown"]);
+  const _livingForestId = _resolveGame(["Living Forest", "LivingForest", "living forest"]);
+  const _laFamigliaId   = _resolveGame(["La Famiglia", "Famiglia", "la famiglia"]);
+  const _dominionId     = _resolveGame(["Dominion", "dominion"]);
+  const _hothId         = _resolveGame(["La Bataille de Hoth", "Bataille de Hoth", "Star Wars La Bataille de Hoth", "Star Wars : La Bataille de Hoth", "Battle of Hoth", "hoth"]);
+  const _krakenId       = _resolveGame(["L'Ombre du Kraken", "Ombre du Kraken", "L\u2019Ombre du Kraken", "Shadow of the Kraken", "kraken"]);
+  const _kronologicId   = _resolveGame(["Kronologic", "Kronologic Paris 1920", "Kronologic : Paris 1920", "kronologic"]);
+  const _ironwoodId     = _resolveGame(["Ironwood", "IronWood", "Iron Wood", "ironwood"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4850,6 +4875,13 @@ const computeAchievementStats = (pid) => {
   const gloomhavenPlayed = _byGame(_gloomhavenId, playerMatches);
   const galacticCruisePlayed = _byGame(_galacticCruiseId, playerMatches);
   const forACrownPlayed      = _byGame(_forACrownId, playerMatches);
+  const livingForestPlayed = _byGame(_livingForestId, playerMatches);
+  const laFamigliaPlayed   = _byGame(_laFamigliaId, playerMatches);
+  const dominionPlayed     = _byGame(_dominionId, playerMatches);
+  const hothPlayed         = _byGame(_hothId, playerMatches);
+  const krakenPlayed       = _byGame(_krakenId, playerMatches);
+  const kronologicPlayed   = _byGame(_kronologicId, playerMatches);
+  const ironwoodPlayed     = _byGame(_ironwoodId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -5008,6 +5040,13 @@ const computeAchievementStats = (pid) => {
     gloomhavenPlayed,
     galacticCruisePlayed,
     forACrownPlayed,
+    livingForestPlayed,
+    laFamigliaPlayed,
+    dominionPlayed,
+    hothPlayed,
+    krakenPlayed,
+    kronologicPlayed,
+    ironwoodPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
@@ -5065,6 +5104,15 @@ const ACH_PROGRESS = {
   gloomhaven_play_15: [(s) => s.gloomhavenPlayed, 15],
   galacticcruise_play_15: [(s) => s.galacticCruisePlayed, 15],
   foracrown_play_15:      [(s) => s.forACrownPlayed, 15],
+  livingforest_play_15: [(s) => s.livingForestPlayed, 15],
+  lafamiglia_play_15:   [(s) => s.laFamigliaPlayed, 15],
+  dominion_play_15:     [(s) => s.dominionPlayed, 15],
+  hoth_play_15:         [(s) => s.hothPlayed, 15],
+  kraken_play_15:       [(s) => s.krakenPlayed, 15],
+  kronologic_play_5:    [(s) => s.kronologicPlayed, 5],
+  kronologic_play_10:   [(s) => s.kronologicPlayed, 10],
+  kronologic_play_15:   [(s) => s.kronologicPlayed, 15],
+  ironwood_play_15:     [(s) => s.ironwoodPlayed, 15],
   first_win:        [(s) => s.won, 1],
   wins_10:          [(s) => s.won, 10],
   wins_50:          [(s) => s.won, 50],
