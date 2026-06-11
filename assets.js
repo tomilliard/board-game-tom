@@ -231,7 +231,12 @@ const BACKGROUNDS = [
   { id: 7, label: 'Sanctuaire d\'Harmonies', src: 'assets/bg_harmonies.webp', reqAch: 'harmonies_play_15' },
   { id: 8, label: 'Cité de Zenith', src: 'assets/bg_zenith.webp', reqAch: 'zenith_play_50' },
   { id: 9, label: 'Champ de bataille Toy Battle', src: 'assets/bg_toybattle.webp', reqAch: 'toybattle_win_15' },
-  { id: 10, label: 'Vallée de l\'Éternité', src: 'assets/bg_vale.webp', reqAch: 'vale_play_25' }
+  { id: 10, label: 'Vallée de l\'Éternité', src: 'assets/bg_vale.webp', reqAch: 'vale_play_25' },
+  { id: 11, label: 'Les Vitraux de Sintra',     src: 'assets/bg_azul.webp',      reqAch: 'azul_play_15' },
+  { id: 12, label: 'Le Parc d\'Ark Nova',       src: 'assets/bg_arknova.webp',   reqAch: 'arknova_play_15' },
+  { id: 13, label: 'La Cité Stellaire d\'Arcs', src: 'assets/bg_arcs.webp',      reqAch: 'arcs_play_15' },
+  { id: 14, label: 'Les Hauteurs d\'Akropolis', src: 'assets/bg_akropolis.webp', reqAch: 'akropolis_play_15' },
+  { id: 15, label: 'Le Palais des Abysses',     src: 'assets/bg_abyss.webp',     reqAch: 'abyss_play_15' }
 ];
 
 // ─── Images décoratives ───

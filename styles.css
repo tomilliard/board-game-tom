@@ -700,3 +700,17 @@ select:focus{border-color:var(--accent);outline:none}
 .ach-card{transition:border-color .15s,transform .15s}
 .ach-card.unlocked:hover{transform:translateY(-1px);border-color:var(--border-strong)}
 @media(max-width:520px){.pp-tiles{grid-template-columns:repeat(2,1fr)}}
+
+/* ─── Fond d'ambiance du jeu : Collection (survol) + Parties ─── */
+.gc-art{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .35s ease;z-index:0}
+.game-card.has-gbg .gc-art::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,15,24,.5),rgba(10,15,24,.86));z-index:1}
+.game-card.has-gbg:hover .gc-art{opacity:1}
+.game-card.has-gbg:hover .gc-cover{opacity:0}
+.game-card.has-gbg .gc-cover{transition:opacity .35s ease}
+.game-card-content{position:relative;z-index:2}
+/* Carte de partie avec fond du jeu */
+.hist-card.has-gbg{position:relative;overflow:hidden;border-color:var(--border-strong)}
+.hist-card.has-gbg .hist-game{color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.7)}
+.hist-card.has-gbg .hist-date,.hist-card.has-gbg .hist-notes{color:rgba(255,255,255,.72)}
+.hist-card.has-gbg .pr.lose{background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.18)}
+.hist-card.has-gbg .sc-chip{background:rgba(0,0,0,.35);border-color:rgba(255,255,255,.18);color:rgba(255,255,255,.85)}

@@ -61,6 +61,32 @@ const cosmeticFrame = (p) => (p && p.frame ? (FRAMES.find((f) => f.id === p.fram
 // Fond de carte cosmétique choisi (si présent dans BACKGROUNDS), sinon null → fond uni.
 const cosmeticBg = (p) => (p && p.cardbg ? (BACKGROUNDS.find((b) => b.id === p.cardbg) || null) : null);
 
+// Fond d'ambiance associé à un JEU (affiché au survol en Collection et en fond des cartes Parties).
+const GAME_BG_DEFS = [
+  { src: 'assets/bg_azul.webp',      names: ['Azul les Vitraux de Sintra', 'Azul Vitraux de Sintra', 'Azul: Les Vitraux de Sintra', 'Azul Sintra', 'Azul', 'vitraux de sintra'] },
+  { src: 'assets/bg_arknova.webp',   names: ['Ark Nova', 'ark nova'] },
+  { src: 'assets/bg_arcs.webp',      names: ['Arcs', 'arcs'] },
+  { src: 'assets/bg_akropolis.webp', names: ['Akropolis', 'Acropolis', 'akropolis'] },
+  { src: 'assets/bg_abyss.webp',     names: ['Abyss', 'abyss'] },
+  { src: 'assets/bg_dune.webp',      names: ['Dune Imperium Insurrection', 'Dune Imperium', 'Dune', 'dune'] },
+  { src: 'assets/bg_7wonders.webp',  names: ['7 Wonders', '7wonders', 'seven wonders'] },
+  { src: 'assets/bg_foret.webp',     names: ['foret mixte', 'forêt mixte', 'foret'] },
+  { src: 'assets/bg_iaww.webp',      names: ["It's a Wonderful World", 'It\u2019s a Wonderful World', 'Its a Wonderful World', 'wonderful world'] },
+  { src: 'assets/bg_catan.webp',     names: ['Catan', 'Catane', 'Les Colons de Catane', 'Colons de Catane'] },
+  { src: 'assets/bg_cyberpunk.webp', names: ['Cyberpunk Gangs of Night City', 'Gangs of Night City', 'night city'] },
+  { src: 'assets/bg_harmonies.webp', names: ['Harmonies', 'harmonies'] },
+  { src: 'assets/bg_zenith.webp',    names: ['Zenith', 'zenith'] },
+  { src: 'assets/bg_toybattle.webp', names: ['Toy Battle', 'ToyBattle', 'toy battle'] },
+  { src: 'assets/bg_vale.webp',      names: ['The Vale of Eternity', 'Vale of Eternity', "Vallée de l'Éternité", 'vale of eternity'] },
+];
+const gameBgSrc = (g) => {
+  if (!g || !g.name) return null;
+  const nm = g.name.toLowerCase().trim();
+  for (const d of GAME_BG_DEFS) if (d.names.some((n) => n.toLowerCase() === nm)) return d.src;
+  for (const d of GAME_BG_DEFS) if (d.names.some((n) => nm.includes(n.toLowerCase()))) return d.src;
+  return null;
+};
+
 // Cadres spécifiques par division (priorité sur le cadre du rang de base).
 // Clé = clé de rang exacte (ex. bois_1 = Bois V).
 const FRAME_BY_DIV = {
@@ -1958,7 +1984,9 @@ const buildGameCard = (g) => {
        </div>`
     : '';
 
-  return `<div class="game-card" id="gc-${g.id}">
+  const gbg = gameBgSrc(g);
+  return `<div class="game-card${gbg ? ' has-gbg' : ''}" id="gc-${g.id}">
+    ${gbg ? `<div class="gc-art" style="background-image:url('${gbg}')"></div>` : ''}
     <div class="gc-cover">
       <div class="game-card-bg"></div>
       <span class="badge ${g.status === 'own' ? 'badge-own' : 'badge-wish'}">${g.status === 'own' ? 'Possédé' : 'Souhait'}</span>
@@ -3105,6 +3133,23 @@ const buildMatchCard = (m) => {
         }).join('')}
        </div>`
     : '';
+
+  const gbg = g ? gameBgSrc(g) : null;
+  if (gbg) {
+    return `<div class="hist-card has-gbg" style="background:linear-gradient(180deg,rgba(10,15,24,.74),rgba(10,15,24,.9)),url('${gbg}') center/cover">
+      <div class="hist-hdr">
+        <div class="hist-hdr-main">
+          <div class="hist-game">${g ? esc(g.name) : 'Jeu inconnu'}</div>
+          ${m.date ? `<div class="hist-date">${fmtDate(m.date)}</div>` : ''}
+          ${m.notes ? `<div class="hist-notes">${esc(m.notes)}</div>` : ''}
+        </div>
+        ${delBtn}
+      </div>
+      <div class="hist-players">${playersHtml}</div>
+      ${scoresHtml}
+      ${ptsHtml}
+    </div>`;
+  }
 
   const cover = g && g.image_url
     ? `<div class="hist-cover" style="background-image:url('${g.image_url}')"></div>`
@@ -4601,6 +4646,11 @@ const ACHIEVEMENTS = [
   { id:'toybattle_play_30',icon:'🏰', name:'Bâtisseur de citadelle',  desc:'Jouer 30 parties de Toy Battle',         check: (s) => (s.toyBattlePlayed || 0) >= 30 },
   { id:'toybattle_win_50',icon:'⚔️', name:'Champion de Toy Battle',   desc:'Gagner 50 parties de Toy Battle',        check: (s) => (s.toyBattleWins || 0) >= 50 },
   { id:'vale_play_25',   icon:'🐉', name:'Gardien de la Vallée',      desc:'Jouer 25 parties de The Vale of Eternity', check: (s) => (s.valePlayed || 0) >= 25 },
+  { id:'azul_play_15',    icon:'🪟', name:'Maître Verrier',           desc:'Jouer 15 parties d\'Azul',    check: (s) => (s.azulPlayed || 0) >= 15 },
+  { id:'arknova_play_15', icon:'🦓', name:'Architecte zoologique',    desc:'Jouer 15 parties d\'Ark Nova', check: (s) => (s.arkNovaPlayed || 0) >= 15 },
+  { id:'arcs_play_15',    icon:'🌌', name:'Seigneur stellaire',       desc:'Jouer 15 parties d\'Arcs',    check: (s) => (s.arcsPlayed || 0) >= 15 },
+  { id:'akropolis_play_15',icon:'🏛️', name:'Urbaniste d\'Akropolis',  desc:'Jouer 15 parties d\'Akropolis',check: (s) => (s.akropolisPlayed || 0) >= 15 },
+  { id:'abyss_play_15',   icon:'🔱', name:'Souverain des Abysses',    desc:'Jouer 15 parties d\'Abyss',   check: (s) => (s.abyssPlayed || 0) >= 15 },
   { id:'rank_challenger',icon:'🏆', name:'Challenger',               desc:'Atteindre le rang Challenger',         check: (s) => s.maxPoints >= 3000 },
   // Parties
   { id:'games_10',       icon:'🎲', name:'10 parties',               desc:'Jouer 10 parties',                     check: (s) => s.played >= 10 },
@@ -4671,6 +4721,10 @@ const computeAchievementStats = (pid) => {
   const _zenithId    = _resolveGame(["Zenith", "zenith"]);
   const _toyBattleId = _resolveGame(["Toy Battle", "ToyBattle", "toy battle"]);
   const _valeId      = _resolveGame(["The Vale of Eternity", "Vale of Eternity", "Vallée de l'Éternité", "Vallee de l'Eternite", "vale of eternity"]);
+  const _azulId    = _resolveGame(["Azul les Vitraux de Sintra", "Azul Vitraux de Sintra", "Azul: Les Vitraux de Sintra", "Azul Sintra", "Azul", "vitraux de sintra"]);
+  const _arkNovaId = _resolveGame(["Ark Nova", "ark nova"]);
+  const _arcsId    = _resolveGame(["Arcs", "arcs"]);
+  const _abyssId   = _resolveGame(["Abyss", "abyss"]);
 
   const iawwWins        = _byGame(_iawwId, won);
   const akropolisWins   = _byGame(_akropolisId, won);
@@ -4688,6 +4742,11 @@ const computeAchievementStats = (pid) => {
   const toyBattlePlayed = _byGame(_toyBattleId, playerMatches);
   const toyBattleWins   = _byGame(_toyBattleId, won);
   const valePlayed      = _byGame(_valeId, playerMatches);
+  const akropolisPlayed = _byGame(_akropolisId, playerMatches);
+  const azulPlayed      = _byGame(_azulId, playerMatches);
+  const arkNovaPlayed   = _byGame(_arkNovaId, playerMatches);
+  const arcsPlayed      = _byGame(_arcsId, playerMatches);
+  const abyssPlayed     = _byGame(_abyssId, playerMatches);
 
   // Best streak from match history (sequential wins)
   let bestStreak = 0, curStreak = 0;
@@ -4811,6 +4870,11 @@ const computeAchievementStats = (pid) => {
     toyBattlePlayed,
     toyBattleWins,
     valePlayed,
+    akropolisPlayed,
+    azulPlayed,
+    arkNovaPlayed,
+    arcsPlayed,
+    abyssPlayed,
     diffGames,
     sentChallenges,
     wonChallenges,
