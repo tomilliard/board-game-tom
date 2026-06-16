@@ -2755,9 +2755,13 @@ document.addEventListener('mouseover', (e) => {
 
 const renderPlayerStats = () => {
   const best = players
-    .map((p) => { const s = playerStats(p.id); return { ...p, rate: s.played > 0 ? Math.round(s.won / s.played * 100) : 0, played: s.played }; })
+    .map((p) => {
+      const s = playerStats(p.id);
+      return { ...p, rate: s.played > 0 ? Math.round(s.won / s.played * 100) : 0,
+               played: s.played, score: wilsonScore(s.won, s.played) };
+    })
     .filter((p) => p.played > 0)
-    .sort((a, b) => b.rate - a.rate)[0] || null;
+    .sort((a, b) => b.score - a.score)[0] || null;
 
   document.getElementById('pstats').innerHTML = `
     <div class="stat-card">
@@ -2773,7 +2777,7 @@ const renderPlayerStats = () => {
     <div class="stat-card">
       <div class="stat-label">Meilleur joueur</div>
       <div class="stat-value" style="font-size:18px">${best ? esc(best.name) : '—'}</div>
-      <div class="stat-sub">${best ? best.rate + '% victoires' : ''}</div>
+      <div class="stat-sub">${best ? best.rate + '% · ' + best.played + ' partie' + (best.played > 1 ? 's' : '') : ''}</div>
     </div>
     ${isAdmin ? `
     <div class="stat-card" style="justify-content:center;align-items:center;text-align:center;gap:8px">
@@ -5571,6 +5575,8 @@ const allPlayersProgression = () => {
 // État du graphe comparatif (joueurs cochés + mode).
 let _cmpMode     = 'pts';
 let _cmpSelected = null;   // Set d'ids ; null = pas encore initialisé
+let _cmpGeo      = null;   // géométrie du dernier dessin (pour le tooltip)
+let _cmpHoverX   = null;   // index de partie survolé (null = aucun)
 
 const setCmpMode = (mode) => {
   _cmpMode = mode;
@@ -5639,6 +5645,15 @@ const renderComparison = () => {
       <div class="cmp-tip" id="cmp-tip" data-tooltip></div>
     </div>`;
   drawComparison();
+
+  const canvas = document.getElementById('cmp-canvas');
+  if (canvas) {
+    canvas.addEventListener('mousemove', _cmpOnMove);
+    canvas.addEventListener('mouseleave', _cmpOnLeave);
+    canvas.addEventListener('touchstart', _cmpOnMove, { passive: true });
+    canvas.addEventListener('touchmove',  _cmpOnMove, { passive: true });
+    canvas.addEventListener('touchend',   _cmpOnLeave);
+  }
 };
 
 const drawComparison = () => {
@@ -5710,6 +5725,70 @@ const drawComparison = () => {
     ctx.beginPath(); ctx.arc(toX(last.x), toY(last.y), 3, 0, Math.PI * 2);
     ctx.fillStyle = s.color; ctx.fill();
   });
+
+  // Mémorise la géométrie pour le tooltip au survol.
+  _cmpGeo = { series, toX, toY, maxX, pad, cW, cH, W, H, elo };
+  // Trait + points de survol si une partie est ciblée.
+  if (_cmpHoverX != null) {
+    const gx = _cmpHoverX;
+    const px = toX(gx);
+    ctx.strokeStyle = 'rgba(127,119,221,0.5)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(px, pad.top); ctx.lineTo(px, pad.top + cH); ctx.stroke(); ctx.setLineDash([]);
+    series.forEach((s) => {
+      // valeur du joueur à cet index = dernier point dont x <= gx (escalier)
+      let pt = null;
+      for (const p of s.pts) { if (p.x <= gx) pt = p; else break; }
+      if (pt) { ctx.beginPath(); ctx.arc(px, toY(pt.y), 4, 0, Math.PI * 2);
+        ctx.fillStyle = s.color; ctx.fill();
+        ctx.strokeStyle = 'var(--surface)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    });
+  }
+};
+
+// Survol : trouve la partie la plus proche en X et affiche l'infobulle.
+const _cmpOnMove = (ev) => {
+  if (!_cmpGeo) return;
+  const canvas = document.getElementById('cmp-canvas');
+  const tip = document.getElementById('cmp-tip');
+  if (!canvas || !tip) return;
+  const rect = canvas.getBoundingClientRect();
+  const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+  const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+  const mx = clientX - rect.left;
+  const { toX, maxX, pad, cW, series, elo } = _cmpGeo;
+  // Index de partie le plus proche (1..maxX)
+  let gi = Math.round(((mx - pad.left) / cW) * maxX);
+  gi = Math.max(1, Math.min(maxX, gi));
+  _cmpHoverX = gi;
+  drawComparison();
+
+  // Valeur de chaque joueur sélectionné à cette partie.
+  const rows = series.map((s) => {
+    let pt = null;
+    for (const p of s.pts) { if (p.x <= gi) pt = p; else break; }
+    const pl = players.find((x) => x.id === s.id);
+    return { color: s.color, name: pl ? pl.name : '?', val: pt ? pt.y : null };
+  }).filter((r) => r.val != null).sort((a, b) => b.val - a.val);
+
+  if (!rows.length) { tip.style.display = 'none'; return; }
+  tip.innerHTML = `<div class="cmp-tip-h">Partie ${gi}</div>` + rows.map((r) =>
+    `<div class="cmp-tip-row"><span class="cmp-tip-dot" style="background:${r.color}"></span>
+      <span class="cmp-tip-n">${esc(r.name)}</span>
+      <span class="cmp-tip-v">${Math.round(r.val)}${elo ? '' : ' pts'}</span></div>`).join('');
+  tip.style.display = 'block';
+  // Positionnement : suit la souris, bascule à gauche si trop à droite.
+  const tipW = 150;
+  let left = toX(gi) + 10;
+  if (left + tipW > _cmpGeo.W) left = toX(gi) - tipW - 10;
+  tip.style.left = Math.max(0, left) + 'px';
+  tip.style.top  = Math.max(0, clientY - rect.top - 10) + 'px';
+};
+
+const _cmpOnLeave = () => {
+  _cmpHoverX = null;
+  const tip = document.getElementById('cmp-tip');
+  if (tip) tip.style.display = 'none';
+  drawComparison();
 };
 
 let ppChartMode  = 'pts';
