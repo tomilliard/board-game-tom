@@ -907,7 +907,17 @@
     </div>
     <div class="form-row">
       <label>Jeu <span class="req">*</span></label>
-      <select class="fselect" id="ch-game"></select>
+      <div class="ch-rand">
+        <div class="ch-dur-tabs">
+          <button type="button" class="ch-dur-btn active" data-dur="" onclick="setChDur('')">Peu importe</button>
+          <button type="button" class="ch-dur-btn" data-dur="court" onclick="setChDur('court')">Court</button>
+          <button type="button" class="ch-dur-btn" data-dur="moyen" onclick="setChDur('moyen')">Moyen</button>
+          <button type="button" class="ch-dur-btn" data-dur="long"  onclick="setChDur('long')">Long</button>
+        </div>
+        <button type="button" class="ch-rand-btn" onclick="rollRandomGame()">🎲 Jeu au hasard</button>
+      </div>
+      <select class="fselect" id="ch-game" style="margin-top:8px"></select>
+      <div id="ch-rand-info" class="ch-rand-info"></div>
     </div>
     <div class="form-row">
       <label>Message (optionnel)</label>

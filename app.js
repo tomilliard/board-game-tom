@@ -4215,13 +4215,58 @@ const openChallengeModal = () => {
          </label>
        </div>`
     ).join('');
-  document.getElementById('ch-game').innerHTML = games
-    .filter((g) => g.status === 'own')
+  document.getElementById('ch-game').innerHTML = playableGames()
+    .filter((g) => g.status === 'own' || g.owner_id)
     .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-    .map((g) => `<option value="${g.id}">${esc(g.name)}</option>`)
+    .map((g) => `<option value="${g.id}">${esc(g.name)}${g.owner_id === myUid() ? ' (ma collection)' : ''}</option>`)
     .join('');
+  chDur = '';
+  document.querySelectorAll('.ch-dur-btn').forEach((b) => b.classList.toggle('active', b.dataset.dur === ''));
+  document.getElementById('ch-rand-info').textContent = '';
   document.getElementById('ch-msg').value = '';
   openModal('modal-challenge');
+};
+
+// Durée choisie pour le tirage au sort ('' = peu importe).
+let chDur = '';
+
+const setChDur = (d) => {
+  chDur = d;
+  document.querySelectorAll('.ch-dur-btn').forEach((b) => b.classList.toggle('active', b.dataset.dur === d));
+  // Met à jour l'indication du nombre de jeux disponibles pour cette durée.
+  const pool = randomGamePool();
+  const info = document.getElementById('ch-rand-info');
+  const label = { '': 'toutes durées', court: 'courts', moyen: 'moyens', long: 'longs' }[d];
+  info.textContent = pool.length
+    ? `${pool.length} jeu${pool.length > 1 ? 'x' : ''} ${label} disponible${pool.length > 1 ? 's' : ''}.`
+    : `Aucun jeu ${label} dans les collections disponibles.`;
+  info.style.color = pool.length ? 'var(--text-faint)' : 'var(--danger)';
+};
+
+// Jeux piochables : club possédés + ma collection perso, filtrés par durée.
+const randomGamePool = () => playableGames()
+  .filter((g) => (g.status === 'own' || g.owner_id) && (!chDur || g.duration === chDur));
+
+const rollRandomGame = () => {
+  const pool = randomGamePool();
+  if (!pool.length) { toast('Aucun jeu pour cette durée'); return; }
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  const sel  = document.getElementById('ch-game');
+  sel.value = pick.id;
+  // Petit effet visuel de « roulette » avant de fixer le choix.
+  const info = document.getElementById('ch-rand-info');
+  let ticks = 0;
+  const spin = setInterval(() => {
+    const r = pool[Math.floor(Math.random() * pool.length)];
+    sel.value = r.id;
+    if (++ticks >= 8) {
+      clearInterval(spin);
+      sel.value = pick.id;
+      const dur = { court: 'court', moyen: 'moyen', long: 'long' }[pick.duration] || '';
+      info.textContent = `🎲 ${pick.name}${dur ? ` · ${dur}` : ''} — bonne chance !`;
+      info.style.color = 'var(--accent)';
+    }
+  }, 60);
 };
 
 const getPlayerEmail = async (player) => {
