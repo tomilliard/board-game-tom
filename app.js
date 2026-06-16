@@ -575,13 +575,29 @@ const sortedLosers = (allIds, winnerIds, scores) => {
   return losers;
 };
 
+// Place d'un perdant, avec gestion des ÉGALITÉS de score (classement « dense »
+// type compétition : 1, 2, 2, 4). `losers` doit être trié par score décroissant
+// (sortie de sortedLosers). Deux perdants à score STRICTEMENT égal obtiennent la
+// MÊME place ; sans scores saisis, on retombe sur l'ordre du tableau (indexOf).
+// `base` = nombre de gagnants (les perdants commencent à base+1).
+const loserPlace = (losers, id, scores, base) => {
+  const idx = losers.indexOf(id);
+  if (idx < 0) return base + 1;
+  if (!scores || !Object.keys(scores).length) return base + 1 + idx;  // pas de score → ordre brut
+  const sc = (x) => Number(scores[x]) || 0;
+  // Combien de perdants ont un score STRICTEMENT supérieur → détermine la place.
+  let ahead = 0;
+  for (const o of losers) { if (o !== id && sc(o) > sc(id)) ahead++; }
+  return base + 1 + ahead;
+};
+
 const placements = (allIds, winnerIds, scores) => {
   const losers = sortedLosers(allIds, winnerIds, scores);
   const map = {};
   allIds.forEach((id) => {
     map[id] = winnerIds.includes(id)
       ? 1
-      : winnerIds.length + 1 + losers.indexOf(id);
+      : loserPlace(losers, id, scores, winnerIds.length);
   });
   return map;
 };
@@ -3196,7 +3212,7 @@ const buildMatchCard = (m) => {
         ${allIds.map((pid) => {
           const pl   = players.find((x) => x.id === pid);
           const isW  = winIds.includes(pid);
-          const rank = isW ? 1 : winIds.length + 1 + losers.indexOf(pid);
+          const rank = isW ? 1 : loserPlace(losers, pid, m.scores, winIds.length);
           const gain = calcPoints(rank, n, m.game_id);
           const loss = calcLoss(pl?.points || 0, rank, n);
           const net  = gain - loss;
@@ -3716,7 +3732,7 @@ const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre) => {
   const losers = ids.filter((id) => !winnerIds.includes(id));
   if (scores && Object.keys(scores).length)
     losers.sort((a, b) => (Number(scores[b]) || 0) - (Number(scores[a]) || 0));
-  const place = (id) => winnerIds.includes(id) ? 1 : winnerIds.length + 1 + losers.indexOf(id);
+  const place = (id) => winnerIds.includes(id) ? 1 : loserPlace(losers, id, scores, winnerIds.length);
 
   // Variations Elo (comparaisons par paires), à partir de l'Elo d'AVANT.
   const R = {}; ids.forEach((id) => { R[id] = Math.round(pre[id].elo); });
@@ -5536,7 +5552,7 @@ const drawProgressionChart = (pid, color) => {
       const winIds  = m.winners || [];
       const losers  = sortedLosers((m.players || []).map((p) => p.id), winIds, m.scores);
       const place   = winIds.includes(pid)
-        ? 1 : winIds.length + 1 + losers.indexOf(pid);
+        ? 1 : loserPlace(losers, pid, m.scores, winIds.length);
       const gain    = calcPoints(place, n, m.game_id);
       const loss    = calcLoss(pts, place, n);
       pts = Math.max(0, pts + gain - loss);
