@@ -4349,15 +4349,34 @@ const renderH2H = () => {
   const p1wins = shared.filter((m) => m.winners?.includes(p1id)).length;
   const p2wins = shared.filter((m) => m.winners?.includes(p2id)).length;
   const draws  = shared.length - p1wins - p2wins;
+
+  // ─── Duel direct : qui finit devant l'autre, même si un tiers gagne ───
+  // On compare les PLACES (denses, gèrent les égalités) de p1 et p2 dans
+  // chaque partie partagée. Place plus petite = mieux classé = « bat l'autre ».
+  let p1ahead = 0, p2ahead = 0, ties = 0;
+  shared.forEach((m) => {
+    const ids = (m.players || []).map((pp) => pp.id);
+    const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+    const pl = placements(ids, winnerIds, m.scores || {});
+    const a = pl[p1id], b = pl[p2id];
+    if (a == null || b == null) return;
+    if (a < b) p1ahead++; else if (b < a) p2ahead++; else ties++;
+  });
+
   const b1 = p1.color || '#4ade80';
   const b2 = p2.color || '#60a5fa';
   const byGame = {};
   shared.forEach((m) => {
     const gn = games.find((x) => x.id === m.game_id)?.name || '?';
-    if (!byGame[gn]) byGame[gn] = { p1w: 0, p2w: 0, total: 0 };
+    if (!byGame[gn]) byGame[gn] = { p1w: 0, p2w: 0, total: 0, p1ahead: 0, p2ahead: 0 };
     byGame[gn].total++;
     if (m.winners?.includes(p1id)) byGame[gn].p1w++;
     if (m.winners?.includes(p2id)) byGame[gn].p2w++;
+    const ids = (m.players || []).map((pp) => pp.id);
+    const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+    const pl = placements(ids, winnerIds, m.scores || {});
+    const a = pl[p1id], b = pl[p2id];
+    if (a != null && b != null) { if (a < b) byGame[gn].p1ahead++; else if (b < a) byGame[gn].p2ahead++; }
   });
   el.innerHTML = `
     <div class="h2h-layout">
@@ -4365,24 +4384,35 @@ const renderH2H = () => {
         <div class="h2h-avatar" style="background:${b1}22;color:${b1}">${ini(p1.name)}</div>
         <div class="h2h-name" style="color:${b1}">${esc(p1.name)}</div>
         <div class="h2h-stat" style="color:${p1wins >= p2wins ? 'var(--accent)' : 'var(--text-muted)'}">${p1wins}</div>
-        <div class="h2h-stat-lbl">victoires</div>
+        <div class="h2h-stat-lbl">parties gagnées</div>
       </div>
       <div class="h2h-card">
         <div class="h2h-avatar" style="background:${b2}22;color:${b2}">${ini(p2.name)}</div>
         <div class="h2h-name" style="color:${b2}">${esc(p2.name)}</div>
         <div class="h2h-stat" style="color:${p2wins > p1wins ? 'var(--accent)' : 'var(--text-muted)'}">${p2wins}</div>
-        <div class="h2h-stat-lbl">victoires</div>
+        <div class="h2h-stat-lbl">parties gagnées</div>
       </div>
       <div class="h2h-summary">
-        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
-          ${shared.length} partie${shared.length > 1 ? 's' : ''} ensemble${draws > 0 ? ` · ${draws} nul${draws > 1 ? 's' : ''}` : ''}.
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:.75rem">
+          ${shared.length} partie${shared.length > 1 ? 's' : ''} ensemble${draws > 0 ? ` · ${draws} sans vainqueur de partie` : ''}.
         </p>
+        <div class="h2h-duel">
+          <div class="h2h-duel-lbl">Duel direct <span title="Qui a fini devant l'autre, même quand quelqu'un d'autre gagne la partie">⚔️</span></div>
+          <div class="h2h-duel-bar">
+            <span class="h2h-duel-n" style="color:${b1}">${p1ahead}</span>
+            <div class="h2h-duel-track">
+              <div class="h2h-duel-fill" style="width:${p1ahead + p2ahead ? Math.round(p1ahead / (p1ahead + p2ahead) * 100) : 50}%;background:${b1}"></div>
+            </div>
+            <span class="h2h-duel-n" style="color:${b2}">${p2ahead}</span>
+          </div>
+          <div class="h2h-duel-sub">fois devant l'autre${ties > 0 ? ` · ${ties} ex æquo` : ''}</div>
+        </div>
         <div class="h2h-games">
           ${Object.entries(byGame).map(([gn, st]) =>
             `<div class="h2h-game-row">
                <span style="font-weight:500;color:var(--text)">${esc(gn)}</span>
                <span class="h2h-score">
-                 <span style="color:${b1}">${st.p1w}</span> – <span style="color:${b2}">${st.p2w}</span>
+                 <span style="color:${b1}">${st.p1ahead}</span> – <span style="color:${b2}">${st.p2ahead}</span>
                  <span style="color:var(--text-faint);font-size:11px">(${st.total}p)</span>
                </span>
              </div>`
