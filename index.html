@@ -579,15 +579,19 @@
       </button>
     </div>
 
-    <!-- Preview avatar -->
-    <div style="display:flex;align-items:center;gap:16px;padding:12px 0 16px;border-bottom:1px solid var(--border);margin-bottom:16px">
-      <div id="pe-avatar-preview-wrap" style="position:relative;width:72px;height:72px;flex-shrink:0">
-        <div id="pe-avatar-preview" style="position:absolute;inset:0;border-radius:50%;overflow:hidden;border:2px solid var(--border)"></div>
-        <div id="pe-frame-preview" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:88px;height:88px;pointer-events:none;z-index:2;display:none"><img id="pe-frame-img" style="width:100%;height:100%;object-fit:contain"></div>
-      </div>
-      <div>
-        <div style="font-size:13px;font-weight:500;color:var(--text)" id="pe-name-preview">Votre nom</div>
-        <div style="font-size:11px;color:var(--text-faint);margin-top:2px">Cliquez sur une illustration ci-dessous</div>
+    <!-- Preview profil (grande carte, sticky sur mobile) -->
+    <div id="pe-preview-card" class="pe-preview-card">
+      <div id="pe-preview-bg" class="pe-preview-bg"></div>
+      <div class="pe-preview-inner">
+        <div id="pe-avatar-preview-wrap" style="position:relative;width:96px;height:96px;flex-shrink:0;margin:0 auto">
+          <div id="pe-avatar-preview" style="position:absolute;inset:0;border-radius:50%;overflow:hidden;border:2px solid var(--border)"></div>
+          <div id="pe-frame-preview" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:118px;height:118px;pointer-events:none;z-index:2;display:none"><img id="pe-frame-img" style="width:100%;height:100%;object-fit:contain"></div>
+        </div>
+        <div style="text-align:center;margin-top:10px">
+          <div style="font-size:16px;font-weight:600;color:var(--text)" id="pe-name-preview">Votre nom</div>
+          <div id="pe-title-preview" class="pe-title-preview"></div>
+          <div style="font-size:11px;color:var(--text-faint);margin-top:4px">Aperçu en direct de votre profil</div>
+        </div>
       </div>
     </div>
 

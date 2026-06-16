@@ -1310,6 +1310,8 @@ const _openProfileModal = (cfg) => {
   buildFramePicker();
   buildBgPicker();
   buildTitlePicker();
+  _updatePreviewBg();
+  _updatePreviewTitle();
 
   // Points
   const ptsRow   = document.getElementById('pe-points-row');
@@ -1564,6 +1566,21 @@ const selectBg = (id) => {
       el.style.boxShadow   = sel ? '0 0 0 2px var(--accent)' : 'none';
     });
   }
+  _updatePreviewBg();
+};
+
+// Reflète le fond de carte choisi (ou uni) dans la grande preview.
+const _updatePreviewBg = () => {
+  const bgEl = document.getElementById('pe-preview-bg');
+  if (!bgEl) return;
+  const b = selBg ? BACKGROUNDS.find((x) => x.id === selBg) : null;
+  if (b) {
+    bgEl.style.backgroundImage = `url('${b.src}')`;
+    bgEl.classList.add('on');
+  } else {
+    bgEl.style.backgroundImage = '';
+    bgEl.classList.remove('on');
+  }
 };
 
 // ─── Sélecteur de titre ───
@@ -1607,6 +1624,16 @@ const selectTitle = (id) => {
       el.classList.toggle('sel', parseInt(el.dataset.ttid) === selTitle);
     });
   }
+  _updatePreviewTitle();
+};
+
+// Reflète le titre équipé dans la grande preview.
+const _updatePreviewTitle = () => {
+  const el = document.getElementById('pe-title-preview');
+  if (!el) return;
+  const t = selTitle ? TITLES.find((x) => x.id === selTitle) : null;
+  if (t) { el.innerHTML = `${t.icon ? t.icon + ' ' : ''}${esc(t.label)}`; el.style.display = 'block'; }
+  else   { el.innerHTML = ''; el.style.display = 'none'; }
 };
 
 const selectAvatar = (id) => {
