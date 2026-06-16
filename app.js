@@ -604,6 +604,15 @@ const placements = (allIds, winnerIds, scores) => {
 
 // ─── Player stat helpers ─────────────────────────────────────
 
+// Score de Wilson (borne basse de l'intervalle de confiance à 95%) : un winrate
+// « honnête » qui pénalise les petits échantillons. 100% sur 1 partie vaut moins
+// qu'un 98% sur 100 parties. Sert à classer les joueurs « au mérite » sur un jeu.
+const wilsonScore = (wins, n) => {
+  if (!n) return 0;
+  const z = 1.96, p = wins / n;
+  return (p + z * z / (2 * n) - z * Math.sqrt((p * (1 - p) + z * z / (4 * n)) / n)) / (1 + z * z / n);
+};
+
 const playerStats = (pid) => {
   const played  = matches.filter((m) => m.players?.some((p) => p.id === pid));
   const won     = matches.filter((m) => m.winners?.includes(pid));
@@ -628,7 +637,7 @@ const bestGame = (pid) => {
   });
   const sorted = Object.entries(stat)
     .filter(([, v]) => v.pl >= 1)
-    .sort((a, b) => b[1].w / b[1].pl - a[1].w / a[1].pl);
+    .sort((a, b) => wilsonScore(b[1].w, b[1].pl) - wilsonScore(a[1].w, a[1].pl));
   if (!sorted.length) return null;
   const g = games.find((x) => x.id === parseInt(sorted[0][0]));
   return g ? { name: g.name, rate: Math.round(sorted[0][1].w / sorted[0][1].pl * 100) } : null;
@@ -647,7 +656,7 @@ const bestAdversary = (pid) => {
   });
   const entries = Object.entries(vs).filter(([, v]) => v.pl >= 1);
   if (!entries.length) return null;
-  entries.sort((a, b) => b[1].w / b[1].pl - a[1].w / a[1].pl);
+  entries.sort((a, b) => wilsonScore(b[1].w, b[1].pl) - wilsonScore(a[1].w, a[1].pl));
   const best = players.find((x) => x.id === parseInt(entries[0][0]));
   const worst = entries.length > 1
     ? players.find((x) => x.id === parseInt(entries[entries.length - 1][0]))
@@ -2038,7 +2047,7 @@ const buildMiniPalmares = (g) => {
   const ranked = Object.entries(stat)
     .map(([pid, s]) => ({ pl: players.find((x) => x.id === parseInt(pid)), ...s }))
     .filter((x) => x.pl && x.pl.name)
-    .sort((a, b) => b.w / b.pl - a.w / a.pl)
+    .sort((a, b) => wilsonScore(b.w, b.pl) - wilsonScore(a.w, a.pl))
     .slice(0, 3);
   if (!ranked.length) return '';
   const medals = ['🥇', '🥈', '🥉'];
