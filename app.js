@@ -2738,6 +2738,7 @@ const renderPlayers = () => {
   const cpBtn = document.getElementById('admin-create-player-btn');
   if (cpBtn) cpBtn.style.display = isAdmin ? 'flex' : 'none';
   renderPlayerStats();
+  renderComparison();
   renderPlayerGrid();
 };
 
@@ -5521,7 +5522,196 @@ const eloHistories = () => {
   return hist;
 };
 
-// ─── Graphique de progression (Points / Elo) du profil ───
+// ─── Progression comparée de TOUS les joueurs (graphe multi-courbes) ───
+// Rejoue la saison une seule fois et note, après CHAQUE partie de la saison,
+// l'Elo ET les points cumulés de chaque participant. Chaque point porte son
+// index de partie globale (gi) pour aligner toutes les courbes sur un axe X
+// commun (1 = 1ʳᵉ partie de la saison). Mise en cache comme eloHistories.
+let _allProgCache = null;
+let _allProgKey   = '';
+const allPlayersProgression = () => {
+  const list = [...seasonMatches()].sort((a, b) => {
+    const da = String(a.date || ''), db = String(b.date || '');
+    if (da !== db) return da < db ? -1 : 1;
+    return (a.id || 0) - (b.id || 0);
+  });
+  const key = 'prog:' + list.length + ':' + (list.length ? list[list.length - 1].id : 0) + ':' + players.length;
+  if (_allProgCache && _allProgKey === key) return _allProgCache;
+
+  const sim  = {};
+  const hist = {};   // hist[id] = [{ gi, date, elo, pts }]
+  players.forEach((p) => {
+    sim[p.id]  = { pts: 0, elo: ELO_BASE, streak: 0, games: 0 };
+    hist[p.id] = [];
+  });
+  let gi = 0;
+  for (const m of list) {
+    const ids = [...new Set((m.players || []).map((pp) => pp && pp.id).filter((id) => id && sim[id]))];
+    if (!ids.length) continue;
+    gi += 1;
+    const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+    const pre = {};
+    ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
+    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
+    const d = String(m.date || '').split('T')[0];
+    ids.forEach((id) => {
+      sim[id].pts    = res[id].newPts;
+      sim[id].elo    = res[id].newElo;
+      sim[id].streak = res[id].newStreak;
+      sim[id].games += 1;
+      hist[id].push({ gi, date: d, elo: res[id].newElo, pts: res[id].newPts });
+    });
+  }
+  const result = { hist, totalGames: gi };
+  _allProgCache = result;
+  _allProgKey   = key;
+  return result;
+};
+
+// État du graphe comparatif (joueurs cochés + mode).
+let _cmpMode     = 'pts';
+let _cmpSelected = null;   // Set d'ids ; null = pas encore initialisé
+
+const setCmpMode = (mode) => {
+  _cmpMode = mode;
+  const bp = document.getElementById('cmp-mode-pts');
+  const be = document.getElementById('cmp-mode-elo');
+  if (bp) bp.classList.toggle('on', mode === 'pts');
+  if (be) be.classList.toggle('on', mode === 'elo');
+  drawComparison();
+};
+
+const toggleCmpPlayer = (pid) => {
+  if (!_cmpSelected) _cmpSelected = new Set();
+  if (_cmpSelected.has(pid)) _cmpSelected.delete(pid);
+  else _cmpSelected.add(pid);
+  const chip = document.querySelector(`.cmp-chip[data-pid="${pid}"]`);
+  if (chip) chip.classList.toggle('on', _cmpSelected.has(pid));
+  drawComparison();
+};
+
+const cmpSelectAll = (on) => {
+  const { hist } = allPlayersProgression();
+  _cmpSelected = new Set(on ? players.filter((p) => (hist[p.id] || []).length).map((p) => p.id) : []);
+  document.querySelectorAll('.cmp-chip').forEach((c) => {
+    c.classList.toggle('on', _cmpSelected.has(parseInt(c.dataset.pid)));
+  });
+  drawComparison();
+};
+
+// Rendu du bloc comparatif (chips + SVG) dans #cmp-wrap.
+const renderComparison = () => {
+  const wrap = document.getElementById('cmp-wrap');
+  if (!wrap) return;
+  const { hist } = allPlayersProgression();
+  const active = players
+    .filter((p) => (hist[p.id] || []).length)
+    .sort((a, b) => (b.points || 0) - (a.points || 0));
+
+  if (active.length < 2) { wrap.innerHTML = ''; return; }
+
+  // Init : on coche par défaut le top 3 (ou tous si moins de 3).
+  if (!_cmpSelected) _cmpSelected = new Set(active.slice(0, Math.min(3, active.length)).map((p) => p.id));
+
+  const chips = active.map((p) => {
+    const c = p.color || '#4ade80';
+    const on = _cmpSelected.has(p.id);
+    return `<button class="cmp-chip${on ? ' on' : ''}" data-pid="${p.id}"
+              style="--cc:${c}" onclick="toggleCmpPlayer(${p.id})">
+        <span class="cmp-dot"></span>${esc(p.name)}
+      </button>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="cmp-head">
+      <div class="cmp-title">📊 Comparer la progression</div>
+      <div class="pp-mode-tabs">
+        <button class="pp-mode-btn on" id="cmp-mode-pts" onclick="setCmpMode('pts')">Points</button>
+        <button class="pp-mode-btn" id="cmp-mode-elo" onclick="setCmpMode('elo')">Elo</button>
+      </div>
+    </div>
+    <div class="cmp-actions">
+      <button class="cmp-mini" onclick="cmpSelectAll(true)">Tout cocher</button>
+      <button class="cmp-mini" onclick="cmpSelectAll(false)">Tout décocher</button>
+    </div>
+    <div class="cmp-chips">${chips}</div>
+    <div class="cmp-canvas-wrap"><canvas id="cmp-canvas"></canvas>
+      <div class="cmp-tip" id="cmp-tip" data-tooltip></div>
+    </div>`;
+  drawComparison();
+};
+
+const drawComparison = () => {
+  const canvas = document.getElementById('cmp-canvas');
+  if (!canvas) return;
+  const { hist, totalGames } = allPlayersProgression();
+  const sel = [...(_cmpSelected || [])].filter((id) => (hist[id] || []).length);
+
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.parentElement.clientWidth;
+  const H   = 260;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 14, right: 14, bottom: 24, left: 40 };
+  const cW  = W - pad.left - pad.right;
+  const cH  = H - pad.top - pad.bottom;
+
+  if (!sel.length) {
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Coche au moins un joueur', W / 2, H / 2);
+    return;
+  }
+
+  // Séries selon le mode, alignées sur l'axe X = index de partie (gi).
+  const elo = _cmpMode === 'elo';
+  const series = sel.map((id) => {
+    const pts = (hist[id] || []).map((d) => ({ x: d.gi, y: elo ? d.elo : d.pts }));
+    if (elo) pts.unshift({ x: 0, y: ELO_BASE }); else pts.unshift({ x: 0, y: 0 });
+    const p = players.find((x) => x.id === id);
+    return { id, color: (p && p.color) || '#4ade80', name: p ? p.name : '?', pts };
+  });
+
+  const allY = series.flatMap((s) => s.pts.map((p) => p.y));
+  let minY = elo ? Math.min(...allY) : 0;
+  let maxY = Math.max(...allY, elo ? ELO_BASE + 20 : 1);
+  if (elo) { const m = Math.max(20, Math.round((maxY - minY) * 0.1)); minY -= m; maxY += m; }
+  const spanY = Math.max(1, maxY - minY);
+  const maxX  = Math.max(1, totalGames);
+
+  const toX = (x) => pad.left + (x / maxX) * cW;
+  const toY = (y) => pad.top + cH - ((y - minY) / spanY) * cH;
+
+  // Grille + libellés Y
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
+  [0, 0.25, 0.5, 0.75, 1].forEach((r) => {
+    const y = pad.top + cH * (1 - r);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cW, y); ctx.stroke();
+    ctx.fillText(Math.round(minY + spanY * r), pad.left - 4, y + 3);
+  });
+  // Ligne de base Elo (1000)
+  if (elo && ELO_BASE > minY && ELO_BASE < maxY) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.13)'; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(pad.left, toY(ELO_BASE)); ctx.lineTo(pad.left + cW, toY(ELO_BASE)); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Courbes
+  series.forEach((s) => {
+    ctx.beginPath(); ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    s.pts.forEach((p, i) => { const X = toX(p.x), Y = toY(p.y); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+    ctx.stroke();
+    const last = s.pts[s.pts.length - 1];
+    ctx.beginPath(); ctx.arc(toX(last.x), toY(last.y), 3, 0, Math.PI * 2);
+    ctx.fillStyle = s.color; ctx.fill();
+  });
+};
+
 let ppChartMode  = 'pts';
 let _ppChartPid  = null;
 let _ppChartColor = '#4ade80';
