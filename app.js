@@ -2280,6 +2280,8 @@ const buildGameCard = (g) => {
 // ─── Grid renderer ───────────────────────────────────────────
 
 // ─── Colonne latérale Collection : Top 10 + joués récemment ──
+// Quelle collection on regarde sur la page Collection : null = la mienne (club).
+let collViewUid = null;
 const renderCollectionSide = () => {
   const topEl = document.getElementById('top-rated-list');
   const recEl = document.getElementById('recent-played-list');
@@ -2322,6 +2324,37 @@ const renderCollectionSide = () => {
            </div>`).join('')
       : '<div class="side-empty">Aucune partie récente.</div>';
   }
+
+  // Collection des membres : joueurs (hors moi) ayant une collection perso.
+  const memEl = document.getElementById('members-coll-list');
+  if (memEl) {
+    const mem = players
+      .filter((p) => p.user_id && p.user_id !== myUid() && ownedIds(p.user_id).size > 0)
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    const backRow = collViewUid
+      ? `<div class="side-row coll-back" onclick="viewMemberCollection(null)">
+           <span class="side-name">← Revenir à ma collection</span>
+         </div>`
+      : '';
+    memEl.innerHTML = backRow + (mem.length
+      ? mem.map((p) => {
+          const active = p.user_id === collViewUid;
+          return `<div class="side-row${active ? ' active' : ''}" onclick="viewMemberCollection('${p.user_id}')">
+             <span class="side-name">${esc(p.name)}</span>
+             <span class="side-val">${ownedIds(p.user_id).size}</span>
+           </div>`;
+        }).join('')
+      : '<div class="side-empty">Aucun membre n\'a de collection.</div>');
+  }
+};
+
+// Bascule l'affichage de la grille vers la collection d'un membre (ou la mienne).
+const viewMemberCollection = (uid) => {
+  collViewUid = uid || null;
+  renderGrid();
+  // Remonte en haut de la grille pour voir le changement.
+  const grid = document.getElementById('grid');
+  if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 // Fait défiler jusqu'à la carte d'un jeu (réinitialise filtres/onglet si masqué).
@@ -2349,10 +2382,15 @@ const renderGrid = () => {
   const fd   = document.getElementById('fd').value;
   const sort = document.getElementById('fsort').value;
 
-  let list = games.filter((g) => {
-    if (!isClubGame(g)) return false;
-    if (curTab === 'own'  && g.status !== 'own')  return false;
-    if (curTab === 'wish' && g.status !== 'wish') return false;
+  // Collection consultée : la mienne (club) par défaut, ou celle d'un membre.
+  const viewingMember = collViewUid ? players.find((p) => p.user_id === collViewUid) : null;
+  const base = viewingMember ? collectionOf(collViewUid) : games.filter(isClubGame);
+
+  let list = base.filter((g) => {
+    if (!viewingMember) {
+      if (curTab === 'own'  && g.status !== 'own')  return false;
+      if (curTab === 'wish' && g.status !== 'wish') return false;
+    }
     if (q && !g.name.toLowerCase().includes(q))  return false;
     if (fp) {
       const n = parseInt(fp);
@@ -2376,13 +2414,20 @@ const renderGrid = () => {
     : list.length === 1 ? '1 jeu'
     : `${list.length} jeux`;
 
+  const banner = viewingMember
+    ? `<div class="coll-view-banner">
+         🎲 Collection de <b>${esc(viewingMember.name)}</b> — ${list.length} jeu${list.length > 1 ? 'x' : ''}
+         <button onclick="viewMemberCollection(null)">← Ma collection</button>
+       </div>`
+    : '';
+
   if (!list.length) {
-    document.getElementById('grid').innerHTML =
+    document.getElementById('grid').innerHTML = banner +
       '<div class="empty"><div class="empty-icon">🎲</div><p>Aucun jeu ne correspond.</p></div>';
     return;
   }
 
-  document.getElementById('grid').innerHTML = list.map(buildGameCard).join('');
+  document.getElementById('grid').innerHTML = banner + list.map(buildGameCard).join('');
 
   // Ne charge les couvertures QUE lorsqu'elles approchent de l'écran (lazy-load).
   setTimeout(() => lazyApplyGameImages(list), 100);
