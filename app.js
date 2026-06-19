@@ -4326,10 +4326,13 @@ const renderChat = (toBottom) => {
     const avHtml = av ? `<img src="${av.src}" alt="">` : `<span>${ini(name)}</span>`;
     const mine = myPid != null && m.player_id === myPid;
     const t = new Date(m.created_at).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const delBtn = isAdmin
+      ? `<button class="chat-del" onclick="deleteChatMessage(${m.id})" title="Supprimer ce message">${SVG_TRASH}</button>`
+      : '';
     return `<div class="chat-msg${mine ? ' mine' : ''}">
         <div class="chat-av">${avHtml}</div>
         <div class="chat-bubble">
-          <div class="chat-meta"><span class="chat-name">${esc(name)}</span><span class="chat-time">${t}</span></div>
+          <div class="chat-meta"><span class="chat-name">${esc(name)}</span><span class="chat-time">${t}</span>${delBtn}</div>
           <div class="chat-text">${esc(m.content)}</div>
         </div>
       </div>`;
@@ -4380,6 +4383,18 @@ const appendChatMessage = (rec) => {
   chatMessages.push(rec);
   if (chatMessages.length > 120) chatMessages = chatMessages.slice(-120);
   if (curPage === 'social') renderChat(true);
+};
+
+// Suppression d'un message (réservé à l'admin).
+const deleteChatMessage = async (id) => {
+  if (!isAdmin) return;
+  if (!confirm('Supprimer ce message ?')) return;
+  try {
+    await sb.del('chat_messages', { id });
+    chatMessages = chatMessages.filter((m) => m.id !== id);
+    renderChat(false);
+    toast('Message supprimé');
+  } catch (e) { toastErr(e.message); }
 };
 
 const handleSocialAdd = () => {
