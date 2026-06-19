@@ -21,7 +21,12 @@ exports.handler = async (event) => {
   const SUBJ = process.env.VAPID_SUBJECT || 'mailto:noreply@boardgametom.com';
   const SB_URL = process.env.SUPABASE_URL;
   const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  console.log('[push] config présente ?', {
+    VAPID_PUBLIC_KEY: !!PUB, VAPID_PRIVATE_KEY: !!PRIV,
+    VAPID_SUBJECT: SUBJ, SUPABASE_URL: !!SB_URL, SUPABASE_SERVICE_ROLE_KEY: !!SB_KEY,
+  });
   if (!PUB || !PRIV || !SB_URL || !SB_KEY) {
+    console.error('[push] CONFIG MANQUANTE');
     return { statusCode: 500, body: 'Configuration push manquante' };
   }
 
@@ -32,6 +37,7 @@ exports.handler = async (event) => {
   catch { return { statusCode: 400, body: 'JSON invalide' }; }
 
   const { userIds, title, body, url, tag } = payload;
+  console.log('[push] requête:', { userIds, title });
   if (!Array.isArray(userIds) || !userIds.length || !title) {
     return { statusCode: 400, body: 'Champs requis manquants (userIds, title)' };
   }
@@ -44,13 +50,18 @@ exports.handler = async (event) => {
       `${SB_URL}/rest/v1/push_subscriptions?user_id=in.(${inList})&select=id,endpoint,p256dh,auth`,
       { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
     );
-    subs = await res.json();
+    const txt = await res.text();
+    console.log('[push] lecture abonnements: HTTP', res.status, '→', txt.slice(0, 300));
+    subs = JSON.parse(txt);
   } catch (e) {
+    console.error('[push] lecture abonnements échouée:', e.message);
     return { statusCode: 500, body: 'Lecture des abonnements impossible' };
   }
   if (!Array.isArray(subs) || !subs.length) {
+    console.log('[push] aucun abonnement trouvé pour ces user_ids');
     return { statusCode: 200, body: JSON.stringify({ sent: 0 }) };
   }
+  console.log('[push]', subs.length, 'abonnement(s) trouvé(s)');
 
   const notif = JSON.stringify({ title, body: body || '', url: url || '/', tag });
   const stale = [];   // endpoints expirés à nettoyer
@@ -62,10 +73,12 @@ exports.handler = async (event) => {
       await webpush.sendNotification(subscription, notif);
       sent++;
     } catch (err) {
+      console.error('[push] envoi échoué (status', err.statusCode + '):', (err.body || err.message || '').toString().slice(0, 200));
       // 404/410 = abonnement expiré ou révoqué → à supprimer.
       if (err.statusCode === 404 || err.statusCode === 410) stale.push(s.id);
     }
   }));
+  console.log('[push] envoyés:', sent, '/ expirés:', stale.length);
 
   // Nettoyage des abonnements morts.
   if (stale.length) {
