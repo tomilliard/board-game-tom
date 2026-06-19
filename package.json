@@ -1,0 +1,9 @@
+{
+  "name": "board-game-tom",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BoardGameTom — classement et collection du club de jeux de société",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
