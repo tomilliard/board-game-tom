@@ -19,7 +19,7 @@ exports.handler = async (event) => {
   const PUB  = process.env.VAPID_PUBLIC_KEY;
   const PRIV = process.env.VAPID_PRIVATE_KEY;
   const SUBJ = process.env.VAPID_SUBJECT || 'mailto:noreply@boardgametom.com';
-  const SB_URL = process.env.SUPABASE_URL;
+  const SB_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
   const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   console.log('[push] config présente ?', {
     VAPID_PUBLIC_KEY: !!PUB, VAPID_PRIVATE_KEY: !!PRIV,
