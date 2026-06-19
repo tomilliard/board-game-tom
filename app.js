@@ -2526,10 +2526,12 @@ const modalAddExt = () => {
 
 const modalDelExt = (i) => { modalExts.splice(i, 1); renderModalExts(); };
 
-let gameModalPerso = false;   // true = on édite/crée un jeu de SA collection perso
+let gameModalPerso = false;   // true = on édite/crée un jeu de collection perso
+let gameModalTargetUid = null; // si admin crée pour un AUTRE joueur (sinon null = moi)
 
-const openGameModal = (id, perso) => {
+const openGameModal = (id, perso, targetUid) => {
   gameModalPerso = !!perso;
+  gameModalTargetUid = (perso && targetUid && targetUid !== myUid()) ? targetUid : null;
   if (!gameModalPerso && !isAdmin) return;
   if (gameModalPerso && !currentUser) { showAuthWall(); return; }
   editGameId = id || null;
@@ -2588,14 +2590,15 @@ const saveGame = async () => {
       toast('Jeu modifié ✓');
     } else {
       data.ratings = [];
-      if (gameModalPerso) data.owner_id = myUid();
+      const forUid = gameModalTargetUid || myUid();
+      if (gameModalPerso) data.owner_id = forUid;
       const created = await sb.post('games', data);
-      // Nouveau jeu perso → on l'inscrit aussi dans MA collection (liaison).
+      // Nouveau jeu perso → on l'inscrit dans la collection du bon joueur.
       if (gameModalPerso) {
         const newId = Array.isArray(created) ? created[0]?.id : created?.id;
-        if (newId) await sb.post('game_owners', { game_id: newId, user_id: myUid() });
+        if (newId) await sb.post('game_owners', { game_id: newId, user_id: forUid });
       }
-      toast(gameModalPerso ? 'Ajouté à ta collection ✓' : 'Jeu ajouté ✓');
+      toast(gameModalPerso ? 'Ajouté à la collection ✓' : 'Jeu ajouté ✓');
     }
     await loadAll();
     closeModal('modal-game');
@@ -2604,19 +2607,25 @@ const saveGame = async () => {
   hideLoading();
 };
 
-// Ajouter un jeu EXISTANT du catalogue à ma collection (sans duplication).
-const addToMyCollection = async (gameId) => {
+// Ajouter un jeu EXISTANT du catalogue à une collection (sans duplication).
+// Sans uid → la mienne. Admin → la collection de n'importe quel joueur.
+const addToCollection = async (gameId, uid) => {
+  const targetUid = uid || myUid();
+  const isMine = targetUid === myUid();
+  if (!isMine && !isAdmin) return;
   if (!currentUser) { showAuthWall(); return; }
-  if (iOwnGame(gameId)) { toast('Déjà dans ta collection'); return; }
+  if (ownedIds(targetUid).has(gameId)) { toast('Déjà dans la collection'); return; }
   showLoading('Ajout…');
   try {
-    await sb.post('game_owners', { game_id: gameId, user_id: myUid() });
+    await sb.post('game_owners', { game_id: gameId, user_id: targetUid });
     await loadAll();
     refreshCollectionModal();
-    toast('Ajouté à ta collection ✓');
+    toast('Ajouté ✓');
   } catch (e) { toastErr(e.message); }
   hideLoading();
 };
+// Alias rétro-compatible (ajout à SA propre collection).
+const addToMyCollection = (gameId) => addToCollection(gameId);
 
 // Retirer un jeu d'une collection. Sans uid → la mienne. Admin → n'importe qui.
 const removeFromCollection = async (gameId, uid) => {
@@ -2709,6 +2718,10 @@ const mcGameRow = (g, mode, targetUid) => {
     actions = iOwnGame(g.id)
       ? '<span class="mc-have">\u2713 dans ta collection</span>'
       : `<button class="mc-add-btn" onclick="addToMyCollection(${g.id})">+ Ajouter</button>`;
+  } else if (mode === 'addfor') {
+    actions = ownedIds(targetUid).has(g.id)
+      ? '<span class="mc-have">\u2713 déjà dans sa collection</span>'
+      : `<button class="mc-add-btn" onclick="addToCollection(${g.id}, '${targetUid}')">+ Ajouter</button>`;
   } else if (mode === 'admin') {
     // Admin : éditer le jeu + le retirer de la collection du joueur consulté.
     actions = `<div class="mc-row-actions">
@@ -2763,9 +2776,12 @@ const renderMcAddResults = () => {
 let mcViewUid = null;
 const renderEveryone = () => {
   const el = document.getElementById('mc-everyone');
-  const withColl = players
-    .filter((p) => p.user_id && ownedIds(p.user_id).size > 0)
-    .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  // Admin : tous les joueurs liés à un compte (même collection vide) pour pouvoir
+  // leur ajouter des jeux. Sinon : seulement ceux ayant déjà une collection.
+  const pool = isAdmin
+    ? players.filter((p) => p.user_id)
+    : players.filter((p) => p.user_id && ownedIds(p.user_id).size > 0);
+  const withColl = pool.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   if (!withColl.length) {
     el.innerHTML = '<p class="mc-cmp-empty">Personne n\'a encore de collection perso.</p>';
     return;
@@ -2779,8 +2795,34 @@ const renderEveryone = () => {
     <div class="mc-addbar">
       <select class="fselect" style="flex:1" onchange="mcViewUid=this.value;renderEveryone()">${opts}</select>
     </div>
-    ${isAdmin ? '<p class="mc-admin-note">Admin : tu peux modifier ou retirer les jeux de cette collection.</p>' : ''}
-    <div class="mc-list" style="margin-top:10px">${coll.map((g) => mcGameRow(g, rowMode(g), mcViewUid)).join('')}</div>`;
+    ${isAdmin ? `
+      <p class="mc-admin-note">Admin : tu peux ajouter, modifier ou retirer les jeux de cette collection.</p>
+      <div class="mc-addbar">
+        <input id="mc-ev-search" class="finput" placeholder="Ajouter un jeu à sa collection…" oninput="renderEvAddResults()" style="flex:1">
+      </div>
+      <div id="mc-ev-add-results" class="mc-add-results"></div>
+      <div class="mc-sep">Sa collection</div>` : ''}
+    <div class="mc-list" style="margin-top:10px">${coll.length ? coll.map((g) => mcGameRow(g, rowMode(g), mcViewUid)).join('') : '<p class="mc-cmp-empty">Collection vide.</p>'}</div>`;
+};
+
+// Résultats de recherche pour qu'un ADMIN ajoute un jeu à la collection consultée.
+const renderEvAddResults = () => {
+  const box = document.getElementById('mc-ev-add-results');
+  if (!box) return;
+  const q = (document.getElementById('mc-ev-search')?.value || '').toLowerCase().trim();
+  if (!q) { box.innerHTML = ''; return; }
+  const matchs = games
+    .filter((g) => g.name.toLowerCase().includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    .slice(0, 8);
+  const exact = games.some((g) => g.name.toLowerCase() === q);
+  const pName = esc((players.find((p) => p.user_id === mcViewUid) || {}).name || 'ce joueur');
+  box.innerHTML = `
+    ${matchs.length ? `<div class="mc-list">${matchs.map((g) => mcGameRow(g, 'addfor', mcViewUid)).join('')}</div>` : ''}
+    ${!exact ? `<button class="btn-add mc-create" onclick="openGameModal(null, true, '${mcViewUid}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Créer « ${esc(document.getElementById('mc-ev-search').value.trim())} » pour ${pName}
+    </button>` : ''}`;
 };
 
 let mcCmpUid = 'club';
