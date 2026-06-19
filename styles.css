@@ -829,3 +829,7 @@ select:focus{border-color:var(--accent);outline:none}
 .mc-create{margin-top:4px;width:100%;justify-content:center}
 .mc-club-tag{font-size:10px;color:#378ADD;font-weight:500;margin-left:4px}
 .mc-own-tag{font-size:10px;color:var(--text-faint);margin-left:4px}
+
+/* ─── Note admin dans la vue collections ─── */
+.mc-admin-note{font-size:11px;color:var(--accent);background:var(--accent-light,rgba(74,222,128,.08));
+  border:1px solid var(--border);border-radius:7px;padding:6px 10px;margin:8px 0 4px}

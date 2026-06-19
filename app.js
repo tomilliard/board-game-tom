@@ -2534,10 +2534,11 @@ const openGameModal = (id, perso) => {
   if (gameModalPerso && !currentUser) { showAuthWall(); return; }
   editGameId = id || null;
   const g = id ? games.find((x) => x.id === id) : null;
-  // Sécurité : en perso on ne peut éditer que SES jeux ; en club, réservé admin.
+  // Sécurité : en perso on édite SES jeux (ou n'importe lequel si admin) ;
+  // en club, réservé admin.
   if (g) {
-    if (gameModalPerso && g.owner_id !== myUid()) return;
-    if (!gameModalPerso && !isClubGame(g)) return;
+    if (gameModalPerso && g.owner_id !== myUid() && !isAdmin) return;
+    if (!gameModalPerso && !isClubGame(g) && !isAdmin) return;
   }
   document.getElementById('mg-title').textContent = id
     ? (gameModalPerso ? 'Modifier mon jeu' : 'Modifier le jeu')
@@ -2598,7 +2599,7 @@ const saveGame = async () => {
     }
     await loadAll();
     closeModal('modal-game');
-    if (gameModalPerso) { openMyCollection(); } else { renderGames(); }
+    if (gameModalPerso) { refreshCollectionModal(); } else { renderGames(); }
   } catch (e) { toastErr(e.message); }
   hideLoading();
 };
@@ -2611,39 +2612,45 @@ const addToMyCollection = async (gameId) => {
   try {
     await sb.post('game_owners', { game_id: gameId, user_id: myUid() });
     await loadAll();
-    renderMyCollection();
+    refreshCollectionModal();
     toast('Ajouté à ta collection ✓');
   } catch (e) { toastErr(e.message); }
   hideLoading();
 };
 
-// Retirer un jeu de MA collection (supprime la possession, pas le jeu lui-même).
-const removeFromMyCollection = async (gameId) => {
-  if (!iOwnGame(gameId)) return;
+// Retirer un jeu d'une collection. Sans uid → la mienne. Admin → n'importe qui.
+const removeFromCollection = async (gameId, uid) => {
+  const targetUid = uid || myUid();
+  const isMine = targetUid === myUid();
+  if (!isMine && !isAdmin) return;
   const g = games.find((x) => x.id === gameId);
-  if (!confirm(`Retirer "${g ? g.name : 'ce jeu'}" de ta collection ?`)) return;
+  const owner = players.find((p) => p.user_id === targetUid);
+  const who = isMine ? 'ta collection' : `la collection de ${owner ? owner.name : 'ce joueur'}`;
+  if (!confirm(`Retirer "${g ? g.name : 'ce jeu'}" de ${who} ?`)) return;
   showLoading('Retrait…');
   try {
-    await sb.del('game_owners', { game_id: gameId, user_id: myUid() });
-    // Si J'EN suis le contributeur et que plus personne ne le possède, on peut
-    // supprimer le jeu du catalogue (nettoyage). Sinon on garde le jeu partagé.
-    if (g && g.owner_id === myUid() && ownerCount(gameId) <= 1) {
+    await sb.del('game_owners', { game_id: gameId, user_id: targetUid });
+    // Nettoyage : si la cible en est le contributeur, que plus personne ne le
+    // possède et qu'aucune partie ne l'utilise, on supprime le jeu du catalogue.
+    if (g && g.owner_id === targetUid && ownerCount(gameId) <= 1) {
       const usedInMatch = matches.some((m) => m.game_id === gameId)
         || pendingMatches.some((m) => m.game_id === gameId);
       if (!usedInMatch) await sb.del('games', { id: gameId });
     }
     await loadAll();
-    renderMyCollection();
-    toast('Retiré de ta collection');
+    refreshCollectionModal();
+    toast('Retiré');
   } catch (e) { toastErr(e.message); }
   hideLoading();
 };
+// Alias rétro-compatible (retrait de SA propre collection).
+const removeFromMyCollection = (gameId) => removeFromCollection(gameId);
 
 const delGame = async (id) => {
   const g = games.find((x) => x.id === id);
   if (!g) return;
   const perso = !!g.owner_id;
-  if (perso) { if (g.owner_id !== myUid()) return; }
+  if (perso) { if (g.owner_id !== myUid() && !isAdmin) return; }
   else if (!isAdmin) { return; }
   if (!confirm(`Supprimer "${g.name}" ?`)) return;
   showLoading('Suppression…');
@@ -2664,7 +2671,9 @@ const openMyCollection = () => {
   openModal('modal-mycoll');
 };
 
+let mcActiveTab = 'mine';
 const switchMcTab = (tab) => {
+  mcActiveTab = tab;
   document.querySelectorAll('.mc-tab').forEach((b) =>
     b.classList.toggle('active', b.dataset.mctab === tab));
   ['mine', 'everyone', 'compare'].forEach((t) => {
@@ -2675,8 +2684,14 @@ const switchMcTab = (tab) => {
   else if (tab === 'everyone') renderEveryone();
   else                         renderCollComparison();
 };
+// Re-rend l'onglet actuellement visible de la modale collection.
+const refreshCollectionModal = () => {
+  const modal = document.getElementById('modal-mycoll');
+  if (!modal || !modal.classList.contains('open')) return;
+  switchMcTab(mcActiveTab);
+};
 
-const mcGameRow = (g, mode) => {
+const mcGameRow = (g, mode, targetUid) => {
   const dur = { court: 'Court', moyen: 'Moyen', long: 'Long' }[g.duration] || '';
   const pl  = (g.pmin && g.pmax) ? `${g.pmin}\u2013${g.pmax}j` : '';
   const owners = ownerCount(g.id);
@@ -2685,15 +2700,21 @@ const mcGameRow = (g, mode) => {
   const meta = [pl, dur].filter(Boolean).join(' \u00b7 ');
   let actions = '';
   if (mode === 'mine') {
-    const canEdit = g.owner_id === myUid();
+    const canEdit = g.owner_id === myUid() || isAdmin;
     actions = `<div class="mc-row-actions">
       ${canEdit ? `<button class="btn-icon" onclick="openGameModal(${g.id}, true)">${SVG_EDIT}</button>` : ''}
-      <button class="btn-icon danger" onclick="removeFromMyCollection(${g.id})" title="Retirer de ma collection">${SVG_TRASH}</button>
+      <button class="btn-icon danger" onclick="removeFromCollection(${g.id})" title="Retirer de ma collection">${SVG_TRASH}</button>
     </div>`;
   } else if (mode === 'add') {
     actions = iOwnGame(g.id)
       ? '<span class="mc-have">\u2713 dans ta collection</span>'
       : `<button class="mc-add-btn" onclick="addToMyCollection(${g.id})">+ Ajouter</button>`;
+  } else if (mode === 'admin') {
+    // Admin : éditer le jeu + le retirer de la collection du joueur consulté.
+    actions = `<div class="mc-row-actions">
+      <button class="btn-icon" onclick="openGameModal(${g.id}, true)" title="Modifier le jeu">${SVG_EDIT}</button>
+      <button class="btn-icon danger" onclick="removeFromCollection(${g.id}, '${targetUid}')" title="Retirer de sa collection">${SVG_TRASH}</button>
+    </div>`;
   }
   return `<div class="mc-row">
       <div class="mc-row-main">
@@ -2753,11 +2774,13 @@ const renderEveryone = () => {
   const opts = withColl.map((p) =>
     `<option value="${p.user_id}"${p.user_id === mcViewUid ? ' selected' : ''}>${esc(p.name)} (${ownedIds(p.user_id).size})</option>`).join('');
   const coll = collectionOf(mcViewUid).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  const rowMode = (g) => isAdmin ? 'admin' : (iOwnGame(g.id) ? 'view' : 'add');
   el.innerHTML = `
     <div class="mc-addbar">
       <select class="fselect" style="flex:1" onchange="mcViewUid=this.value;renderEveryone()">${opts}</select>
     </div>
-    <div class="mc-list" style="margin-top:10px">${coll.map((g) => mcGameRow(g, iOwnGame(g.id) ? 'view' : 'add')).join('')}</div>`;
+    ${isAdmin ? '<p class="mc-admin-note">Admin : tu peux modifier ou retirer les jeux de cette collection.</p>' : ''}
+    <div class="mc-list" style="margin-top:10px">${coll.map((g) => mcGameRow(g, rowMode(g), mcViewUid)).join('')}</div>`;
 };
 
 let mcCmpUid = 'club';
