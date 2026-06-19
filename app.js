@@ -4292,6 +4292,7 @@ const renderCurrentSocialTab = () => {
   else if (socialTab === 'challenges')  renderChallenges();
   else if (socialTab === 'h2h')         renderH2HSelects();
   else if (socialTab === 'newsletter')  renderNewsletter();
+  if (chatLoaded) renderChat(false);   // refait apparaître/disparaître les boutons admin
 };
 
 // ═══════════════════════════════════════════════════════════════
