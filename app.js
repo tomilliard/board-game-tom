@@ -685,7 +685,7 @@ const bestGame = (pid) => {
     .sort((a, b) => wilsonScore(b[1].w, b[1].pl) - wilsonScore(a[1].w, a[1].pl));
   if (!sorted.length) return null;
   const g = games.find((x) => x.id === parseInt(sorted[0][0]));
-  return g ? { name: g.name, rate: Math.round(sorted[0][1].w / sorted[0][1].pl * 100) } : null;
+  return g ? { id: g.id, name: g.name, rate: Math.round(sorted[0][1].w / sorted[0][1].pl * 100) } : null;
 };
 
 const bestAdversary = (pid) => {
@@ -3801,7 +3801,12 @@ const renderLeaderboard = () => {
     const streak = last5.length
       ? `<span class="lb-frm" title="${last5.map((w) => w ? 'V' : 'D').join(' ')}${(p.streak || 0) >= 3 ? ' · série de ' + p.streak : ''}">${last5.map((w) => `<i class="${w ? 'w' : 'l'}"></i>`).join('')}</span>`
       : `<span class="lb-streak flat">—</span>`;
-    const gbg = fav ? gameBgSrc({ name: fav.name }) : null;
+    // Fond de ligne : illustration du meilleur jeu SI c'est un jeu du club
+    // (ma collection). Sinon (jeu perso, ou pas d'illustration) → bannière du rang.
+    const favObj = fav ? games.find((x) => x.id === fav.id) : null;
+    const clubArt = (favObj && isClubGame(favObj)) ? gameBgSrc({ name: fav.name }) : null;
+    const rankBanner = (RANK_ASSETS_DESKTOP[rk.baseKey || rk.key] || {}).banner || null;
+    const gbg = clubArt || rankBanner;
     const rowStyle = gbg
       ? ` style="background:linear-gradient(90deg,rgba(12,17,26,.93) 0%,rgba(12,17,26,.8) 38%,rgba(12,17,26,.58) 72%,rgba(12,17,26,.5) 100%),url('${gbg}') center/cover"`
       : '';
