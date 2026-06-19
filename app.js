@@ -4328,7 +4328,7 @@ const renderChat = (toBottom) => {
     const mine = myPid != null && m.player_id === myPid;
     const t = new Date(m.created_at).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     const delBtn = isAdmin
-      ? `<button class="chat-del" onclick="deleteChatMessage(${m.id})" title="Supprimer ce message">${SVG_TRASH}</button>`
+      ? `<button class="chat-del" onclick="deleteChatMessage('${m.id}')" title="Supprimer ce message">${SVG_TRASH}</button>`
       : '';
     return `<div class="chat-msg${mine ? ' mine' : ''}">
         <div class="chat-av">${avHtml}</div>
@@ -4392,7 +4392,7 @@ const deleteChatMessage = async (id) => {
   if (!confirm('Supprimer ce message ?')) return;
   try {
     await sb.del('chat_messages', { id });
-    chatMessages = chatMessages.filter((m) => m.id !== id);
+    chatMessages = chatMessages.filter((m) => String(m.id) !== String(id));
     renderChat(false);
     toast('Message supprimé');
   } catch (e) { toastErr(e.message); }
