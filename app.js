@@ -3939,6 +3939,13 @@ const notifyValidators = async (otherPids, matchId, token, gid) => {
   const game     = games.find((g) => g.id === gid);
   const recorder = players.find((p) => p.user_id === currentUser?.id);
   const link     = `${SITE_URL}/?validate=${matchId}&token=${encodeURIComponent(token)}`;
+  // Notification push (en plus de l'email) aux joueurs devant valider.
+  sendPush(
+    pushTargets(otherPids),
+    '✅ Partie à valider',
+    `${recorder?.name || 'Un joueur'} a enregistré une partie${game ? ' de ' + game.name : ''} à valider.`,
+    `/?validate=${matchId}&token=${encodeURIComponent(token)}`, 'validate'
+  );
   for (const pid of otherPids) {
     const pl    = players.find((p) => p.id === pid);
     const email = await getPlayerEmail(pl).catch(() => null);
@@ -4356,6 +4363,13 @@ const sendChatMessage = async () => {
       if (chatMessages.length > 120) chatMessages = chatMessages.slice(-120);
       renderChat(true);
     }
+    // Notification push aux autres membres ayant un compte (hors auteur).
+    sendPush(
+      pushTargets(players.map((p) => p.id)),
+      `💬 ${currentProfile?.name || 'Nouveau message'}`,
+      content.length > 80 ? content.slice(0, 77) + '…' : content,
+      '/', 'chat'
+    );
   } catch (e) { input.value = content; toastErr('Envoi échoué : ' + e.message); }
 };
 
@@ -4536,6 +4550,13 @@ const saveChallenge = async () => {
     renderChallenges();
     toast('Défi envoyé !');
     const game = games.find((g) => g.id === gameId);
+    // Notification push aux joueurs défiés.
+    sendPush(
+      pushTargets(toIds),
+      '⚔️ Nouveau défi !',
+      `${myPlayer.name} te défie${game ? ' à ' + game.name : ''}.`,
+      '/', 'challenge'
+    );
     for (const toId of toIds) {
       const toPlayer = players.find((p) => p.id === toId);
       const toEmail  = await getPlayerEmail(toPlayer);
@@ -5000,6 +5021,130 @@ const sendBrevoEmail = async (toEmail, toName, subject, text) => {
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// NOTIFICATIONS PUSH (Web Push)
+// ═══════════════════════════════════════════════════════════════
+const VAPID_PUBLIC_KEY = 'BEsCx7Shv72nkbhxpcH3_ZWEL0fupcEriYVc6WXDilLRSyShmhAjq0sFRHnA4f0c7j8gFjhWiaIQf9l-JUDWHwQ';
+
+const _urlB64ToUint8 = (base64) => {
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+  const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(b64);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+};
+
+let _swReg = null;
+// Enregistre le service worker (sans rien demander à l'utilisateur).
+const registerServiceWorker = async () => {
+  if (!('serviceWorker' in navigator)) return null;
+  try { _swReg = await navigator.serviceWorker.register('sw.js'); return _swReg; }
+  catch (e) { return null; }
+};
+
+// Le push est-il supporté par ce navigateur ?
+const pushSupported = () =>
+  'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+// Active les notifications : demande la permission, s'abonne, enregistre côté Supabase.
+const enablePush = async () => {
+  if (!currentUser) { showAuthWall(); return; }
+  if (!pushSupported()) { toast('Notifications non supportées sur cet appareil'); return; }
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('Notifications refusées'); return; }
+    const reg = _swReg || await registerServiceWorker();
+    if (!reg) { toastErr('Service worker indisponible'); return; }
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _urlB64ToUint8(VAPID_PUBLIC_KEY),
+      });
+    }
+    const j = sub.toJSON();
+    // Upsert : on évite les doublons sur le même endpoint.
+    await sb.del('push_subscriptions', { endpoint: j.endpoint }).catch(() => {});
+    await sb.post('push_subscriptions', {
+      user_id:  currentUser.id,
+      endpoint: j.endpoint,
+      p256dh:   j.keys.p256dh,
+      auth:     j.keys.auth,
+    });
+    updatePushMenuLabel(true);
+    toast('Notifications activées 🔔');
+  } catch (e) { toastErr('Activation échouée : ' + e.message); }
+};
+
+// Désactive les notifications sur CET appareil.
+const disablePush = async () => {
+  try {
+    const reg = _swReg || (('serviceWorker' in navigator) ? await navigator.serviceWorker.getRegistration() : null);
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (sub) {
+      await sb.del('push_subscriptions', { endpoint: sub.endpoint }).catch(() => {});
+      await sub.unsubscribe().catch(() => {});
+    }
+    updatePushMenuLabel(false);
+    toast('Notifications désactivées');
+  } catch (e) { toastErr(e.message); }
+};
+
+// Bascule depuis le menu.
+const togglePush = async () => {
+  const reg = _swReg || (('serviceWorker' in navigator) ? await navigator.serviceWorker.getRegistration() : null);
+  const sub = reg && await reg.pushManager.getSubscription();
+  if (sub && Notification.permission === 'granted') disablePush();
+  else enablePush();
+};
+
+// Met à jour le libellé du bouton dans le menu utilisateur.
+const updatePushMenuLabel = (on) => {
+  const el = document.getElementById('push-menu-label');
+  if (el) el.textContent = on ? 'Notifications activées 🔔' : 'Activer les notifications 🔕';
+};
+
+// Au démarrage : enregistre le SW et, si déjà autorisé, garde l'abonnement à jour.
+const initPush = async () => {
+  if (!pushSupported()) return;
+  const reg = await registerServiceWorker();
+  if (Notification.permission === 'granted' && currentUser && reg) {
+    try {
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        const j = sub.toJSON();
+        await sb.del('push_subscriptions', { endpoint: j.endpoint }).catch(() => {});
+        await sb.post('push_subscriptions', {
+          user_id: currentUser.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth,
+        }).catch(() => {});
+      }
+      updatePushMenuLabel(true);
+    } catch (e) { /* silencieux */ }
+  } else {
+    updatePushMenuLabel(false);
+  }
+};
+
+// Convertit des ids de JOUEURS en ids de COMPTES (user_id), en excluant l'envoyeur.
+const pushTargets = (playerIds, excludeUid) => {
+  const ex = excludeUid || (currentUser ? currentUser.id : null);
+  return playerIds
+    .map((pid) => players.find((p) => p.id === pid))
+    .filter((p) => p && p.user_id && p.user_id !== ex)
+    .map((p) => p.user_id);
+};
+
+// Envoie une notification push à des comptes (via la fonction Netlify).
+const sendPush = async (userIds, title, body, url, tag) => {
+  if (!userIds || !userIds.length) return;
+  try {
+    await fetch('/.netlify/functions/send-push', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ userIds, title, body, url: url || '/', tag }),
+    });
+  } catch (e) { /* non bloquant */ }
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -6753,6 +6898,7 @@ const init = async () => {
   initDecorations();
   initRatingTooltip();
   handleValidationLink();     // validation via lien email (?validate=…&token=…)
+  initPush();                 // enregistre le service worker + abonnement push
 };
 
 init();
