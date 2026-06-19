@@ -804,3 +804,14 @@ select:focus{border-color:var(--accent);outline:none}
     box-shadow:0 6px 16px rgba(0,0,0,.3)}
   .pe-preview-inner{padding:14px 12px 12px}
 }
+
+/* ─── Titre cliquable + modale d'explication ─── */
+.title-clickable{cursor:pointer;transition:opacity .15s}
+.title-clickable:hover{opacity:.7;text-decoration:underline dotted}
+.ti-body{text-align:center;padding:8px 4px 4px}
+.ti-icon{font-size:46px;line-height:1;margin-bottom:10px}
+.ti-name{font-size:20px;font-weight:600;color:var(--text);margin-bottom:16px}
+.ti-cond{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px}
+.ti-cond-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);margin-bottom:6px}
+.ti-cond-txt{font-size:15px;color:var(--text);font-weight:500}
+.ti-cond-ach{font-size:12px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}

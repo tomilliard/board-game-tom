@@ -554,7 +554,24 @@ const displayRank = (p) => {
 const titleOf = (p) => (p && p.title) ? TITLES.find((t) => t.id === p.title) : null;
 const titleHtml = (p, cls) => {
   const t = titleOf(p);
-  return t ? `<div class="${cls}">${t.icon ? t.icon + ' ' : ''}${t.label}</div>` : '';
+  if (!t) return '';
+  return `<div class="${cls} title-clickable" onclick="event.stopPropagation();showTitleInfo(${t.id})" title="Comment ce titre a été obtenu">${t.icon ? t.icon + ' ' : ''}${t.label}</div>`;
+};
+
+// Explication d'un titre : son nom + la condition de déblocage (via l'achievement lié).
+const showTitleInfo = (titleId) => {
+  const t = TITLES.find((x) => x.id === titleId);
+  if (!t) return;
+  const ach = (typeof ACHIEVEMENTS !== 'undefined') ? ACHIEVEMENTS.find((a) => a.id === t.reqAch) : null;
+  const cond = ach ? ach.desc : 'Condition spéciale';
+  const achName = ach ? ach.name : '';
+  document.getElementById('title-info-icon').textContent = t.icon || '🏅';
+  document.getElementById('title-info-name').textContent = t.label;
+  document.getElementById('title-info-cond').innerHTML =
+    `<div class="ti-cond-lbl">Comment l'obtenir</div>
+     <div class="ti-cond-txt">${esc(cond)}</div>
+     ${achName ? `<div class="ti-cond-ach">Succès lié : ${esc(achName)}</div>` : ''}`;
+  openModal('modal-title-info');
 };
 
 // Poids comparatif d'un rang (pour suivre le pic de saison). Challenger > GM > reste.
@@ -1044,7 +1061,7 @@ document.addEventListener('keydown', (e) => {
     'modal-game', 'modal-match', 'modal-reco', 'modal-admin',
     'modal-profile', 'modal-challenge', 'modal-challenge-result',
     'modal-comments', 'modal-palmares', 'modal-suggestion', 'modal-event', 'modal-player-profile',
-    'modal-seasons', 'modal-records', 'modal-feed', 'modal-mycoll',
+    'modal-seasons', 'modal-records', 'modal-feed', 'modal-mycoll', 'modal-title-info',
   ].forEach(closeModal);
 });
 
@@ -3591,8 +3608,7 @@ const renderLeaderboard = () => {
     const av = AVATARS.find((a) => a.id === (p.avatar || 1));
     const avHtml = av ? `<img src="${av.src}" alt="">` : `<span style="color:${bg}">${ini(p.name)}</span>`;
     const fav = bestGame(p.id);
-    const ttl = titleOf(p);
-    const sub = ttl ? `${ttl.icon ? ttl.icon + ' ' : ''}${ttl.label}` : (fav ? `🎯 ${esc(fav.name)}` : `${p.played} parties`);
+    const sub = fav ? `🎯 ${esc(fav.name)}` : `${p.played} parties`;
     const last5 = [...matches]
       .filter((m) => m.players?.some((pp) => pp.id === p.id))
       .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || (b.id || 0) - (a.id || 0))
