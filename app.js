@@ -362,7 +362,16 @@ const ownedIds   = (uid) => new Set(gameOwners.filter((o) => o.user_id === uid).
 // La collection (objets jeu) d'un utilisateur donné.
 const collectionOf = (uid) => { if (!uid) return []; const ids = ownedIds(uid); return games.filter((g) => ids.has(g.id)); };
 const myGames    = (uid) => collectionOf(uid || myUid());
-const gamesOf    = (uid) => collectionOf(uid);
+// Ma collection « effective » pour la comparaison : ma collection perso, et —
+// si je suis admin — AUSSI le catalogue du club (le club, c'est moi).
+const myEffectiveCollection = () => {
+  const mine = myGames();
+  if (isAdmin) {
+    const have = new Set(mine.map((g) => g.id));
+    clubGames().filter((g) => g.status === 'own').forEach((g) => { if (!have.has(g.id)) mine.push(g); });
+  }
+  return mine;
+};
 // Est-ce que JE possède ce jeu ?
 const iOwnGame   = (gameId) => gameOwners.some((o) => o.game_id === gameId && o.user_id === myUid());
 // Combien de joueurs possèdent ce jeu (hors club).
@@ -2835,7 +2844,7 @@ const renderCollComparison = () => {
   const opts = `<option value="club"${mcCmpUid === 'club' ? ' selected' : ''}>\u{1F3DB}\uFE0F Le club</option>` +
     others.map((p) => `<option value="${p.user_id}"${p.user_id === mcCmpUid ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
 
-  const mine = myGames();
+  const mine = myEffectiveCollection();
   const theirs = mcCmpUid === 'club' ? clubGames().filter((g) => g.status === 'own') : collectionOf(mcCmpUid);
   const theirNames = new Set(theirs.map((g) => norm(g.name)));
   const myNames    = new Set(mine.map((g) => norm(g.name)));
