@@ -5,7 +5,15 @@
   publish    = "."
   functions  = "netlify/functions"
 
-# Les variables d'environnement BREVO_KEY et BREVO_FROM
+# Le scanner de secrets de Netlify s'inquiète de voir SUPABASE_URL et
+# VAPID_PUBLIC_KEY en clair dans le code. C'est NORMAL : ce sont des valeurs
+# PUBLIQUES, nécessaires côté navigateur (l'app s'y connecte depuis le client).
+# On les exclut donc du scan. Les vrais secrets (SUPABASE_SERVICE_ROLE_KEY,
+# VAPID_PRIVATE_KEY) ne sont JAMAIS dans le code et restent surveillés.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,VAPID_PUBLIC_KEY"
+
+# Les variables d'environnement (BREVO_KEY, BREVO_FROM, VAPID_*, SUPABASE_*)
 # se définissent dans l'interface Netlify :
 #   Site settings → Environment variables
 # (ne PAS les mettre ici, ce fichier est versionné).
