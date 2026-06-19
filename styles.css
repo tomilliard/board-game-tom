@@ -815,3 +815,17 @@ select:focus{border-color:var(--accent);outline:none}
 .ti-cond-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);margin-bottom:6px}
 .ti-cond-txt{font-size:15px;color:var(--text);font-weight:500}
 .ti-cond-ach{font-size:12px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+
+/* ─── Collection partagée : ajout par sélection ─── */
+.mc-addbar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.mc-add-results{margin-bottom:4px}
+.mc-add-results .mc-list{max-height:200px;margin-bottom:8px}
+.mc-sep{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);
+  margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border)}
+.mc-add-btn{font-size:12px;padding:5px 12px;border:1px solid var(--accent);background:transparent;
+  color:var(--accent);border-radius:7px;cursor:pointer;font-family:inherit;font-weight:500;flex-shrink:0}
+.mc-add-btn:hover{background:var(--accent);color:#0d1a13}
+.mc-have{font-size:11px;color:var(--text-faint);flex-shrink:0}
+.mc-create{margin-top:4px;width:100%;justify-content:center}
+.mc-club-tag{font-size:10px;color:#378ADD;font-weight:500;margin-left:4px}
+.mc-own-tag{font-size:10px;color:var(--text-faint);margin-left:4px}
