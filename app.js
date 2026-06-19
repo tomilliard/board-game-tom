@@ -3810,10 +3810,9 @@ const renderLeaderboard = () => {
     const streak = last5.length
       ? `<span class="lb-frm" title="${last5.map((w) => w ? 'V' : 'D').join(' ')}${(p.streak || 0) >= 3 ? ' · série de ' + p.streak : ''}">${last5.map((w) => `<i class="${w ? 'w' : 'l'}"></i>`).join('')}</span>`
       : `<span class="lb-streak flat">—</span>`;
-    // Fond de ligne : illustration du meilleur jeu SI c'est un jeu du club
-    // (ma collection). Sinon (jeu perso, ou pas d'illustration) → bannière du rang.
-    const favObj = fav ? games.find((x) => x.id === fav.id) : null;
-    const clubArt = (favObj && isClubGame(favObj)) ? gameBgSrc({ name: fav.name }) : null;
+    // Fond de ligne : illustration du meilleur jeu si elle existe (jeux de ma
+    // collection en ont une). Sinon (jeu perso sans illu, etc.) → bannière du rang.
+    const clubArt = fav ? gameBgSrc({ name: fav.name }) : null;
     const rankBanner = (RANK_ASSETS_DESKTOP[rk.baseKey || rk.key] || {}).banner || null;
     const gbg = clubArt || rankBanner;
     const rowStyle = gbg
