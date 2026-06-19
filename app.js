@@ -4653,6 +4653,7 @@ const openChallengeResult = (chId) => {
            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
            ${esc(p.name)}
          </label>
+         <input type="number" class="cr-score-inp" data-pid="${p.id}" placeholder="Score" min="0" step="1">
        </div>`
     ).join('');
   document.getElementById('cr-notes').value = '';
@@ -4664,9 +4665,25 @@ const saveChallengeResult = async () => {
   const ch        = challenges.find((c) => c.id === currentChallengeId);
   if (!ch) return;
   const winnerIds = [...document.querySelectorAll('.cr-winner-cb:checked')].map((c) => parseInt(c.value));
-  if (!winnerIds.length) { toastErr('Sélectionnez au moins un gagnant.'); return; }
   const toIds  = Array.isArray(ch.to_player_ids) && ch.to_player_ids.length ? ch.to_player_ids : [ch.to_player_id].filter(Boolean);
   const allIds = [ch.from_player_id, ...toIds];
+  // Scores saisis (facultatifs, mais requis pour départager 2e/3e…).
+  const scores = {};
+  document.querySelectorAll('.cr-score-inp').forEach((inp) => {
+    const pid = parseInt(inp.dataset.pid);
+    const v   = inp.value.trim();
+    if (allIds.includes(pid) && v !== '') scores[pid] = parseFloat(v);
+  });
+  // Si aucun gagnant coché, on le déduit du meilleur score.
+  let finalWinners = winnerIds;
+  if (!finalWinners.length) {
+    const e = Object.entries(scores).filter(([, v]) => !isNaN(v));
+    if (e.length) {
+      const mx = Math.max(...e.map(([, v]) => v));
+      finalWinners = e.filter(([, v]) => v === mx).map(([k]) => parseInt(k));
+    }
+  }
+  if (!finalWinners.length) { toastErr('Coche un gagnant ou saisis les scores.'); return; }
   const notes  = document.getElementById('cr-notes').value.trim();
   const me     = players.find((p) => p.user_id === currentUser?.id);
   const myPid  = me ? me.id : null;
@@ -4680,8 +4697,8 @@ const saveChallengeResult = async () => {
       game_id: ch.game_id,
       date:    new Date().toISOString().split('T')[0],
       players: allIds.map((id) => ({ id })),
-      winners: winnerIds,
-      scores:  {},
+      winners: finalWinners,
+      scores:  scores,
       notes:   notes ? notes + ' (Défi)' : 'Défi',
       recorded_by:      myPid,
       validation_token: token,
@@ -4694,7 +4711,7 @@ const saveChallengeResult = async () => {
 
     if (!others.length) {
       await sb.patch('matches', { confirmed_at: new Date().toISOString() }, { id: matchId });
-      await awardPoints(matchId, winnerIds, allIds, true, ch.game_id, {});
+      await awardPoints(matchId, finalWinners, allIds, true, ch.game_id, scores);
       await loadSocial();
       closeModal('modal-challenge-result');
       renderChallenges();
