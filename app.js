@@ -4231,8 +4231,17 @@ const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre) => {
       if (gain < floor) gain = floor;
     }
     const streakPenalty = (!isW && pre[id].streak >= 3 && getRank(curPts).idx >= 3) ? 3 : 0;
+    // Défi : barème dégressif. Le gagnant a déjà son +5 (plus haut). Les perdants
+    // prennent un malus selon leur place : dernier −5, puis +1 par place en
+    // remontant (avant-dernier −4, etc.). place va de 2 (juste après le gagnant) à n.
+    let challengePenalty = 0;
+    if (isChallenge && !isW) {
+      const pl = place(id);                 // 2 = meilleur perdant … n = dernier
+      challengePenalty = 5 - (n - pl);      // dernier (pl=n) → 5 ; remonte de 1 par place
+      if (challengePenalty < 0) challengePenalty = 0;
+    }
     const loss = calcLoss(curPts, place(id), n);
-    const net  = gain - loss - streakPenalty;
+    const net  = gain - loss - streakPenalty - challengePenalty;
     out[id] = {
       net,
       newPts:    Math.max(0, curPts + net),
