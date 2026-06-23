@@ -282,8 +282,9 @@ select:focus{border-color:var(--accent);outline:none}
   .pr{font-size:11px;padding:2px 7px}
   /* Leaderboard compact */
   .lb-head{display:none}
-  .lb-row{grid-template-columns:30px 1.5fr auto;gap:9px;padding:10px 12px}
+  .lb-row{grid-template-columns:30px minmax(0,1fr) 40px;gap:9px;padding:10px 12px}
   .lb-col,.lb-wr,.lb-strk{display:none}
+  .lb-emblem{justify-self:center}
 
   /* ── MODALES ── */
   .modal-overlay{align-items:flex-end;padding:0}

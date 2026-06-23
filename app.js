@@ -3500,8 +3500,8 @@ const buildPlayerCard = (p) => {
         : `<div class="pl-prog-lbl" style="color:${tc}">Rang max !</div>`}
       <div class="pl-stats">
         <div><b style="color:var(--accent)">${s.won}</b>V</div>
-        <div><b>${s.lost}</b>D</div>
-        <div><b>${rate}%</b>WR</div>
+        <div><b style="color:var(--danger)">${s.lost}</b>D</div>
+        <div><b>${s.played}</b>parties</div>
       </div>
       ${badges.length ? `<div class="pl-badges">${badges.join('')}</div>` : ''}
       ${(fav || (adv && adv.worst)) ? `<div class="pl-tags">
@@ -6324,8 +6324,9 @@ const renderComparison = () => {
   // Init : on coche par défaut le top 3 (ou tous si moins de 3).
   if (!_cmpSelected) _cmpSelected = new Set(active.slice(0, Math.min(3, active.length)).map((p) => p.id));
 
+  const colorMap = cmpColorMap();
   const chips = active.map((p) => {
-    const c = p.color || '#4ade80';
+    const c = colorMap[p.id] || '#4ade80';
     const on = _cmpSelected.has(p.id);
     return `<button class="cmp-chip${on ? ' on' : ''}" data-pid="${p.id}"
               style="--cc:${c}" onclick="toggleCmpPlayer(${p.id})">
@@ -6361,6 +6362,22 @@ const renderComparison = () => {
   }
 };
 
+// Palette de couleurs distinctes pour le graphe comparatif (ordre de sélection).
+// 1er bleu, 2e rouge, 3e vert, 4e orange, 5e violet, 6e cyan, etc.
+const CMP_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#a855f7', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
+
+// Couleur stable par joueur : selon son rang (points) dans la liste des actifs.
+// Garantit que chips, courbes et tooltip utilisent la MÊME couleur par joueur.
+const cmpColorMap = () => {
+  const { hist } = allPlayersProgression();
+  const active = players
+    .filter((p) => (hist[p.id] || []).length)
+    .sort((a, b) => (b.points || 0) - (a.points || 0));
+  const map = {};
+  active.forEach((p, i) => { map[p.id] = CMP_COLORS[i % CMP_COLORS.length]; });
+  return map;
+};
+
 const drawComparison = () => {
   const canvas = document.getElementById('cmp-canvas');
   if (!canvas) return;
@@ -6388,12 +6405,15 @@ const drawComparison = () => {
   }
 
   // Séries selon le mode, alignées sur l'axe X = index de partie (gi).
+  // Couleurs FIXES et distinctes attribuées par ordre de sélection (lisibilité),
+  // plutôt que la couleur cosmétique du joueur (souvent identique entre joueurs).
   const elo = _cmpMode === 'elo';
+  const colorMap = cmpColorMap();
   const series = sel.map((id) => {
     const pts = (hist[id] || []).map((d) => ({ x: d.gi, y: elo ? d.elo : d.pts }));
     if (elo) pts.unshift({ x: 0, y: ELO_BASE }); else pts.unshift({ x: 0, y: 0 });
     const p = players.find((x) => x.id === id);
-    return { id, color: (p && p.color) || '#4ade80', name: p ? p.name : '?', pts };
+    return { id, color: colorMap[id] || '#4ade80', name: p ? p.name : '?', pts };
   });
 
   const allY = series.flatMap((s) => s.pts.map((p) => p.y));
