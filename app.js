@@ -1040,6 +1040,7 @@ async function loadAll() {
       ratingsCache[row.game_id].myScore = Number(row.score);
   });
   syncAchievementUnlocks(false);   // notifie les nouveaux succès (si baseline déjà posée)
+  syncRankChange(false);
 }
 
 async function loadSocial() {
@@ -1059,6 +1060,7 @@ async function loadSocial() {
   events      = ev;
   updateNotifBadge();
   syncAchievementUnlocks(false);   // succès sociaux (défis, avis, suggestions)
+  syncRankChange(false);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1222,6 +1224,7 @@ const doRegisterStep2 = async () => {
     hideAuthWall();
     await Promise.all([loadAll(), loadSocial()]);
     syncAchievementUnlocks(true);   // pose la baseline (sans notifier)
+    syncRankChange(true);
     updateUserUI();
     renderCurrentPage();
     toast(`Bienvenue ${name} ! 🎉`);
@@ -1248,6 +1251,7 @@ const doLogin = async () => {
     hideAuthWall();
     await Promise.all([loadAll(), loadSocial()]);
     syncAchievementUnlocks(true);   // pose la baseline (sans notifier)
+    syncRankChange(true);
     updateUserUI();
     renderCurrentPage();
     toast(`Bon retour ${currentProfile?.name || ''} !`);
@@ -6156,6 +6160,55 @@ const announceAchievement = (a) => {
 
 // Baseline locale des succès déjà vus, par joueur.
 const _achSeenKey = (pid) => `bgt_ach_seen_${pid}`;
+const _rankSeenKey = (pid) => `bgt_rank_seen_${pid}`;
+
+// Détecte si le joueur a changé de rang depuis sa dernière visite et, si c'est
+// une MONTÉE, affiche une grande annonce de promotion (plus marquante qu'un toast).
+const syncRankChange = (allowSeed = false) => {
+  try {
+    if (!currentUser) return;
+    const mp = players.find((p) => p.user_id === currentUser.id);
+    if (!mp) return;
+    const rk  = displayRank(mp);
+    const key = _rankSeenKey(mp.id);
+
+    let seen = null;
+    try { seen = JSON.parse(localStorage.getItem(key) || 'null'); } catch { seen = null; }
+    const save = () => { try { localStorage.setItem(key, JSON.stringify({ idx: rk.idx, key: rk.key, name: rk.name })); } catch {} };
+
+    if (!seen || typeof seen.idx !== 'number') {
+      if (allowSeed) save();
+      return; // pas de baseline fiable → on ne notifie pas
+    }
+
+    // Montée de rang (nouvel indice strictement supérieur) → annonce.
+    if (rk.idx > seen.idx) {
+      announceRankUp(seen, rk);
+    }
+    // On enregistre le nouvel état (montée comme descente) pour ne pas re-notifier.
+    save();
+  } catch { /* ne jamais casser le chargement */ }
+};
+
+// Grande annonce de promotion de rang (overlay central, plus important qu'un toast).
+const announceRankUp = (fromRk, toRk) => {
+  const tc  = tierColor(toRk);
+  const ov  = document.createElement('div');
+  ov.className = 'rankup-overlay';
+  ov.onclick = () => { ov.classList.remove('show'); setTimeout(() => ov.remove(), 350); };
+  ov.innerHTML = `
+    <div class="rankup-card" style="--rc:${tc}">
+      <div class="rankup-label">Nouveau rang atteint !</div>
+      <div class="rankup-emblem">${rankImg(toRk, 96)}</div>
+      <div class="rankup-name" style="color:${tc}">${esc(toRk.name)}</div>
+      <div class="rankup-from">${fromRk && fromRk.name ? esc(fromRk.name) + ' → ' + esc(toRk.name) : ''}</div>
+      <button class="rankup-btn" style="background:${tc}" onclick="event.stopPropagation();this.closest('.rankup-overlay').click()">Continuer</button>
+    </div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add('show'));
+  // Auto-fermeture de sécurité après 12s si non cliqué.
+  setTimeout(() => { if (ov.isConnected) { ov.classList.remove('show'); setTimeout(() => ov.remove(), 350); } }, 12000);
+};
 
 // Détecte les succès nouvellement débloqués et les notifie.
 //   allowSeed=true  → si aucune baseline, on enregistre l'état SANS notifier
@@ -7016,6 +7069,7 @@ const init = async () => {
 
   await Promise.all([loadAll(), loadSocial()]);
   syncAchievementUnlocks(true);   // pose la baseline au démarrage (sans notifier)
+  syncRankChange(true);
 
   if (games.length === 0) {
     showLoading('Importation de la collection…');
