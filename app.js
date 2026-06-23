@@ -824,6 +824,24 @@ const auth = {
     });
     return r.ok ? r.json() : null;
   },
+
+  // Change l'adresse e-mail du compte connecté. Supabase envoie un e-mail de
+  // confirmation à la NOUVELLE adresse ; le changement n'est effectif qu'après
+  // que l'utilisateur a cliqué le lien reçu.
+  async updateEmail(newEmail) {
+    if (!authToken) throw new Error('Non connecté');
+    const r = await fetch(`${SB_URL}/auth/v1/user`, {
+      method:  'PUT',
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: newEmail }),
+    });
+    if (!r.ok) {
+      let msg = 'Échec du changement d\'e-mail';
+      try { const e = await r.json(); msg = e.msg || e.error_description || e.message || msg; } catch {}
+      throw new Error(msg);
+    }
+    return r.json();
+  },
 };
 
 // ─── Session storage ─────────────────────────────────────────
@@ -1391,6 +1409,15 @@ const _openProfileModal = (cfg) => {
   if (cfg.showEmail) document.getElementById('pe-email').value = '';
   if (cfg.showPass)  document.getElementById('pe-pass').value  = '';
 
+  // Changement d'e-mail : uniquement sur SON propre profil (ni création, ni édition admin d'un autre).
+  const ownProfile = !cfg.isCreate && !cfg.targetId && !!currentUser;
+  const cmRow = document.getElementById('pe-changemail-row');
+  if (cmRow) {
+    cmRow.style.display = ownProfile ? 'block' : 'none';
+    const inp = document.getElementById('pe-newmail');
+    if (inp) inp.value = '';
+  }
+
   openModal('modal-profile');
   setTimeout(() => nameIn.focus(), 50);
 };
@@ -1695,6 +1722,27 @@ const selectAvatar = (id) => {
     });
   }
   _updateAvatarPreview();
+};
+
+
+const changeMyEmail = async () => {
+  if (!currentUser) { showAuthWall(); return; }
+  const inp = document.getElementById('pe-newmail');
+  const email = (inp?.value || '').trim().toLowerCase();
+  if (!email) { inp?.focus(); return; }
+  // Validation simple du format.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toastErr('Adresse e-mail invalide'); return; }
+  if (currentUser.email && email === currentUser.email.toLowerCase()) {
+    toastErr('C\'est déjà ton adresse actuelle'); return;
+  }
+  if (!confirm(`Envoyer un lien de confirmation à ${email} ?\n\nLe changement ne sera effectif qu'après avoir cliqué le lien reçu à cette nouvelle adresse.`)) return;
+  showLoading('Envoi du lien…');
+  try {
+    await auth.updateEmail(email);
+    if (inp) inp.value = '';
+    toast('Lien envoyé ✉️ — confirme depuis ta nouvelle adresse');
+  } catch (e) { toastErr(e.message); }
+  hideLoading();
 };
 
 

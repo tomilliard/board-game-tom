@@ -665,6 +665,18 @@
       <input class="finput" type="text" id="pe-pass" placeholder="6 caractères min.">
     </div>
 
+    <!-- Changer son adresse e-mail (son propre compte) -->
+    <div class="form-row" id="pe-changemail-row" style="display:none">
+      <label>Mon adresse e-mail</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="finput" type="email" id="pe-newmail" placeholder="nouvelle@email.com" style="flex:1">
+        <button type="button" class="btn-add" style="flex-shrink:0" onclick="changeMyEmail()">Changer</button>
+      </div>
+      <p style="font-size:11px;color:var(--text-faint);margin:6px 0 0">
+        Un lien de confirmation sera envoyé à la nouvelle adresse. Le changement ne prend effet qu'après avoir cliqué ce lien.
+      </p>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-cancel-m" onclick="closeModal('modal-profile')">Annuler</button>
       <button class="btn-save-m"   onclick="saveProfileEdit()" id="pe-save-btn">Enregistrer</button>
