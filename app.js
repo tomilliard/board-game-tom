@@ -3919,7 +3919,10 @@ const renderLeaderboard = () => {
       </div>
       <div class="lb-tier" title="${esc(rk.name)}${isAdmin ? ' · Elo ' + getElo(p) : ''}">
         <span class="lb-emblem">${rankImg(rk, 26)}</span>
-        <div class="lb-tinfo"><b style="color:${tc}">${p.points || 0}</b> pts</div>
+        <div class="lb-tinfo">
+          <b class="lb-rkname" style="color:${tc}">${esc(rk.name)}</b>
+          <span class="lb-rkpts"><b style="color:${tc}">${p.points || 0}</b> pts</span>
+        </div>
       </div>
       <div class="lb-col ctr">${p.played}</div>
       <div class="lb-col ctr"><span class="win">${p.won}</span>/<span class="lose">${p.lost}</span></div>
