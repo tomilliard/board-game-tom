@@ -283,9 +283,11 @@ select:focus{border-color:var(--accent);outline:none}
   .pr{font-size:11px;padding:2px 7px}
   /* Leaderboard compact */
   .lb-head{display:none}
-  .lb-row{grid-template-columns:30px minmax(0,1fr) 40px;gap:9px;padding:10px 12px}
+  .lb-row{grid-template-columns:28px minmax(0,1fr) auto;gap:8px;padding:10px 12px}
   .lb-col,.lb-wr,.lb-strk{display:none}
-  .lb-emblem{justify-self:center}
+  .lb-rkname{display:none}            /* trop étroit sur mobile : emblème + points seulement */
+  .lb-tier{gap:6px}
+  .lb-rkpts{white-space:nowrap}
 
   /* ── MODALES ── */
   .modal-overlay{align-items:flex-end;padding:0}
