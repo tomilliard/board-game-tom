@@ -5180,8 +5180,8 @@ const renderRivalries = () => {
   const rivs = computeRivalries().slice(0, 5);
   if (!rivs.length) { el.innerHTML = ''; return; }
 
-  const av = (name, c) => `<span style="display:inline-flex;align-items:center;justify-content:center;
-      width:26px;height:26px;border-radius:50%;background:${c}22;color:${c};font-size:10px;font-weight:700;flex-shrink:0">${ini(name)}</span>`;
+  const av = (p, c) => `<span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;
+      width:26px;height:26px;border-radius:50%;background:${c}22;color:${c};font-size:10px;font-weight:700;flex-shrink:0">${playerAvatarInner(p, c)}</span>`;
 
   // Une paire de couleurs distincte par rivalité (côté gauche / côté droit).
   // Chaque paire est fortement contrastée ; l'ensemble de la liste varie.
@@ -5203,11 +5203,11 @@ const renderRivalries = () => {
                border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;font-family:inherit">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
           <span style="font-size:13px;width:20px;flex-shrink:0">${medal}</span>
-          ${av(p1.name, b1)}
+          ${av(p1, b1)}
           <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p1.name)}</span>
           <span style="font-size:11px;color:var(--text-faint);flex-shrink:0">⚔️</span>
           <span style="flex:1;min-width:0;text-align:right;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p2.name)}</span>
-          ${av(p2.name, b2)}
+          ${av(p2, b2)}
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:13px;font-weight:700;color:${b1};width:22px;text-align:center;flex-shrink:0">${r.p1ahead}</span>
