@@ -3722,8 +3722,114 @@ const delPlayer = async (id) => {
 // PARTIES PAGE
 // ═══════════════════════════════════════════════════════════════
 
+// ─── Filtres de l'historique ─────────────────────────────────
+// Filtrent la liste « Parties jouées » (qui ne montre que MES parties) par
+// jeu, co-joueur, période et recherche texte. Les parties à valider restent
+// toujours affichées (elles demandent une action).
+let _histSearch = '';
+let _histGame   = '';
+let _histWith   = '';
+let _histPeriod = '';   // '' | 'month' | 'year'
+
+const _histMine = () => {
+  if (!currentUser) return [];
+  const me = players.find((p) => p.user_id === currentUser.id);
+  if (!me) return [];
+  return matches.filter((m) => (m.players || []).some((pp) => pp.id === me.id));
+};
+
+const histFiltersActive = () => !!(_histSearch || _histGame || _histWith || _histPeriod);
+
+const applyHistFilters = (list) => {
+  const q   = _histSearch.trim().toLowerCase();
+  const gid = _histGame ? parseInt(_histGame) : null;
+  const wid = _histWith ? parseInt(_histWith) : null;
+  const now = new Date();
+  return list.filter((m) => {
+    if (gid && m.game_id !== gid) return false;
+    if (wid && !(m.players || []).some((pp) => pp.id === wid)) return false;
+    if (_histPeriod) {
+      if (!m.date) return false;
+      const d = new Date(String(m.date).split('T')[0]);
+      if (_histPeriod === 'month' && (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear())) return false;
+      if (_histPeriod === 'year'  && d.getFullYear() !== now.getFullYear()) return false;
+    }
+    if (q) {
+      const g = games.find((x) => x.id === m.game_id);
+      const hay = [
+        g ? g.name : '',
+        m.notes || '',
+        ...(m.players || []).map((pp) => { const pl = players.find((x) => x.id === pp.id); return pl ? pl.name : ''; }),
+      ].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+};
+
+const setHistFilter = (key, val) => {
+  if (key === 'search')      _histSearch = val;
+  else if (key === 'game')   _histGame   = val;
+  else if (key === 'with')   _histWith   = val;
+  else if (key === 'period') _histPeriod = val;
+  renderMatchList();                       // ne rebâtit que #hlist → focus de la recherche préservé
+  const clr = document.getElementById('hist-clear');
+  if (clr) clr.style.display = histFiltersActive() ? 'inline-flex' : 'none';
+};
+
+const clearHistFilters = () => {
+  _histSearch = ''; _histGame = ''; _histWith = ''; _histPeriod = '';
+  renderHistFilters();
+  renderMatchList();
+};
+
+const renderHistFilters = () => {
+  const el = document.getElementById('hist-filters');
+  if (!el) return;
+  const mine = _histMine();
+  if (mine.length < 2) { el.innerHTML = ''; return; }   // inutile de filtrer 0/1 partie
+  const me = players.find((p) => p.user_id === currentUser.id);
+
+  const gOpts = [...new Set(mine.map((m) => m.game_id))]
+    .map((id) => games.find((x) => x.id === id))
+    .filter(Boolean)
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    .map((g) => `<option value="${g.id}"${String(g.id) === _histGame ? ' selected' : ''}>${esc(g.name)}</option>`)
+    .join('');
+  const pOpts = [...new Set(mine.flatMap((m) => (m.players || []).map((pp) => pp.id)))]
+    .filter((id) => !me || id !== me.id)
+    .map((id) => players.find((x) => x.id === id))
+    .filter((p) => p && p.name)
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    .map((p) => `<option value="${p.id}"${String(p.id) === _histWith ? ' selected' : ''}>${esc(p.name)}</option>`)
+    .join('');
+
+  const sel = 'height:34px;padding:0 26px 0 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:13px;outline:none;cursor:pointer;appearance:none';
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <input id="hist-search" type="text" placeholder="🔍 Rechercher (jeu, joueur, note)…"
+        value="${esc(_histSearch)}" oninput="setHistFilter('search',this.value)"
+        style="flex:1;min-width:160px;height:34px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);font-family:inherit;font-size:13px;outline:none">
+      <select onchange="setHistFilter('game',this.value)" style="${sel}">
+        <option value="">Tous les jeux</option>${gOpts}
+      </select>
+      <select onchange="setHistFilter('with',this.value)" style="${sel}">
+        <option value="">Avec qui…</option>${pOpts}
+      </select>
+      <select onchange="setHistFilter('period',this.value)" style="${sel}">
+        <option value=""${_histPeriod === ''      ? ' selected' : ''}>Toute période</option>
+        <option value="month"${_histPeriod === 'month' ? ' selected' : ''}>Ce mois-ci</option>
+        <option value="year"${_histPeriod === 'year'   ? ' selected' : ''}>Cette année</option>
+      </select>
+      <button id="hist-clear" onclick="clearHistFilters()"
+        style="display:${histFiltersActive() ? 'inline-flex' : 'none'};align-items:center;gap:4px;height:34px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-muted);font-family:inherit;font-size:12px;cursor:pointer">✕ Effacer</button>
+    </div>
+    <div id="hist-count" style="font-size:12px;color:var(--text-faint);margin-bottom:8px"></div>`;
+};
+
 const renderHistory = () => {
   renderHistoryStats();
+  renderHistFilters();
   renderMatchList();
   renderLeaderboard();
 };
@@ -3904,9 +4010,20 @@ const renderMatchList = () => {
   const mine = myPlayer
     ? matches.filter((m) => (m.players || []).some((pp) => pp.id === myPlayer.id))
     : [];
-  const confirmedHtml = mine.length
-    ? mine.map(buildMatchCard).join('')
-    : (pendingHtml ? '' : '<div class="empty"><div class="empty-icon">🎮</div><p>Tu n\'as encore aucune partie enregistrée.</p></div>');
+  const filtered = applyHistFilters(mine);
+
+  const countEl = document.getElementById('hist-count');
+  if (countEl) {
+    countEl.textContent = (histFiltersActive() && mine.length)
+      ? `${filtered.length} partie${filtered.length > 1 ? 's' : ''} sur ${mine.length}`
+      : '';
+  }
+
+  const confirmedHtml = filtered.length
+    ? filtered.map(buildMatchCard).join('')
+    : (histFiltersActive()
+        ? '<div class="empty"><div class="empty-icon">🔍</div><p>Aucune partie ne correspond aux filtres.</p></div>'
+        : (pendingHtml ? '' : '<div class="empty"><div class="empty-icon">🎮</div><p>Tu n\'as encore aucune partie enregistrée.</p></div>'));
 
   el.innerHTML = pendingHtml + confirmedHtml;
 };
