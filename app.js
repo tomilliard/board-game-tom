@@ -6354,6 +6354,7 @@ const toggleCmpPlayer = (pid) => {
   else _cmpSelected.add(pid);
   const chip = document.querySelector(`.cmp-chip[data-pid="${pid}"]`);
   if (chip) chip.classList.toggle('on', _cmpSelected.has(pid));
+  applyCmpChipColors();
   drawComparison();
 };
 
@@ -6363,6 +6364,7 @@ const cmpSelectAll = (on) => {
   document.querySelectorAll('.cmp-chip').forEach((c) => {
     c.classList.toggle('on', _cmpSelected.has(parseInt(c.dataset.pid)));
   });
+  applyCmpChipColors();
   drawComparison();
 };
 
@@ -6382,7 +6384,7 @@ const renderComparison = () => {
 
   const colorMap = cmpColorMap();
   const chips = active.map((p) => {
-    const c = colorMap[p.id] || '#4ade80';
+    const c = colorMap[p.id] || 'rgba(255,255,255,0.25)';
     const on = _cmpSelected.has(p.id);
     return `<button class="cmp-chip${on ? ' on' : ''}" data-pid="${p.id}"
               style="--cc:${c}" onclick="toggleCmpPlayer(${p.id})">
@@ -6422,16 +6424,28 @@ const renderComparison = () => {
 // 1er bleu, 2e rouge, 3e vert, 4e orange, 5e violet, 6e cyan, etc.
 const CMP_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#a855f7', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'];
 
-// Couleur stable par joueur : selon son rang (points) dans la liste des actifs.
-// Garantit que chips, courbes et tooltip utilisent la MÊME couleur par joueur.
+// Couleur par ordre de SÉLECTION : le 1ᵉʳ joueur coché prend la 1ʳᵉ couleur,
+// le 2ᵉ la 2ᵉ, etc. (_cmpSelected est un Set qui conserve l'ordre d'insertion).
+// Les joueurs non cochés ne reçoivent pas de couleur (point gris neutre côté chip).
+// chips, courbes et tooltip partagent ainsi la MÊME couleur par joueur.
 const cmpColorMap = () => {
-  const { hist } = allPlayersProgression();
-  const active = players
-    .filter((p) => (hist[p.id] || []).length)
-    .sort((a, b) => (b.points || 0) - (a.points || 0));
   const map = {};
-  active.forEach((p, i) => { map[p.id] = CMP_COLORS[i % CMP_COLORS.length]; });
+  let i = 0;
+  for (const id of (_cmpSelected || [])) {
+    map[id] = CMP_COLORS[i % CMP_COLORS.length];
+    i += 1;
+  }
   return map;
+};
+
+// Met à jour la pastille (--cc) de chaque chip selon l'ordre de sélection courant,
+// pour garder chips, courbes et tooltip synchronisés après chaque coche/décoche.
+const applyCmpChipColors = () => {
+  const colorMap = cmpColorMap();
+  document.querySelectorAll('.cmp-chip').forEach((chip) => {
+    const pid = parseInt(chip.dataset.pid);
+    chip.style.setProperty('--cc', colorMap[pid] || 'rgba(255,255,255,0.25)');
+  });
 };
 
 const drawComparison = () => {
