@@ -5242,6 +5242,16 @@ const renderH2HSelects = () => {
   renderH2H();
 };
 
+// Avatar d'un joueur : image réelle si elle existe (comme dans le classement),
+// sinon repli sur les initiales colorées. À placer dans un conteneur rond
+// avec overflow:hidden.
+const playerAvatarInner = (p, color) => {
+  const av = p ? AVATARS.find((a) => a.id === (p.avatar || 1)) : null;
+  return av
+    ? `<img src="${av.src}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`
+    : `<span style="color:${color}">${ini(p ? p.name : '?')}</span>`;
+};
+
 const renderH2H = () => {
   const p1id = parseInt(document.getElementById('h2h-p1').value);
   const p2id = parseInt(document.getElementById('h2h-p2').value);
@@ -5295,13 +5305,13 @@ const renderH2H = () => {
   el.innerHTML = `
     <div class="h2h-layout">
       <div class="h2h-card">
-        <div class="h2h-avatar" style="background:${b1}22;color:${b1}">${ini(p1.name)}</div>
+        <div class="h2h-avatar" style="background:${b1}22;color:${b1}">${playerAvatarInner(p1, b1)}</div>
         <div class="h2h-name" style="color:${b1}">${esc(p1.name)}</div>
         <div class="h2h-stat" style="color:${p1wins >= p2wins ? 'var(--accent)' : 'var(--text-muted)'}">${p1wins}</div>
         <div class="h2h-stat-lbl">parties gagnées</div>
       </div>
       <div class="h2h-card">
-        <div class="h2h-avatar" style="background:${b2}22;color:${b2}">${ini(p2.name)}</div>
+        <div class="h2h-avatar" style="background:${b2}22;color:${b2}">${playerAvatarInner(p2, b2)}</div>
         <div class="h2h-name" style="color:${b2}">${esc(p2.name)}</div>
         <div class="h2h-stat" style="color:${p2wins > p1wins ? 'var(--accent)' : 'var(--text-muted)'}">${p2wins}</div>
         <div class="h2h-stat-lbl">parties gagnées</div>

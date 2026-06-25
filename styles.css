@@ -400,7 +400,7 @@ select:focus{border-color:var(--accent);outline:none}
 .h2h-select-row{display:flex;gap:10px;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap}
 .h2h-vs{font-size:18px;font-weight:500;color:var(--text-faint);flex-shrink:0}
 .h2h-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;text-align:center;box-shadow:var(--shadow)}
-.h2h-avatar{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:500;font-family:'Chakra Petch',sans-serif;margin:0 auto 10px}
+.h2h-avatar{width:60px;height:60px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:500;font-family:'Chakra Petch',sans-serif;margin:0 auto 10px}
 .h2h-name{font-size:16px;font-weight:500;margin-bottom:12px}
 .h2h-stat{font-size:28px;font-weight:500;font-family:'Chakra Petch',sans-serif}
 .h2h-stat-lbl{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
