@@ -63,6 +63,9 @@ const cosmeticBg = (p) => (p && p.cardbg ? (BACKGROUNDS.find((b) => b.id === p.c
 
 // Fond d'ambiance associé à un JEU (affiché au survol en Collection et en fond des cartes Parties).
 const GAME_BG_DEFS = [
+  { src: 'assets/bg_traitresabord.webp', names: ['Traîtres à bord', 'Traitres à bord', 'Traîtres a bord', 'Traitres a bord', 'traîtres à bord', 'traitres a bord'] },
+  { src: 'assets/bg_codenames.webp',     names: ['Codenames', 'Code Names', 'Code Name', 'codenames', 'code names'] },
+  { src: 'assets/bg_agentavenue.webp',   names: ['Agent Avenue', 'AgentAvenue', 'agent avenue'] },
   { src: 'assets/bg_azul.webp',      names: ['Azul les Vitraux de Sintra', 'Azul Vitraux de Sintra', 'Azul: Les Vitraux de Sintra', 'Azul Sintra', 'Azul', 'vitraux de sintra'] },
   { src: 'assets/bg_arknova.webp',   names: ['Ark Nova', 'ark nova'] },
   { src: 'assets/bg_arcs.webp',      names: ['Arcs', 'arcs'] },
