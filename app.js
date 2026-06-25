@@ -3572,7 +3572,7 @@ const _recapAvatar = (ctx, img, p, cx, cy, r, ring, ringW) => {
 };
 
 const drawSeasonRecap = async (canvas) => {
-  const W = 1080, H = 1350;
+  const W = 1080, H = 1080;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
@@ -3586,21 +3586,44 @@ const drawSeasonRecap = async (canvas) => {
   const nameOf  = (id) => { const p = players.find((x) => x.id === id); return p ? p.name : '?'; };
   const gOf     = (id) => { const g = games.find((x) => x.id === id); return g ? g.name : '?'; };
 
-  const loadImg = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
-  const imgs = await Promise.all(top3.map((p) => { const a = AVATARS.find((x) => x.id === (p.avatar || 1)); return a ? loadImg(a.src) : Promise.resolve(null); }));
+  // Fond = illustration du meilleur jeu du champion (top 1), assombrie.
+  const champGame = top3[0] ? bestGame(top3[0].id) : null;
+  const bgSrc = champGame ? gameBgSrc({ name: champGame.name }) : null;
 
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#0c1320'); bg.addColorStop(1, '#0a0f18');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-  const halo = ctx.createRadialGradient(W / 2, 330, 40, W / 2, 330, 540);
-  halo.addColorStop(0, 'rgba(74,222,128,0.10)'); halo.addColorStop(1, 'rgba(74,222,128,0)');
-  ctx.fillStyle = halo; ctx.fillRect(0, 0, W, 720);
+  const loadImg = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  const [bgImg, ...imgs] = await Promise.all([
+    bgSrc ? loadImg(bgSrc) : Promise.resolve(null),
+    ...top3.map((p) => { const a = AVATARS.find((x) => x.id === (p.avatar || 1)); return a ? loadImg(a.src) : Promise.resolve(null); }),
+  ]);
+
+  ctx.fillStyle = '#0a0d16'; ctx.fillRect(0, 0, W, H);
+  if (bgImg) {
+    const ir = bgImg.width / bgImg.height, cr = W / H;
+    let dw, dh, dx, dy;
+    if (ir > cr) { dh = H; dw = H * ir; dx = (W - dw) / 2; dy = 0; }
+    else { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2; }
+    ctx.drawImage(bgImg, dx, dy, dw, dh);
+  } else {
+    const fb = ctx.createLinearGradient(0, 0, W, H);
+    fb.addColorStop(0, '#1b1430'); fb.addColorStop(1, '#0a0d16');
+    ctx.fillStyle = fb; ctx.fillRect(0, 0, W, H);
+  }
+  const scrim = ctx.createLinearGradient(0, 0, 0, H);
+  scrim.addColorStop(0, 'rgba(8,10,18,0.66)');
+  scrim.addColorStop(0.34, 'rgba(8,10,18,0.46)');
+  scrim.addColorStop(1, 'rgba(8,10,18,0.93)');
+  ctx.fillStyle = scrim; ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W / 2, 150, 30, W / 2, 150, 480);
+  glow.addColorStop(0, 'rgba(192,132,252,0.14)'); glow.addColorStop(1, 'rgba(192,132,252,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 520);
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#e8eef5'; ctx.font = '600 30px Inter, sans-serif';
-  ctx.fillText('🎲 BOARD GAME TOM', W / 2, 92);
-  ctx.fillStyle = '#4ade80'; ctx.font = '800 58px Inter, sans-serif';
-  ctx.fillText('RÉCAP DE SAISON', W / 2, 156);
+  ctx.fillStyle = '#c9d2e0'; ctx.font = '600 28px Inter, sans-serif';
+  ctx.fillText('🎲 BOARD GAME TOM', W / 2, 72);
+  const tg = ctx.createLinearGradient(W / 2 - 280, 0, W / 2 + 280, 0);
+  tg.addColorStop(0, '#c084fc'); tg.addColorStop(1, '#f472b6');
+  ctx.fillStyle = tg; ctx.font = '800 56px Inter, sans-serif';
+  ctx.fillText('RÉCAP DE SAISON', W / 2, 132);
   let dr = '';
   if (currentSeason && currentSeason.started_at) {
     const sd = new Date(String(currentSeason.started_at).slice(0, 10));
@@ -3608,17 +3631,17 @@ const drawSeasonRecap = async (canvas) => {
       dr = 'depuis le ' + sd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     }
   }
-  ctx.fillStyle = '#7a8699'; ctx.font = '400 26px Inter, sans-serif';
-  ctx.fillText(`Saison ${currentSeason ? currentSeason.number : 1}${dr ? ' · ' + dr : ''}`, W / 2, 204);
+  ctx.fillStyle = '#9aa3b2'; ctx.font = '400 24px Inter, sans-serif';
+  ctx.fillText(`Saison ${currentSeason ? currentSeason.number : 1}${dr ? ' · ' + dr : ''}`, W / 2, 170);
 
   const trunc = (t, maxW) => { t = String(t); if (ctx.measureText(t).width <= maxW) return t; while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1); return t + '…'; };
 
-  const podBottom = 812;
-  const pedW = 226;
+  const podBottom = 668;
+  const pedW = 224;
   const cfg = [
-    { x: W / 2,       r: 96, ringW: 8, ped: 236, color: '#fbbf24', crown: true },
-    { x: W / 2 - 264, r: 78, ringW: 6, ped: 166, color: '#cbd5e1' },
-    { x: W / 2 + 264, r: 78, ringW: 6, ped: 136, color: '#d8a05a' },
+    { x: W / 2,       r: 80, ringW: 8, ped: 174, color: '#fbbf24', crown: true },
+    { x: W / 2 - 262, r: 64, ringW: 6, ped: 124, color: '#cbd5e1' },
+    { x: W / 2 + 262, r: 64, ringW: 6, ped: 100, color: '#d8a05a' },
   ];
   // Pédestaux : dégradé teinté de la couleur du rang, liseré haut inséré,
   // gros chiffre fantôme dans la teinte du rang.
@@ -3626,63 +3649,63 @@ const drawSeasonRecap = async (canvas) => {
     const p = top3[i]; if (!p) return;
     const px = c.x - pedW / 2, pedTop = podBottom - c.ped;
     const g = ctx.createLinearGradient(0, pedTop, 0, podBottom);
-    g.addColorStop(0, c.color + '26'); g.addColorStop(1, 'rgba(255,255,255,0.015)');
+    g.addColorStop(0, c.color + '2b'); g.addColorStop(1, 'rgba(255,255,255,0.02)');
     ctx.fillStyle = g;
     _recapRoundRect(ctx, px, pedTop, pedW, c.ped, 18); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
     _recapRoundRect(ctx, px, pedTop, pedW, c.ped, 18); ctx.stroke();
     ctx.fillStyle = c.color;
     _recapRoundRect(ctx, px + 26, pedTop, pedW - 52, 6, 3); ctx.fill();
-    ctx.fillStyle = c.color + '16'; ctx.font = '800 132px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(String(i + 1), c.x, podBottom - 36);
+    ctx.fillStyle = c.color + '1a'; ctx.font = '800 112px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(String(i + 1), c.x, podBottom - 30);
   });
   // Avatars (halo doré pour le 1ᵉʳ), couronne, nom et points AU-DESSUS du pédestal.
   cfg.forEach((c, i) => {
     const p = top3[i]; if (!p) return;
     const pedTop = podBottom - c.ped;
-    const cy = pedTop - c.r - 116;
+    const cy = pedTop - c.r - 100;
     if (c.crown) {
-      ctx.beginPath(); ctx.arc(c.x, cy, c.r + 16, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(251,191,36,0.13)'; ctx.fill();
-      ctx.font = '54px serif'; ctx.textAlign = 'center'; ctx.fillText('👑', c.x, cy - c.r - 18);
+      ctx.beginPath(); ctx.arc(c.x, cy, c.r + 14, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(251,191,36,0.14)'; ctx.fill();
+      ctx.font = '44px serif'; ctx.textAlign = 'center'; ctx.fillText('👑', c.x, cy - c.r - 12);
     }
     _recapAvatar(ctx, imgs[i], p, c.x, cy, c.r, c.color, c.ringW);
-    ctx.fillStyle = '#e8eef5'; ctx.font = '600 32px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(trunc(p.name, pedW + 30), c.x, cy + c.r + 50);
-    ctx.fillStyle = c.color; ctx.font = '800 36px Inter, sans-serif';
-    ctx.fillText(`${p.points || 0} pts`, c.x, cy + c.r + 96);
+    ctx.fillStyle = '#eef2f8'; ctx.font = '600 30px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(trunc(p.name, pedW + 20), c.x, cy + c.r + 42);
+    ctx.fillStyle = c.color; ctx.font = '800 33px Inter, sans-serif';
+    ctx.fillText(`${p.points || 0} pts`, c.x, cy + c.r + 84);
   });
 
-  const panelX = 70, panelW = W - 140, panelY = 852, panelH = 416;
-  ctx.fillStyle = 'rgba(255,255,255,0.03)';
-  _recapRoundRect(ctx, panelX, panelY, panelW, panelH, 22); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1.5;
-  _recapRoundRect(ctx, panelX, panelY, panelW, panelH, 22); ctx.stroke();
-  ctx.textAlign = 'left'; ctx.fillStyle = '#7a8699'; ctx.font = '700 22px Inter, sans-serif';
-  ctx.fillText('FAITS MARQUANTS', panelX + 40, panelY + 48);
+  const panelX = 70, panelW = W - 140, panelY = 704, panelH = 296;
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  _recapRoundRect(ctx, panelX, panelY, panelW, panelH, 20); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1.5;
+  _recapRoundRect(ctx, panelX, panelY, panelW, panelH, 20); ctx.stroke();
+  ctx.textAlign = 'left'; ctx.fillStyle = '#9aa3b2'; ctx.font = '700 22px Inter, sans-serif';
+  ctx.fillText('FAITS MARQUANTS', panelX + 38, panelY + 46);
 
-  const rows = [
-    ['🎲', 'Parties jouées',       String(total)],
-    ['🎯', 'Jeux différents',      String(distinct)],
-    ['🔥', 'Plus longue série',    rec.streak.pid ? `${nameOf(rec.streak.pid)} · ${rec.streak.val} V` : '—'],
-    ['🎮', 'Joueur le plus actif', rec.active.pid ? `${nameOf(rec.active.pid)} · ${rec.active.n} parties` : '—'],
-    ['🌙', 'Soirée record',        rec.night.date ? `${rec.night.n} parties` : '—'],
-    ['💥', 'Plus gros écart',      rec.gap.m ? `${rec.gap.val} pts · ${gOf(rec.gap.m.game_id)}` : '—'],
+  const stats = [
+    ['🎲', 'Parties', String(total)],
+    ['🎯', 'Jeux',    String(distinct)],
+    ['🔥', 'Série',   rec.streak.pid ? `${nameOf(rec.streak.pid)} · ${rec.streak.val}V` : '—'],
+    ['🎮', 'Actif',   rec.active.pid ? `${nameOf(rec.active.pid)} · ${rec.active.n}` : '—'],
+    ['🌙', 'Soirée',  rec.night.date ? `${rec.night.n} parties` : '—'],
+    ['💥', 'Écart',   rec.gap.m ? `${rec.gap.val} pts` : '—'],
   ];
-  const rowH = (panelH - 116) / rows.length;
-  let ry = panelY + 100;
-  rows.forEach(([ic, lbl, val]) => {
-    ctx.textAlign = 'left'; ctx.font = '32px serif'; ctx.fillText(ic, panelX + 40, ry + 10);
-    ctx.fillStyle = '#aeb8c6'; ctx.font = '400 26px Inter, sans-serif'; ctx.fillText(lbl, panelX + 94, ry + 7);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#e8eef5'; ctx.font = '600 27px Inter, sans-serif';
-    ctx.fillText(trunc(val, panelW - 380), panelX + panelW - 40, ry + 7);
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(panelX + 40, ry + rowH - 26, panelW - 80, 1);
-    ry += rowH;
+  const colLX = [panelX + 38, panelX + panelW / 2 + 14];
+  const colVX = [panelX + panelW / 2 - 18, panelX + panelW - 38];
+  const rowY  = [panelY + 104, panelY + 174, panelY + 244];
+  stats.forEach(([ic, lbl, val], i) => {
+    const col = i % 2, lx = colLX[col], vx = colVX[col], ry = rowY[Math.floor(i / 2)];
+    ctx.textAlign = 'left'; ctx.font = '26px serif'; ctx.fillText(ic, lx, ry + 9);
+    ctx.fillStyle = '#aeb8c6'; ctx.font = '400 24px Inter, sans-serif'; ctx.fillText(lbl, lx + 42, ry + 6);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#eef2f8'; ctx.font = '600 25px Inter, sans-serif';
+    ctx.fillText(trunc(val, vx - (lx + 42) - 80), vx, ry + 6);
   });
 
-  ctx.textAlign = 'center'; ctx.fillStyle = '#5a6678'; ctx.font = '400 24px Inter, sans-serif';
+  ctx.textAlign = 'center'; ctx.fillStyle = '#6b7488'; ctx.font = '400 23px Inter, sans-serif';
   const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-  ctx.fillText(`boardgametom.com · ${today}`, W / 2, H - 46);
+  ctx.fillText(`boardgametom.com · ${today}`, W / 2, H - 38);
 };
 
 const openSeasonRecap = async () => {
