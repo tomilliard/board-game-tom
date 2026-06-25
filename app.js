@@ -5122,6 +5122,108 @@ const saveChallengeResult = async () => {
 
 // ─── Head-to-head ─────────────────────────────────────────────
 
+// ─── Rivalités : duels les plus serrés et fréquents du club ──
+// Pour chaque paire de joueurs ayant partagé des parties, on compte les
+// « duels directs » (qui a fini devant l'autre, via placements). Une rivalité
+// est d'autant plus forte qu'elle est FRÉQUENTE et ÉQUILIBRÉE (proche du 50/50).
+const computeRivalries = () => {
+  const idx = {};   // "lo-hi" -> stats agrégées de la paire
+  matches.forEach((m) => {
+    const ids = [...new Set((m.players || []).map((pp) => pp.id))]
+      .filter((id) => players.find((p) => p.id === id));
+    if (ids.length < 2) return;
+    const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+    const pls = placements(ids, winnerIds, m.scores || {});
+    const d = String(m.date || '');
+    for (let a = 0; a < ids.length; a++) {
+      for (let b = a + 1; b < ids.length; b++) {
+        const lo = Math.min(ids[a], ids[b]);
+        const hi = Math.max(ids[a], ids[b]);
+        const key = lo + '-' + hi;
+        const e = idx[key] || (idx[key] = { p1id: lo, p2id: hi, total: 0, p1ahead: 0, p2ahead: 0, ties: 0, lastDate: '' });
+        e.total += 1;
+        if (d > e.lastDate) e.lastDate = d;
+        const plLo = pls[lo], plHi = pls[hi];
+        if (plLo != null && plHi != null) {
+          if (plLo < plHi) e.p1ahead += 1;
+          else if (plHi < plLo) e.p2ahead += 1;
+          else e.ties += 1;
+        }
+      }
+    }
+  });
+  const MIN = 4;   // confrontations décisives minimum pour parler de « rivalité »
+  return Object.values(idx)
+    .map((e) => {
+      const decisive  = e.p1ahead + e.p2ahead;
+      const balance   = decisive ? 1 - Math.abs(e.p1ahead - e.p2ahead) / decisive : 0; // 1 = 50/50 parfait
+      const intensity = decisive * balance;   // récompense fréquence ET équilibre
+      return { ...e, decisive, balance, intensity };
+    })
+    .filter((e) => e.decisive >= MIN)
+    .sort((a, b) => b.intensity - a.intensity || b.decisive - a.decisive);
+};
+
+const openRivalry = (p1id, p2id) => {
+  const s1 = document.getElementById('h2h-p1');
+  const s2 = document.getElementById('h2h-p2');
+  if (s1) s1.value = String(p1id);
+  if (s2) s2.value = String(p2id);
+  renderH2H();
+  const res = document.getElementById('h2h-result');
+  if (res) res.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+const renderRivalries = () => {
+  const el = document.getElementById('rivalries');
+  if (!el) return;
+  const rivs = computeRivalries().slice(0, 5);
+  if (!rivs.length) { el.innerHTML = ''; return; }
+
+  const av = (name, c) => `<span style="display:inline-flex;align-items:center;justify-content:center;
+      width:26px;height:26px;border-radius:50%;background:${c}22;color:${c};font-size:10px;font-weight:700;flex-shrink:0">${ini(name)}</span>`;
+
+  const cards = rivs.map((r, i) => {
+    const p1 = players.find((x) => x.id === r.p1id);
+    const p2 = players.find((x) => x.id === r.p2id);
+    if (!p1 || !p2) return '';
+    const b1 = p1.color || '#4ade80';
+    const b2 = p2.color || '#60a5fa';
+    const pctL  = r.decisive ? Math.round(r.p1ahead / r.decisive * 100) : 50;
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+    return `
+      <button onclick="openRivalry(${r.p1id},${r.p2id})"
+        style="display:block;width:100%;text-align:left;background:var(--surface-2);border:1px solid var(--border);
+               border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;font-family:inherit">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:13px;width:20px;flex-shrink:0">${medal}</span>
+          ${av(p1.name, b1)}
+          <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p1.name)}</span>
+          <span style="font-size:11px;color:var(--text-faint);flex-shrink:0">⚔️</span>
+          <span style="flex:1;min-width:0;text-align:right;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p2.name)}</span>
+          ${av(p2.name, b2)}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:13px;font-weight:700;color:${b1};width:22px;text-align:center;flex-shrink:0">${r.p1ahead}</span>
+          <div style="flex:1;height:8px;border-radius:4px;overflow:hidden;display:flex;background:var(--border)">
+            <div style="height:100%;width:${pctL}%;background:${b1}"></div>
+            <div style="height:100%;width:${100 - pctL}%;background:${b2}"></div>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:${b2};width:22px;text-align:center;flex-shrink:0">${r.p2ahead}</span>
+        </div>
+        <div style="text-align:center;font-size:10px;color:var(--text-faint);margin-top:6px">
+          ${r.total} partie${r.total > 1 ? 's' : ''} · équilibre ${Math.round(r.balance * 100)}%${r.ties ? ` · ${r.ties} nul${r.ties > 1 ? 's' : ''}` : ''}
+        </div>
+      </button>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px">🔥 Rivalités du club</div>
+    <div style="font-size:11px;color:var(--text-faint);margin-bottom:11px">Les duels les plus serrés et les plus fréquents. Touche une rivalité pour le détail.</div>
+    ${cards}
+    <div style="border-top:1px solid var(--border);margin:4px 0 14px"></div>`;
+};
+
 const renderH2HSelects = () => {
   ['h2h-p1', 'h2h-p2'].forEach((id) => {
     const sel = document.getElementById(id);
@@ -5130,6 +5232,7 @@ const renderH2HSelects = () => {
       + players.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
     sel.value = cur;
   });
+  renderRivalries();
   renderH2H();
 };
 
