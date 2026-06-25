@@ -5183,14 +5183,18 @@ const renderRivalries = () => {
   const av = (name, c) => `<span style="display:inline-flex;align-items:center;justify-content:center;
       width:26px;height:26px;border-radius:50%;background:${c}22;color:${c};font-size:10px;font-weight:700;flex-shrink:0">${ini(name)}</span>`;
 
+  // Une paire de couleurs distincte par rivalité (côté gauche / côté droit).
+  // Chaque paire est fortement contrastée ; l'ensemble de la liste varie.
+  const RIVAL_PAIRS = [
+    ['#3b82f6', '#ef4444'], ['#22c55e', '#f59e0b'], ['#a855f7', '#06b6d4'],
+    ['#ec4899', '#84cc16'], ['#f97316', '#14b8a6'],
+  ];
+
   const cards = rivs.map((r, i) => {
     const p1 = players.find((x) => x.id === r.p1id);
     const p2 = players.find((x) => x.id === r.p2id);
     if (!p1 || !p2) return '';
-    // Couleurs fixes et fortement contrastées (bleu vs rouge) plutôt que les
-    // couleurs cosmétiques des joueurs, souvent proches → barre illisible.
-    const b1 = '#3b82f6';
-    const b2 = '#ef4444';
+    const [b1, b2] = RIVAL_PAIRS[i % RIVAL_PAIRS.length];
     const pctL  = r.decisive ? Math.round(r.p1ahead / r.decisive * 100) : 50;
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
     return `
