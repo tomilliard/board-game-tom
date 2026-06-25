@@ -2208,6 +2208,135 @@ const buildMiniPalmares = (g) => {
   </div>`;
 };
 
+// ─── Statistiques détaillées par jeu ─────────────────────────
+// Agrège toutes les parties d'un jeu : victoires, parties jouées, place
+// moyenne et score moyen par joueur, puis désigne le champion (winrate de
+// Wilson) et le joueur le plus assidu.
+const computeGameStats = (gid) => {
+  const gMatches = matches.filter((m) => m.game_id === gid);
+  const stat = {};                 // pid -> { pl, w, sumPlace, placeN, sumScore, scoreN }
+  let lastDate = '';
+  gMatches.forEach((m) => {
+    const ids = (m.players || []).map((pp) => pp.id);
+    const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+    const pls = placements(ids, winnerIds, m.scores || {});
+    const d = String(m.date || '');
+    if (d > lastDate) lastDate = d;
+    (m.players || []).forEach((pp) => {
+      const s = stat[pp.id] || (stat[pp.id] = { pl: 0, w: 0, sumPlace: 0, placeN: 0, sumScore: 0, scoreN: 0 });
+      s.pl += 1;
+      if (winnerIds.includes(pp.id)) s.w += 1;
+      const pos = pls[pp.id];
+      if (pos != null) { s.sumPlace += pos; s.placeN += 1; }
+      const sc = m.scores ? m.scores[pp.id] : undefined;
+      if (sc !== undefined && sc !== null && sc !== '') { s.sumScore += Number(sc); s.scoreN += 1; }
+    });
+  });
+  const rows = Object.entries(stat)
+    .map(([pid, s]) => {
+      const player = players.find((x) => x.id === parseInt(pid));
+      return (player && player.name) ? {
+        player, pl: s.pl, w: s.w,
+        rate: s.pl ? s.w / s.pl : 0,
+        avgPlace: s.placeN ? s.sumPlace / s.placeN : null,
+        avgScore: s.scoreN ? s.sumScore / s.scoreN : null,
+        wilson: wilsonScore(s.w, s.pl),
+      } : null;
+    })
+    .filter(Boolean);
+  return { total: gMatches.length, rows, lastDate };
+};
+
+const openGameStats = (gid) => {
+  const g  = games.find((x) => x.id === gid);
+  const el = document.getElementById('gamestats-content');
+  const titleEl = document.getElementById('gamestats-title');
+  if (!g || !el) return;
+  if (titleEl) titleEl.textContent = '📊 ' + g.name;
+
+  const { total, rows, lastDate } = computeGameStats(gid);
+  if (!total || !rows.length) {
+    el.innerHTML = '<p style="text-align:center;color:var(--text-faint);padding:2rem 1rem">Aucune partie enregistrée pour ce jeu.</p>';
+    openModal('modal-gamestats');
+    return;
+  }
+
+  const ranked     = [...rows].sort((a, b) => b.wilson - a.wilson || b.w - a.w || b.pl - a.pl);
+  const champ      = ranked[0];
+  const mostPlayed = [...rows].sort((a, b) => b.pl - a.pl || b.w - a.w)[0];
+  const dateStr    = lastDate
+    ? new Date(lastDate.split('T')[0]).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '—';
+
+  const tile = (label, value) => `
+    <div style="flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--border);
+                border-radius:10px;padding:9px 8px;text-align:center">
+      <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em">${label}</div>
+      <div style="font-size:17px;font-weight:700;color:var(--text);margin-top:2px">${value}</div>
+    </div>`;
+
+  const champBg = champ.player.color || '#4ade80';
+  const champHtml = `
+    <div style="display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,${champBg}22,transparent);
+                border:1px solid ${champBg}55;border-radius:12px;padding:11px 13px;margin:12px 0">
+      <div style="font-size:24px">🏆</div>
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;
+                  border-radius:50%;background:${champBg}22;color:${champBg};font-weight:700;font-size:14px;flex-shrink:0">
+        ${ini(champ.player.name)}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em">Champion·ne du jeu</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(champ.player.name)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:18px;font-weight:700;color:${champBg}">${Math.round(champ.rate * 100)}%</div>
+        <div style="font-size:11px;color:var(--text-faint)">${champ.w}V / ${champ.pl}p</div>
+      </div>
+    </div>`;
+
+  const rowsHtml = ranked.map((r, i) => {
+    const bg = r.player.color || '#4ade80';
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉'
+      : `<span style="display:inline-block;width:18px;text-align:center;color:var(--text-faint);font-size:11px">${i + 1}</span>`;
+    const pct = Math.round(r.rate * 100);
+    return `
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span style="width:20px;text-align:center;font-size:13px">${medal}</span>
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
+                     background:${bg}22;color:${bg};font-size:10px;font-weight:600;flex-shrink:0">${ini(r.player.name)}</span>
+        <span style="flex:1;min-width:0;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.player.name)}</span>
+        <div style="width:60px;flex-shrink:0">
+          <div style="height:6px;border-radius:3px;background:var(--border);overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${bg}"></div>
+          </div>
+        </div>
+        <span style="width:36px;text-align:right;font-size:13px;font-weight:600;color:var(--accent);flex-shrink:0">${pct}%</span>
+        <span style="width:62px;text-align:right;font-size:11px;color:var(--text-faint);flex-shrink:0">${r.w}V/${r.pl}p${r.avgPlace != null ? ` · ${r.avgPlace.toFixed(1)}ᵉ` : ''}</span>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;gap:8px">
+      ${tile('Parties', total)}
+      ${tile('Joueurs', rows.length)}
+      ${tile('Dernière', dateStr)}
+    </div>
+    ${champHtml}
+    <div style="font-size:12px;color:var(--text-muted);margin:0 0 10px">
+      🎲 Le plus assidu : <strong style="color:var(--text)">${esc(mostPlayed.player.name)}</strong>
+      (${mostPlayed.pl} partie${mostPlayed.pl > 1 ? 's' : ''})
+    </div>
+    <div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">
+      Classement (winrate ajusté)
+    </div>
+    ${rowsHtml}
+    <div style="font-size:10px;color:var(--text-faint);margin-top:9px;line-height:1.4">
+      Le classement utilise un winrate « honnête » qui pénalise les petits échantillons.
+      « ᵉ » = place moyenne à ce jeu.
+    </div>`;
+  openModal('modal-gamestats');
+};
+
 const buildExtList = (g) => {
   const exts = g.extensions || [];
   const extAddBtn = isAdmin
@@ -2267,6 +2396,7 @@ const buildGameCard = (g) => {
     <button class="palmares-card-btn" onclick="openComments(${g.id})">
       💬 Avis ${(comments[g.id] || []).length > 0 ? '(' + comments[g.id].length + ')' : ''}
     </button>
+    ${tp > 0 ? `<button class="palmares-card-btn" onclick="openGameStats(${g.id})">📊 Stats</button>` : ''}
   </div>`;
 
   const adminActions = isAdmin

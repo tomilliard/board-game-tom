@@ -1046,6 +1046,21 @@
   </div>
 </div>
 
+<!-- Statistiques par jeu -->
+<div class="modal-overlay" id="modal-gamestats" onclick="bgClose(event,'modal-gamestats')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="gamestats-title">📊 Statistiques</h2>
+      <button class="btn-close" onclick="closeModal('modal-gamestats')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="palmares-modal-content" id="gamestats-content"></div>
+  </div>
+</div>
+
 <!-- Info titre (comment il a été obtenu) -->
 <div class="modal-overlay" id="modal-title-info" onclick="bgClose(event,'modal-title-info')">
   <div class="modal" style="max-width:360px">
