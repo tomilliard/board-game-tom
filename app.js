@@ -5187,8 +5187,10 @@ const renderRivalries = () => {
     const p1 = players.find((x) => x.id === r.p1id);
     const p2 = players.find((x) => x.id === r.p2id);
     if (!p1 || !p2) return '';
-    const b1 = p1.color || '#4ade80';
-    const b2 = p2.color || '#60a5fa';
+    // Couleurs fixes et fortement contrastées (bleu vs rouge) plutôt que les
+    // couleurs cosmétiques des joueurs, souvent proches → barre illisible.
+    const b1 = '#3b82f6';
+    const b2 = '#ef4444';
     const pctL  = r.decisive ? Math.round(r.p1ahead / r.decisive * 100) : 50;
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
     return `
