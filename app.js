@@ -3601,45 +3601,59 @@ const drawSeasonRecap = async (canvas) => {
   ctx.fillText('🎲 BOARD GAME TOM', W / 2, 92);
   ctx.fillStyle = '#4ade80'; ctx.font = '800 58px Inter, sans-serif';
   ctx.fillText('RÉCAP DE SAISON', W / 2, 156);
-  const dr = (currentSeason && currentSeason.started_at)
-    ? 'depuis le ' + new Date(String(currentSeason.started_at).slice(0, 10)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-    : '';
+  let dr = '';
+  if (currentSeason && currentSeason.started_at) {
+    const sd = new Date(String(currentSeason.started_at).slice(0, 10));
+    if (!isNaN(sd.getTime()) && sd.getFullYear() >= 2020) {
+      dr = 'depuis le ' + sd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+  }
   ctx.fillStyle = '#7a8699'; ctx.font = '400 26px Inter, sans-serif';
   ctx.fillText(`Saison ${currentSeason ? currentSeason.number : 1}${dr ? ' · ' + dr : ''}`, W / 2, 204);
 
   const trunc = (t, maxW) => { t = String(t); if (ctx.measureText(t).width <= maxW) return t; while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1); return t + '…'; };
 
-  const podBottom = 772;
-  const pedW = 224;
+  const podBottom = 812;
+  const pedW = 226;
   const cfg = [
-    { x: W / 2,       r: 96, ringW: 8, ped: 250, color: '#fbbf24', medal: '🥇', crown: true },
-    { x: W / 2 - 262, r: 78, ringW: 6, ped: 174, color: '#cbd5e1', medal: '🥈' },
-    { x: W / 2 + 262, r: 78, ringW: 6, ped: 144, color: '#d8a05a', medal: '🥉' },
+    { x: W / 2,       r: 96, ringW: 8, ped: 236, color: '#fbbf24', crown: true },
+    { x: W / 2 - 264, r: 78, ringW: 6, ped: 166, color: '#cbd5e1' },
+    { x: W / 2 + 264, r: 78, ringW: 6, ped: 136, color: '#d8a05a' },
   ];
+  // Pédestaux : dégradé teinté de la couleur du rang, liseré haut inséré,
+  // gros chiffre fantôme dans la teinte du rang.
   cfg.forEach((c, i) => {
     const p = top3[i]; if (!p) return;
-    const pedTop = podBottom - c.ped;
-    ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    _recapRoundRect(ctx, c.x - pedW / 2, pedTop, pedW, c.ped, 16); ctx.fill();
+    const px = c.x - pedW / 2, pedTop = podBottom - c.ped;
+    const g = ctx.createLinearGradient(0, pedTop, 0, podBottom);
+    g.addColorStop(0, c.color + '26'); g.addColorStop(1, 'rgba(255,255,255,0.015)');
+    ctx.fillStyle = g;
+    _recapRoundRect(ctx, px, pedTop, pedW, c.ped, 18); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+    _recapRoundRect(ctx, px, pedTop, pedW, c.ped, 18); ctx.stroke();
     ctx.fillStyle = c.color;
-    _recapRoundRect(ctx, c.x - pedW / 2, pedTop, pedW, 6, 3); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.font = '800 116px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(String(i + 1), c.x, pedTop + c.ped - 30);
+    _recapRoundRect(ctx, px + 26, pedTop, pedW - 52, 6, 3); ctx.fill();
+    ctx.fillStyle = c.color + '16'; ctx.font = '800 132px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(String(i + 1), c.x, podBottom - 36);
   });
+  // Avatars (halo doré pour le 1ᵉʳ), couronne, nom et points AU-DESSUS du pédestal.
   cfg.forEach((c, i) => {
     const p = top3[i]; if (!p) return;
     const pedTop = podBottom - c.ped;
-    const cy = pedTop - c.r - 66;
-    if (c.crown) { ctx.font = '52px serif'; ctx.textAlign = 'center'; ctx.fillText('👑', c.x, cy - c.r - 14); }
+    const cy = pedTop - c.r - 116;
+    if (c.crown) {
+      ctx.beginPath(); ctx.arc(c.x, cy, c.r + 16, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(251,191,36,0.13)'; ctx.fill();
+      ctx.font = '54px serif'; ctx.textAlign = 'center'; ctx.fillText('👑', c.x, cy - c.r - 18);
+    }
     _recapAvatar(ctx, imgs[i], p, c.x, cy, c.r, c.color, c.ringW);
-    ctx.font = '38px serif'; ctx.textAlign = 'center'; ctx.fillText(c.medal, c.x + c.r * 0.72, cy + c.r * 0.86);
-    ctx.fillStyle = '#e8eef5'; ctx.font = '600 30px Inter, sans-serif';
-    ctx.fillText(trunc(p.name, pedW + 34), c.x, cy + c.r + 46);
-    ctx.fillStyle = c.color; ctx.font = '800 34px Inter, sans-serif';
-    ctx.fillText(`${p.points || 0} pts`, c.x, cy + c.r + 86);
+    ctx.fillStyle = '#e8eef5'; ctx.font = '600 32px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(trunc(p.name, pedW + 30), c.x, cy + c.r + 50);
+    ctx.fillStyle = c.color; ctx.font = '800 36px Inter, sans-serif';
+    ctx.fillText(`${p.points || 0} pts`, c.x, cy + c.r + 96);
   });
 
-  const panelX = 70, panelW = W - 140, panelY = 824, panelH = 432;
+  const panelX = 70, panelW = W - 140, panelY = 852, panelH = 416;
   ctx.fillStyle = 'rgba(255,255,255,0.03)';
   _recapRoundRect(ctx, panelX, panelY, panelW, panelH, 22); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1.5;
