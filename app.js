@@ -3542,6 +3542,182 @@ const openClubRecords = () => {
   openModal('modal-records');
 };
 
+// ─── Récap de saison partageable (image générée sur canvas) ──
+const _recapRoundRect = (ctx, x, y, w, h, r) => {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+};
+
+const _recapAvatar = (ctx, img, p, cx, cy, r, ring, ringW) => {
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
+  if (img) {
+    ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
+  } else {
+    ctx.fillStyle = (p.color || '#4ade80') + '33'; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    ctx.fillStyle = p.color || '#4ade80';
+    ctx.font = '700 ' + Math.round(r * 0.85) + 'px Inter, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(ini(p.name), cx, cy);
+    ctx.textBaseline = 'alphabetic';
+  }
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.lineWidth = ringW; ctx.strokeStyle = ring; ctx.stroke();
+};
+
+const drawSeasonRecap = async (canvas) => {
+  const W = 1080, H = 1350;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const ranked = players
+    .map((p) => { const s = playerStats(p.id); return { ...p, played: s.played, won: s.won }; })
+    .sort((a, b) => (b.points || 0) - (a.points || 0) || b.won - a.won);
+  const top3    = ranked.slice(0, 3);
+  const total   = matches.length;
+  const distinct = new Set(matches.map((m) => m.game_id)).size;
+  const rec     = clubRecords();
+  const nameOf  = (id) => { const p = players.find((x) => x.id === id); return p ? p.name : '?'; };
+  const gOf     = (id) => { const g = games.find((x) => x.id === id); return g ? g.name : '?'; };
+
+  const loadImg = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  const imgs = await Promise.all(top3.map((p) => { const a = AVATARS.find((x) => x.id === (p.avatar || 1)); return a ? loadImg(a.src) : Promise.resolve(null); }));
+
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0c1320'); bg.addColorStop(1, '#0a0f18');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const halo = ctx.createRadialGradient(W / 2, 330, 40, W / 2, 330, 540);
+  halo.addColorStop(0, 'rgba(74,222,128,0.10)'); halo.addColorStop(1, 'rgba(74,222,128,0)');
+  ctx.fillStyle = halo; ctx.fillRect(0, 0, W, 720);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8eef5'; ctx.font = '600 30px Inter, sans-serif';
+  ctx.fillText('🎲 BOARD GAME TOM', W / 2, 92);
+  ctx.fillStyle = '#4ade80'; ctx.font = '800 58px Inter, sans-serif';
+  ctx.fillText('RÉCAP DE SAISON', W / 2, 156);
+  const dr = (currentSeason && currentSeason.started_at)
+    ? 'depuis le ' + new Date(String(currentSeason.started_at).slice(0, 10)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+  ctx.fillStyle = '#7a8699'; ctx.font = '400 26px Inter, sans-serif';
+  ctx.fillText(`Saison ${currentSeason ? currentSeason.number : 1}${dr ? ' · ' + dr : ''}`, W / 2, 204);
+
+  const trunc = (t, maxW) => { t = String(t); if (ctx.measureText(t).width <= maxW) return t; while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1); return t + '…'; };
+
+  const podBottom = 772;
+  const pedW = 224;
+  const cfg = [
+    { x: W / 2,       r: 96, ringW: 8, ped: 250, color: '#fbbf24', medal: '🥇', crown: true },
+    { x: W / 2 - 262, r: 78, ringW: 6, ped: 174, color: '#cbd5e1', medal: '🥈' },
+    { x: W / 2 + 262, r: 78, ringW: 6, ped: 144, color: '#d8a05a', medal: '🥉' },
+  ];
+  cfg.forEach((c, i) => {
+    const p = top3[i]; if (!p) return;
+    const pedTop = podBottom - c.ped;
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    _recapRoundRect(ctx, c.x - pedW / 2, pedTop, pedW, c.ped, 16); ctx.fill();
+    ctx.fillStyle = c.color;
+    _recapRoundRect(ctx, c.x - pedW / 2, pedTop, pedW, 6, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.font = '800 116px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(String(i + 1), c.x, pedTop + c.ped - 30);
+  });
+  cfg.forEach((c, i) => {
+    const p = top3[i]; if (!p) return;
+    const pedTop = podBottom - c.ped;
+    const cy = pedTop - c.r - 66;
+    if (c.crown) { ctx.font = '52px serif'; ctx.textAlign = 'center'; ctx.fillText('👑', c.x, cy - c.r - 14); }
+    _recapAvatar(ctx, imgs[i], p, c.x, cy, c.r, c.color, c.ringW);
+    ctx.font = '38px serif'; ctx.textAlign = 'center'; ctx.fillText(c.medal, c.x + c.r * 0.72, cy + c.r * 0.86);
+    ctx.fillStyle = '#e8eef5'; ctx.font = '600 30px Inter, sans-serif';
+    ctx.fillText(trunc(p.name, pedW + 34), c.x, cy + c.r + 46);
+    ctx.fillStyle = c.color; ctx.font = '800 34px Inter, sans-serif';
+    ctx.fillText(`${p.points || 0} pts`, c.x, cy + c.r + 86);
+  });
+
+  const panelX = 70, panelW = W - 140, panelY = 824, panelH = 432;
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  _recapRoundRect(ctx, panelX, panelY, panelW, panelH, 22); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1.5;
+  _recapRoundRect(ctx, panelX, panelY, panelW, panelH, 22); ctx.stroke();
+  ctx.textAlign = 'left'; ctx.fillStyle = '#7a8699'; ctx.font = '700 22px Inter, sans-serif';
+  ctx.fillText('FAITS MARQUANTS', panelX + 40, panelY + 48);
+
+  const rows = [
+    ['🎲', 'Parties jouées',       String(total)],
+    ['🎯', 'Jeux différents',      String(distinct)],
+    ['🔥', 'Plus longue série',    rec.streak.pid ? `${nameOf(rec.streak.pid)} · ${rec.streak.val} V` : '—'],
+    ['🎮', 'Joueur le plus actif', rec.active.pid ? `${nameOf(rec.active.pid)} · ${rec.active.n} parties` : '—'],
+    ['🌙', 'Soirée record',        rec.night.date ? `${rec.night.n} parties` : '—'],
+    ['💥', 'Plus gros écart',      rec.gap.m ? `${rec.gap.val} pts · ${gOf(rec.gap.m.game_id)}` : '—'],
+  ];
+  const rowH = (panelH - 116) / rows.length;
+  let ry = panelY + 100;
+  rows.forEach(([ic, lbl, val]) => {
+    ctx.textAlign = 'left'; ctx.font = '32px serif'; ctx.fillText(ic, panelX + 40, ry + 10);
+    ctx.fillStyle = '#aeb8c6'; ctx.font = '400 26px Inter, sans-serif'; ctx.fillText(lbl, panelX + 94, ry + 7);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#e8eef5'; ctx.font = '600 27px Inter, sans-serif';
+    ctx.fillText(trunc(val, panelW - 380), panelX + panelW - 40, ry + 7);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(panelX + 40, ry + rowH - 26, panelW - 80, 1);
+    ry += rowH;
+  });
+
+  ctx.textAlign = 'center'; ctx.fillStyle = '#5a6678'; ctx.font = '400 24px Inter, sans-serif';
+  const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  ctx.fillText(`boardgametom.com · ${today}`, W / 2, H - 46);
+};
+
+const openSeasonRecap = async () => {
+  openModal('modal-recap');
+  const loading = document.getElementById('recap-loading');
+  const canvas  = document.getElementById('recap-canvas');
+  const actions = document.getElementById('recap-actions');
+  if (loading) { loading.style.display = 'block'; loading.textContent = 'Génération de l\'image…'; }
+  if (canvas)  canvas.style.display = 'none';
+  if (actions) actions.style.display = 'none';
+  if (!players.length || !matches.length) {
+    if (loading) loading.textContent = 'Pas encore assez de données pour un récap.';
+    return;
+  }
+  try {
+    await drawSeasonRecap(canvas);
+    if (loading) loading.style.display = 'none';
+    if (canvas)  canvas.style.display = 'block';
+    if (actions) actions.style.display = 'flex';
+    const sb = document.getElementById('recap-share-btn');
+    if (sb && !(navigator.share && navigator.canShare)) sb.style.display = 'none';
+  } catch (e) {
+    if (loading) { loading.style.display = 'block'; loading.textContent = 'Impossible de générer l\'image.'; }
+  }
+};
+
+const downloadRecap = () => {
+  const canvas = document.getElementById('recap-canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = `recap-saison-${currentSeason ? currentSeason.number : ''}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+};
+
+const shareRecap = async () => {
+  const canvas = document.getElementById('recap-canvas');
+  if (!canvas) return;
+  try {
+    const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+    const file = new File([blob], 'recap-saison.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Récap de saison', text: 'Board Game Tom — récap de saison 🏆' });
+    } else {
+      downloadRecap();
+    }
+  } catch (e) { /* partage annulé */ }
+};
+
 // ─── Fil d'actu du club ──────────────────────────────────────
 const openActivityFeed = () => {
   const el = document.getElementById('feed-content');

@@ -432,6 +432,7 @@
             <button onclick="openActivityFeed()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">📰 Actu</button>
             <button onclick="openClubRecords()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">📖 Records</button>
             <button onclick="openSeasonsHistory()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">🏆 Palmarès</button>
+            <button onclick="openSeasonRecap()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent-text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">📸 Récap</button>
           </div>
         </div>
         <div class="lboard" id="lboard" style="margin-top:1rem"></div>
@@ -1060,6 +1061,28 @@
       </button>
     </div>
     <div class="palmares-modal-content" id="gamestats-content"></div>
+  </div>
+</div>
+
+<!-- Récap de saison partageable -->
+<div class="modal-overlay" id="modal-recap" onclick="bgClose(event,'modal-recap')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2 class="modal-title">📸 Récap de saison</h2>
+      <button class="btn-close" onclick="closeModal('modal-recap')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div style="text-align:center">
+      <div id="recap-loading" style="padding:2.5rem 1rem;color:var(--text-faint);font-size:13px">Génération de l'image…</div>
+      <canvas id="recap-canvas" style="width:100%;max-width:380px;border-radius:14px;display:none;border:1px solid var(--border)"></canvas>
+      <div id="recap-actions" style="display:none;gap:10px;margin-top:16px;justify-content:center;flex-wrap:wrap">
+        <button onclick="downloadRecap()" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">⬇️ Télécharger</button>
+        <button id="recap-share-btn" onclick="shareRecap()" style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:#0d1a13;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📤 Partager</button>
+      </div>
+    </div>
   </div>
 </div>
 
