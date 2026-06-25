@@ -112,7 +112,7 @@ select:focus{border-color:var(--accent);outline:none}
 .wr-bar{width:100%;height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:2px}
 .wr-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
 .p-card-foot{display:flex;gap:6px;width:100%;border-top:1px solid var(--border);padding-top:7px;margin-top:2px}
-.hist-layout{display:grid;grid-template-columns:1fr 360px;gap:1.5rem;align-items:start}
+.hist-layout{display:grid;grid-template-columns:1fr 440px;gap:1.5rem;align-items:start}
 .section-title{font-family:'Chakra Petch',sans-serif;font-size:19px;color:var(--text);margin-bottom:1rem}
 .hist-list{display:flex;flex-direction:column;gap:10px}
 .hist-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;box-shadow:var(--shadow);transition:border-color .15s,box-shadow .2s,transform .15s}
@@ -162,6 +162,16 @@ select:focus{border-color:var(--accent);outline:none}
 .lb-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--blue));border-radius:999px}
 .lb-streak{font-size:12px;font-weight:800}
 .lb-streak.up{color:var(--accent)}.lb-streak.down{color:var(--danger)}.lb-streak.flat{color:var(--text-faint)}
+
+/* Classement dans la colonne latérale de l'Historique (desktop 2 colonnes) :
+   trop étroit pour 7 colonnes → on masque « Forme » et on resserre les pistes.
+   L'accueil (#home-lb, pleine largeur) garde les 7 colonnes. */
+@media(min-width:1001px){
+  #lboard .lb-head,
+  #lboard .lb-row{grid-template-columns:26px minmax(0,1fr) 96px 38px 48px 52px;gap:8px;padding:10px 12px}
+  #lboard .lb-strk,
+  #lboard .lb-head > div:nth-child(7){display:none}
+}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:1rem}
 .modal-overlay.open{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius-lg);padding:1.75rem;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:slideUp .2s ease;border:1px solid var(--border-strong)}
