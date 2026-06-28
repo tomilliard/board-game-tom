@@ -247,6 +247,11 @@ const DURATION_LABELS = {
 
 const DURATION_MULT = { court: 1, moyen: 1.5, long: 2 };
 
+// Durée saisie À CHAQUE PARTIE (4 paliers) → multiplicateur des points de base.
+// Barème « marqué » : plus la partie est longue, plus elle rapporte.
+const MATCH_DURATION_MULT   = { lt30: 1, lt60: 1.5, lt120: 2.5, gt120: 4 };
+const MATCH_DURATION_LABELS = { lt30: '< 30 min', lt60: '< 1h', lt120: '< 2h', gt120: '> 2h' };
+
 const RANKS = (() => {
   const DIVS = [
     { name:'Bois',       key:'bois',       color:'#8B6914', start:0,    end:49,   count:5 },
@@ -427,13 +432,17 @@ const durationMult = (gameId) => {
   return g ? (DURATION_MULT[g.duration] || 1) : 1;
 };
 
-const calcPoints = (rank, totalPlayers, gameId) => {
+const calcPoints = (rank, totalPlayers, gameId, mDur) => {
   let base;
   if      (rank === 1) base = 10 + (totalPlayers - 1) * 3;
   else if (rank === 2) base = 6 + Math.max(0, (totalPlayers - 2) * 2);
   else if (rank === 3) base = 3 + Math.max(0, totalPlayers - 3);
   else                 base = 1;
-  return Math.round(base * durationMult(gameId));
+  // Durée de la PARTIE si renseignée, sinon repli sur la durée du JEU (anciennes parties).
+  const mult = (mDur != null && MATCH_DURATION_MULT[mDur] != null)
+    ? MATCH_DURATION_MULT[mDur]
+    : durationMult(gameId);
+  return Math.round(base * mult);
 };
 
 const calcLoss = (pts, placement, totalPlayers) => {
@@ -3545,6 +3554,97 @@ const openClubRecords = () => {
   openModal('modal-records');
 };
 
+// ─── Trophées de fin de saison (superlatifs auto) ───────────
+// Décerne des récompenses fun à partir des parties de la saison en cours.
+const computeSeasonTrophies = () => {
+  const ms = seasonMatches();
+  const stat = {};
+  const pts = {}; players.forEach((p) => { pts[p.id] = p.points || 0; });
+  const chrono = [...ms].sort((a, b) => {
+    const da = String(a.date || ''), db = String(b.date || '');
+    if (da !== db) return da < db ? -1 : 1;
+    return (a.id || 0) - (b.id || 0);
+  });
+  chrono.forEach((m) => {
+    const ids = [...new Set((m.players || []).map((pp) => pp.id))].filter((id) => players.find((p) => p.id === id));
+    const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+    ids.forEach((id) => {
+      const s = stat[id] || (stat[id] = { played: 0, won: 0, games: new Set(), upsets: 0, cur: 0, best: 0 });
+      s.played += 1; s.games.add(m.game_id);
+      if (winnerIds.includes(id)) {
+        s.won += 1; s.cur += 1; if (s.cur > s.best) s.best = s.cur;
+        if (ids.some((o) => o !== id && (pts[o] || 0) > (pts[id] || 0))) s.upsets += 1;
+      } else { s.cur = 0; }
+    });
+  });
+  return Object.entries(stat).map(([id, s]) => {
+    const player = players.find((x) => x.id === parseInt(id));
+    return (player && player.name) ? {
+      player, played: s.played, won: s.won, games: s.games.size,
+      upsets: s.upsets, best: s.best, wilson: wilsonScore(s.won, s.played),
+    } : null;
+  }).filter(Boolean);
+};
+
+const computeTrophyList = () => {
+  const rows = computeSeasonTrophies();
+  const topBy = (key, min, fmt) => {
+    const e = rows.filter((r) => r.played >= (min || 1) && r[key] > 0);
+    if (!e.length) return null;
+    const t = [...e].sort((a, b) => b[key] - a[key])[0];
+    return { player: t.player, val: fmt(t) };
+  };
+  const champ = [...players].filter((p) => (p.points || 0) > 0).sort((a, b) => (b.points || 0) - (a.points || 0))[0];
+  const sniper = (() => {
+    const e = rows.filter((r) => r.played >= 3);
+    if (!e.length) return null;
+    const t = [...e].sort((a, b) => b.wilson - a.wilson)[0];
+    return { player: t.player, val: Math.round(t.won / t.played * 100) + '%' };
+  })();
+  return [
+    { icon: '👑', title: 'Champion·ne',      desc: 'En tête aux points',              res: champ ? { player: champ, val: (champ.points || 0) + ' pts' } : null },
+    { icon: '🎯', title: 'Sniper',           desc: 'Meilleur taux de victoire (≥3 parties)', res: sniper },
+    { icon: '🦈', title: 'Machine à gagner', desc: 'Le plus de victoires',            res: topBy('won', 1, (t) => t.won + ' V') },
+    { icon: '🎲', title: 'Pilier du club',   desc: 'Le plus de parties jouées',       res: topBy('played', 1, (t) => t.played + ' parties') },
+    { icon: '🎰', title: 'Explorateur',      desc: 'Le plus de jeux différents',      res: topBy('games', 1, (t) => t.games + ' jeux') },
+    { icon: '⚔️', title: 'Tombeur de géants', desc: 'Victoires contre un mieux classé', res: topBy('upsets', 1, (t) => t.upsets + (t.upsets > 1 ? ' exploits' : ' exploit')) },
+    { icon: '🔥', title: 'Série de feu',     desc: 'Plus longue série de victoires',  res: topBy('best', 1, (t) => t.best + ' d\'affilée') },
+  ];
+};
+
+const openSeasonTrophies = () => {
+  const el = document.getElementById('trophies-content');
+  if (!el) return;
+  if (!players.length || !seasonMatches().length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text-faint);text-align:center;padding:1.5rem">Pas encore assez de parties cette saison pour décerner des trophées.</p>';
+    openModal('modal-trophies'); return;
+  }
+  const av = (p, c) => `<span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;
+      width:30px;height:30px;border-radius:50%;background:${c}22;color:${c};font-size:11px;font-weight:700;flex-shrink:0">${playerAvatarInner(p, c)}</span>`;
+  el.innerHTML = computeTrophyList().map((t) => {
+    const c = t.res && t.res.player.color ? t.res.player.color : '#4ade80';
+    const winner = t.res
+      ? `<div style="display:flex;align-items:center;gap:9px;flex-shrink:0">
+           ${av(t.res.player, c)}
+           <div style="text-align:right">
+             <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis">${esc(t.res.player.name)}</div>
+             <div style="font-size:12px;font-weight:700;color:var(--accent)">${t.res.val}</div>
+           </div>
+         </div>`
+      : '<span style="color:var(--text-faint);font-size:13px;flex-shrink:0">—</span>';
+    return `<div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border);
+                 border-radius:12px;padding:11px 13px;margin-bottom:8px">
+        <div style="font-size:26px;width:34px;text-align:center;flex-shrink:0">${t.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${t.title}</div>
+          <div style="font-size:11px;color:var(--text-faint)">${t.desc}</div>
+        </div>
+        ${winner}
+      </div>`;
+  }).join('');
+  openModal('modal-trophies');
+};
+
 // ─── Récap de saison partageable (image générée sur canvas) ──
 const _recapRoundRect = (ctx, x, y, w, h, r) => {
   ctx.beginPath();
@@ -3759,6 +3859,169 @@ const shareRecap = async () => {
 };
 
 // ─── Fil d'actu du club ──────────────────────────────────────
+// ─── Carte de joueur partageable (image générée sur canvas) ──
+// Plus grand rival = adversaire le plus souvent affronté ; on note le « duel
+// direct » (qui finit devant l'autre) sur ces confrontations.
+const playerTopRival = (pid) => {
+  const tally = {};
+  matches.forEach((m) => {
+    const ids = [...new Set((m.players || []).map((pp) => pp.id))].filter((id) => players.find((p) => p.id === id));
+    if (!ids.includes(pid) || ids.length < 2) return;
+    const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+    const pls = placements(ids, winnerIds, m.scores || {});
+    ids.forEach((oid) => {
+      if (oid === pid) return;
+      const e = tally[oid] || (tally[oid] = { me: 0, opp: 0, total: 0 });
+      e.total += 1;
+      const a = pls[pid], b = pls[oid];
+      if (a != null && b != null) { if (a < b) e.me += 1; else if (b < a) e.opp += 1; }
+    });
+  });
+  let best = null;
+  Object.entries(tally).forEach(([oid, e]) => {
+    const decisive = e.me + e.opp;
+    if (!best || e.total > best.total || (e.total === best.total && decisive > best.decisive)) {
+      best = { oid: parseInt(oid), me: e.me, opp: e.opp, total: e.total, decisive };
+    }
+  });
+  return best;
+};
+
+const _saveCanvasPng = (canvasId, filename) => {
+  const c = document.getElementById(canvasId); if (!c) return;
+  const a = document.createElement('a'); a.download = filename; a.href = c.toDataURL('image/png'); a.click();
+};
+const _shareCanvasPng = async (canvasId, fname, text) => {
+  const c = document.getElementById(canvasId); if (!c) return;
+  try {
+    const blob = await new Promise((res) => c.toBlob(res, 'image/png'));
+    const file = new File([blob], fname, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: text, text });
+    else _saveCanvasPng(canvasId, fname);
+  } catch (e) { /* annulé */ }
+};
+
+const drawPlayerCard = async (canvas, pid) => {
+  const W = 1080, H = 1350;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const p = players.find((x) => x.id === pid);
+  if (!p) return;
+  const rk    = displayRank(p);
+  const rkc   = rk.color || '#4ade80';
+  const s     = playerStats(pid);
+  const rate  = s.played > 0 ? Math.round(s.won / s.played * 100) : 0;
+  const fav   = bestGame(pid);
+  const rival = playerTopRival(pid);
+  const rivalP = rival ? players.find((x) => x.id === rival.oid) : null;
+
+  const loadImg = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  const bgSrc  = (getRankAssets(rk.key) || {}).banner || (fav ? gameBgSrc({ name: fav.name }) : null);
+  const avDef  = AVATARS.find((a) => a.id === (p.avatar || 1));
+  const embSrc = RANK_EMBLEMS[rk.baseKey || rk.key];
+  const [bgImg, avImg, embImg] = await Promise.all([
+    bgSrc ? loadImg(bgSrc) : Promise.resolve(null),
+    avDef ? loadImg(avDef.src) : Promise.resolve(null),
+    embSrc ? loadImg(embSrc) : Promise.resolve(null),
+  ]);
+
+  ctx.fillStyle = '#0a0d16'; ctx.fillRect(0, 0, W, H);
+  if (bgImg) {
+    const ir = bgImg.width / bgImg.height, cr = W / H;
+    let dw, dh, dx, dy;
+    if (ir > cr) { dh = H; dw = H * ir; dx = (W - dw) / 2; dy = 0; }
+    else { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2; }
+    ctx.drawImage(bgImg, dx, dy, dw, dh);
+  } else {
+    const fbg = ctx.createLinearGradient(0, 0, W, H);
+    fbg.addColorStop(0, rkc + '33'); fbg.addColorStop(1, '#0a0d16');
+    ctx.fillStyle = fbg; ctx.fillRect(0, 0, W, H);
+  }
+  const scrim = ctx.createLinearGradient(0, 0, 0, H);
+  scrim.addColorStop(0, 'rgba(8,10,18,0.72)');
+  scrim.addColorStop(0.4, 'rgba(8,10,18,0.55)');
+  scrim.addColorStop(1, 'rgba(8,10,18,0.95)');
+  ctx.fillStyle = scrim; ctx.fillRect(0, 0, W, H);
+
+  const trunc = (t, maxW) => { t = String(t); if (ctx.measureText(t).width <= maxW) return t; while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1); return t + '…'; };
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#c9d2e0'; ctx.font = '600 28px Inter, sans-serif';
+  ctx.fillText('🎲 BOARD GAME TOM', W / 2, 78);
+  ctx.fillStyle = rkc; ctx.font = '700 24px Inter, sans-serif';
+  ctx.fillText('CARTE DE JOUEUR', W / 2, 120);
+
+  const cx = W / 2, cy = 358, r = 138;
+  ctx.beginPath(); ctx.arc(cx, cy, r + 18, 0, Math.PI * 2); ctx.fillStyle = rkc + '22'; ctx.fill();
+  _recapAvatar(ctx, avImg, p, cx, cy, r, rkc, 9);
+  if (embImg) {
+    const ex = cx + r * 0.64, ey = cy + r * 0.64, es = 80;
+    ctx.beginPath(); ctx.arc(ex, ey, es / 2 + 7, 0, Math.PI * 2); ctx.fillStyle = 'rgba(10,13,22,0.88)'; ctx.fill();
+    ctx.drawImage(embImg, ex - es / 2, ey - es / 2, es, es);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff'; ctx.font = '800 60px Inter, sans-serif';
+  ctx.fillText(trunc(p.name, W - 160), cx, cy + r + 96);
+  ctx.fillStyle = rkc; ctx.font = '600 30px Inter, sans-serif';
+  ctx.fillText(`${rk.name} · ${p.points || 0} pts`, cx, cy + r + 144);
+
+  const tiles = [['Parties', s.played], ['Victoires', s.won], ['Défaites', s.lost], ['Winrate', rate + '%']];
+  const tY = 712, tH = 120, gap = 16, tW = (W - 140 - gap * 3) / 4;
+  tiles.forEach(([lbl, val], i) => {
+    const tx = 70 + i * (tW + gap);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    _recapRoundRect(ctx, tx, tY, tW, tH, 16); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; _recapRoundRect(ctx, tx, tY, tW, tH, 16); ctx.stroke();
+    ctx.fillStyle = i === 1 ? '#4ade80' : i === 0 ? '#fbbf24' : '#eef2f8';
+    ctx.font = '800 40px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(String(val), tx + tW / 2, tY + 58);
+    ctx.fillStyle = '#9aa3b2'; ctx.font = '400 20px Inter, sans-serif';
+    ctx.fillText(lbl, tx + tW / 2, tY + 92);
+  });
+
+  const panel = (y, icon, label, main, sub, accent) => {
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    _recapRoundRect(ctx, 70, y, W - 140, 116, 18); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; _recapRoundRect(ctx, 70, y, W - 140, 116, 18); ctx.stroke();
+    ctx.textAlign = 'left'; ctx.font = '40px serif'; ctx.fillText(icon, 102, y + 72);
+    ctx.fillStyle = '#9aa3b2'; ctx.font = '700 20px Inter, sans-serif'; ctx.fillText(label, 164, y + 46);
+    ctx.fillStyle = '#eef2f8'; ctx.font = '600 30px Inter, sans-serif'; ctx.fillText(trunc(main, W - 440), 164, y + 84);
+    if (sub) { ctx.textAlign = 'right'; ctx.fillStyle = accent || '#aeb8c6'; ctx.font = '800 30px Inter, sans-serif'; ctx.fillText(sub, W - 102, y + 72); }
+  };
+  panel(880, '🎯', 'MEILLEUR JEU', fav ? fav.name : '—', fav ? `${fav.rate}%` : '', '#4ade80');
+  panel(1016, '⚔️', 'PLUS GRAND RIVAL', rivalP ? rivalP.name : '—', rival ? `${rival.me}–${rival.opp}` : '', rkc);
+
+  ctx.textAlign = 'center'; ctx.fillStyle = '#6b7488'; ctx.font = '400 23px Inter, sans-serif';
+  const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  ctx.fillText(`boardgametom.com · ${today}`, W / 2, H - 44);
+};
+
+let _pcPid = null;
+const openPlayerCard = async (pid) => {
+  _pcPid = pid;
+  openModal('modal-playercard');
+  const loading = document.getElementById('pc-loading');
+  const canvas  = document.getElementById('pc-canvas');
+  const actions = document.getElementById('pc-actions');
+  if (loading) { loading.style.display = 'block'; loading.textContent = 'Génération de la carte…'; }
+  if (canvas)  canvas.style.display = 'none';
+  if (actions) actions.style.display = 'none';
+  try {
+    await drawPlayerCard(canvas, pid);
+    if (loading) loading.style.display = 'none';
+    if (canvas)  canvas.style.display = 'block';
+    if (actions) actions.style.display = 'flex';
+    const sb = document.getElementById('pc-share-btn');
+    if (sb && !(navigator.share && navigator.canShare)) sb.style.display = 'none';
+  } catch (e) {
+    if (loading) { loading.style.display = 'block'; loading.textContent = 'Impossible de générer la carte.'; }
+  }
+};
+const downloadPlayerCard = () => { const p = players.find((x) => x.id === _pcPid); _saveCanvasPng('pc-canvas', `carte-${p ? p.name.replace(/\s+/g, '-').toLowerCase() : 'joueur'}.png`); };
+const sharePlayerCard  = () => { const p = players.find((x) => x.id === _pcPid); _shareCanvasPng('pc-canvas', 'carte-joueur.png', `${p ? p.name : 'Joueur'} — Board Game Tom`); };
+
 const openActivityFeed = () => {
   const el = document.getElementById('feed-content');
   const recent = [...matches].sort((a, b) => {
@@ -4082,6 +4345,14 @@ const renderHistoryStats = () => {
     </div>`;
 };
 
+// Date + durée de la partie pour l'en-tête des cartes d'historique.
+const histDateLabel = (m) => {
+  const parts = [];
+  if (m.date) parts.push(fmtDate(m.date));
+  if (m.duration && MATCH_DURATION_LABELS[m.duration]) parts.push(MATCH_DURATION_LABELS[m.duration]);
+  return parts.length ? `<div class="hist-date">${parts.join(' · ')}</div>` : '';
+};
+
 const buildMatchCard = (m) => {
   const g    = games.find((x) => x.id === m.game_id);
   const canDel = isAdmin || currentUser;
@@ -4121,7 +4392,7 @@ const buildMatchCard = (m) => {
           const pl   = players.find((x) => x.id === pid);
           const isW  = winIds.includes(pid);
           const rank = isW ? 1 : loserPlace(losers, pid, m.scores, winIds.length);
-          const gain = calcPoints(rank, n, m.game_id);
+          const gain = calcPoints(rank, n, m.game_id, m.duration);
           const loss = calcLoss(pl?.points || 0, rank, n);
           const net  = gain - loss;
           const col  = net >= 0 ? 'var(--accent)' : 'var(--danger)';
@@ -4139,7 +4410,7 @@ const buildMatchCard = (m) => {
       <div class="hist-hdr">
         <div class="hist-hdr-main">
           <div class="hist-game">${g ? esc(g.name) : 'Jeu inconnu'}</div>
-          ${m.date ? `<div class="hist-date">${fmtDate(m.date)}</div>` : ''}
+          ${histDateLabel(m)}
           ${m.notes ? `<div class="hist-notes">${esc(m.notes)}</div>` : ''}
         </div>
         ${delBtn}
@@ -4159,7 +4430,7 @@ const buildMatchCard = (m) => {
       ${cover}
       <div class="hist-hdr-main">
         <div class="hist-game">${g ? esc(g.name) : 'Jeu inconnu'}</div>
-        ${m.date ? `<div class="hist-date">${fmtDate(m.date)}</div>` : ''}
+        ${histDateLabel(m)}
         ${m.notes ? `<div class="hist-notes">${esc(m.notes)}</div>` : ''}
       </div>
       ${delBtn}
@@ -4423,7 +4694,18 @@ const openMatchModal = () => {
       ).join('')
     : '<p style="font-size:13px;color:var(--text-faint)">Aucun joueur inscrit.</p>';
   document.getElementById('fm-notes').value = '';
+  document.getElementById('fm-duration').value = '';
+  document.querySelectorAll('#fm-duration-seg .dur-opt').forEach((b) => b.classList.remove('active'));
   openModal('modal-match');
+};
+
+// Sélection de la durée de la partie (segmented control).
+const togD = (btn) => {
+  const seg = btn.closest('.dur-seg');
+  if (!seg) return;
+  seg.querySelectorAll('.dur-opt').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('fm-duration').value = btn.dataset.dur;
 };
 
 const togW = (btn) => {
@@ -4436,6 +4718,8 @@ const saveMatch = async () => {
   if (!currentUser) { showAuthWall(); return; }
   const gid  = parseInt(document.getElementById('fm-game').value);
   if (!gid) { document.getElementById('fm-game-search').focus(); return; }
+  const dur  = document.getElementById('fm-duration').value;
+  if (!dur) { toast('Indiquez la durée de la partie'); return; }
   const cbs  = [...document.querySelectorAll('.mcb:checked')];
   if (!cbs.length) { toast('Sélectionnez au moins un joueur'); return; }
   const pids = cbs.map((c) => parseInt(c.value));
@@ -4463,6 +4747,7 @@ const saveMatch = async () => {
   const mdata = {
     game_id: gid,
     date:    document.getElementById('fm-date').value,
+    duration: dur,
     players: pids.map((id) => ({ id })),
     winners: finW,
     scores,
@@ -4480,7 +4765,7 @@ const saveMatch = async () => {
     if (!others.length) {
       // Aucun validateur possible → on confirme et on attribue tout de suite.
       await sb.patch('matches', { confirmed_at: new Date().toISOString() }, { id: matchId });
-      await awardPoints(matchId, finW, pids, false, gid, scores);
+      await awardPoints(matchId, finW, pids, false, gid, scores, dur);
       await loadAll();
       closeModal('modal-match');
       renderHistory();
@@ -4539,7 +4824,7 @@ const confirmMatch = async (id) => {
   try {
     await sb.patch('matches', { status: 'confirmed', confirmed_at: new Date().toISOString() }, { id });
     const pids = (m.players || []).map((pp) => pp.id);
-    await awardPoints(id, m.winners || [], pids, !!m.is_challenge, m.game_id, m.scores || {});
+    await awardPoints(id, m.winners || [], pids, !!m.is_challenge, m.game_id, m.scores || {}, m.duration);
     await loadAll();
     renderHistory();
     toast('Partie validée — points attribués ✨');
@@ -4686,7 +4971,7 @@ const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre) => {
   ids.forEach((id) => {
     const isW    = winnerIds.includes(id);
     const curPts = pre[id].pts;
-    const basePts = calcPoints(place(id), n, gameId);
+    const basePts = calcPoints(place(id), n, gameId, mDur);
     let gain = basePts;
     if (isChallenge && isW) gain += 5;
     const newStreak = isW ? pre[id].streak + 1 : 0;
@@ -4722,7 +5007,7 @@ const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre) => {
   return out;
 };
 
-const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gameId, scores) => {
+const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gameId, scores, mDur) => {
   const ids = allPlayerIds.filter((id) => players.some((x) => x.id === id));
   if (!ids.length) { await loadAll(); return; }
 
@@ -7208,7 +7493,7 @@ const drawProgressionChart = (pid, color) => {
       const losers  = sortedLosers((m.players || []).map((p) => p.id), winIds, m.scores);
       const place   = winIds.includes(pid)
         ? 1 : loserPlace(losers, pid, m.scores, winIds.length);
-      const gain    = calcPoints(place, n, m.game_id);
+      const gain    = calcPoints(place, n, m.game_id, m.duration);
       const loss    = calcLoss(pts, place, n);
       pts = Math.max(0, pts + gain - loss);
       dataPoints.push({ date: m.date.split('T')[0], v: pts });
@@ -7400,6 +7685,9 @@ const openPlayerProfile = (pid) => {
     </div>
     <button class="pp-history-btn" onclick="openPlayerHistory(${pid})">
       🎲 Voir l'historique des parties
+    </button>
+    <button class="pp-history-btn" onclick="openPlayerCard(${pid})" style="margin-top:8px">
+      📸 Carte de joueur partageable
     </button>`;
 
   openModal('modal-player-profile');
