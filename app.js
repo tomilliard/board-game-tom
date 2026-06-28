@@ -4699,13 +4699,14 @@ const openMatchModal = () => {
   openModal('modal-match');
 };
 
-// Sélection de la durée de la partie (segmented control).
+// Sélection de la durée de la partie (segmented control, réutilisable).
 const togD = (btn) => {
   const seg = btn.closest('.dur-seg');
   if (!seg) return;
   seg.querySelectorAll('.dur-opt').forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('fm-duration').value = btn.dataset.dur;
+  const inp = seg.dataset.target ? document.getElementById(seg.dataset.target) : null;
+  if (inp) inp.value = btn.dataset.dur;
 };
 
 const togW = (btn) => {
@@ -5551,6 +5552,8 @@ const openChallengeResult = (chId) => {
        </div>`
     ).join('');
   document.getElementById('cr-notes').value = '';
+  document.getElementById('cr-duration').value = '';
+  document.querySelectorAll('#cr-duration-seg .dur-opt').forEach((b) => b.classList.remove('active'));
   openModal('modal-challenge-result');
 };
 
@@ -5558,6 +5561,8 @@ const saveChallengeResult = async () => {
   if (!currentChallengeId) return;
   const ch        = challenges.find((c) => c.id === currentChallengeId);
   if (!ch) return;
+  const dur = document.getElementById('cr-duration').value;
+  if (!dur) { toastErr('Indiquez la durée de la partie.'); return; }
   const winnerIds = [...document.querySelectorAll('.cr-winner-cb:checked')].map((c) => parseInt(c.value));
   const toIds  = Array.isArray(ch.to_player_ids) && ch.to_player_ids.length ? ch.to_player_ids : [ch.to_player_id].filter(Boolean);
   const allIds = [ch.from_player_id, ...toIds];
@@ -5590,6 +5595,7 @@ const saveChallengeResult = async () => {
     const mdata = {
       game_id: ch.game_id,
       date:    new Date().toISOString().split('T')[0],
+      duration: dur,
       players: allIds.map((id) => ({ id })),
       winners: finalWinners,
       scores:  scores,
@@ -5605,7 +5611,7 @@ const saveChallengeResult = async () => {
 
     if (!others.length) {
       await sb.patch('matches', { confirmed_at: new Date().toISOString() }, { id: matchId });
-      await awardPoints(matchId, finalWinners, allIds, true, ch.game_id, scores);
+      await awardPoints(matchId, finalWinners, allIds, true, ch.game_id, scores, dur);
       await loadSocial();
       closeModal('modal-challenge-result');
       renderChallenges();
