@@ -4452,8 +4452,48 @@ const buildPendingCard = (m) => {
   const playersHtml = (m.players || []).map((pp) => {
     const pl = players.find((x) => x.id === pp.id);
     const iw = m.winners?.includes(pp.id);
-    return `<span class="pr ${iw ? 'win' : 'lose'}">${iw ? '⭐ ' : ''}${pl ? esc(pl.name) : '?'}</span>`;
+    const dot = pl
+      ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${pl.color || '#4ade80'}"></span>`
+      : '';
+    return `<span class="pr ${iw ? 'win' : 'lose'}">${iw ? '⭐ ' : ''}${dot} ${pl ? esc(pl.name) : '?'}</span>`;
   }).join('');
+
+  const scoresHtml = m.scores && Object.keys(m.scores).length
+    ? `<div class="scores-row">${(m.players || []).map((pp) => {
+        const sc = m.scores[pp.id];
+        if (sc === undefined) return '';
+        const pl = players.find((x) => x.id === pp.id);
+        const iw = m.winners?.includes(pp.id);
+        return `<span class="sc-chip ${iw ? 'top' : ''}">${pl ? esc(pl.name) : '?'}&nbsp;:&nbsp;${sc}</span>`;
+      }).join('')}</div>`
+    : '';
+
+  const notesHtml = m.notes ? `<div class="hist-notes">${esc(m.notes)}</div>` : '';
+
+  const allIds = (m.players || []).map((pp) => pp.id);
+  const winIds = m.winners || [];
+  const losers = sortedLosers(allIds, winIds, m.scores);
+  const n      = allIds.length;
+  const ptsHtml = allIds.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;padding-top:6px;
+                   border-top:1px solid var(--border)">
+        ${allIds.map((pid) => {
+          const pl   = players.find((x) => x.id === pid);
+          const isW  = winIds.includes(pid);
+          const rank = isW ? 1 : loserPlace(losers, pid, m.scores, winIds.length);
+          const gain = calcPoints(rank, n, m.game_id, m.duration);
+          const loss = calcLoss(pl?.points || 0, rank, n);
+          const net  = gain - loss;
+          const col  = net >= 0 ? 'var(--accent)' : 'var(--danger)';
+          return `<span style="font-size:11px;padding:2px 7px;border-radius:12px;
+                              background:var(--bg);border:1px solid var(--border);color:${col}">
+            ${pl ? esc(pl.name) : '?'} ${net >= 0 ? '+' : ''}${net} pts
+          </span>`;
+        }).join('')}
+       </div>`
+    : '';
+
+  const durTxt = (m.duration && MATCH_DURATION_LABELS[m.duration]) ? ` · ${MATCH_DURATION_LABELS[m.duration]}` : '';
 
   const actions = canValidate
     ? `<div style="display:flex;gap:8px;margin-top:10px">
@@ -4468,9 +4508,12 @@ const buildPendingCard = (m) => {
   return `<div class="hist-card" id="pending-${m.id}" style="border:1px solid var(--gold)">
     <div class="hist-hdr"><div>
       <div class="hist-game">${g ? esc(g.name) : 'Jeu inconnu'}</div>
-      <div class="hist-date">${m.date ? fmtDate(m.date) : ''} · par ${recorder ? esc(recorder.name) : '?'}</div>
+      <div class="hist-date">${m.date ? fmtDate(m.date) : ''}${durTxt} · par ${recorder ? esc(recorder.name) : '?'}</div>
+      ${notesHtml}
     </div></div>
     <div class="hist-players">${playersHtml}</div>
+    ${scoresHtml}
+    ${ptsHtml}
     ${actions}
   </div>`;
 };
