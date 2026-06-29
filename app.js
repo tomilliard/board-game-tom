@@ -3321,9 +3321,9 @@ const getReco = () => {
 const renderPlayers = () => {
   const cpBtn = document.getElementById('admin-create-player-btn');
   if (cpBtn) cpBtn.style.display = isAdmin ? 'flex' : 'none';
-  renderPlayerStats();
-  renderComparison();
-  renderPlayerGrid();
+  try { renderPlayerStats(); } catch (e) { console.error('renderPlayerStats', e); }
+  try { renderComparison(); }  catch (e) { console.error('renderComparison', e); }
+  try { renderPlayerGrid(); }  catch (e) { console.error('renderPlayerGrid', e); }
 };
 
 // Charge le fond d'ambiance d'une carte de jeu uniquement au premier survol
@@ -4134,7 +4134,10 @@ const renderPlayerGrid = () => {
   }
   const ordered = [...players].sort((a, b) =>
     (b.points || 0) - (a.points || 0) || (a.name || '').localeCompare(b.name || ''));
-  document.getElementById('pgrid').innerHTML = ordered.map(buildPlayerCard).join('');
+  document.getElementById('pgrid').innerHTML = ordered.map((p) => {
+    try { return buildPlayerCard(p); }
+    catch (e) { console.error('buildPlayerCard a échoué pour le joueur', p && p.id, e); return ''; }
+  }).join('');
 };
 
 const editPlayerAdmin = async (id) => {
