@@ -6402,6 +6402,7 @@ const buildCoopCard = (s) => {
   const gameName = g ? g.name : (s.game_name || 'Jeu');
   const kindLbl  = COOP_KIND_LABELS[s.kind] || COOP_KIND_LABELS.coop;
   const out      = s.outcome ? COOP_OUTCOME[s.outcome] : null;
+  const gbg      = gameBgSrc(g || { name: gameName });
   const myPid    = (players.find((p) => p.user_id === currentUser?.id) || {}).id;
   const canDel   = isAdmin || (currentUser && s.created_by === currentUser.id);
 
@@ -6430,7 +6431,9 @@ const buildCoopCard = (s) => {
       </span>`;
   }).join('');
 
-  return `<div class="hist-card" style="margin-bottom:10px">
+  return `<div class="hist-card${gbg ? ' has-gbg' : ''}" style="${gbg
+      ? `background:linear-gradient(180deg,rgba(10,15,24,.74),rgba(10,15,24,.9)),url('${gbg}') center/cover;`
+      : ''}margin-bottom:10px">
     <div class="hist-hdr"><div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="hist-game">${esc(gameName)}</span>
