@@ -6449,11 +6449,64 @@ const buildCoopCard = (s) => {
   </div>`;
 };
 
+// Stats agrégées des invités (par nom), à travers toutes les parties coop.
+const computeGuestStats = () => {
+  const map = {};
+  coopSessions.forEach((s) => {
+    (s.guests || []).forEach((g) => {
+      const name = typeof g === 'string' ? g : (g.name || '');
+      if (!name) return;
+      const key = name.toLowerCase();
+      if (!map[key]) map[key] = { name, played: 0, won: 0 };
+      map[key].played++;
+      if (typeof g === 'object' && g.won) map[key].won++;
+    });
+  });
+  return Object.values(map).sort((a, b) =>
+    b.played - a.played || b.won - a.won || a.name.localeCompare(b.name, 'fr'));
+};
+
+const renderCoopGuestBoard = () => {
+  const el = document.getElementById('coop-guestboard');
+  if (!el) return;
+  const stats = computeGuestStats();
+  if (!stats.length) { el.innerHTML = ''; return; }
+  const rows = stats.slice(0, 15).map((g, i) => {
+    const rate  = g.played ? Math.round(g.won / g.played * 100) : 0;
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `<span style="color:var(--text-faint)">${i + 1}</span>`;
+    return `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:8px 10px;text-align:center;width:34px">${medal}</td>
+      <td style="padding:8px 10px;color:var(--text);font-weight:600">👤 ${esc(g.name)}</td>
+      <td style="padding:8px 10px;text-align:center;color:var(--text-muted)">${g.played}</td>
+      <td style="padding:8px 10px;text-align:center;color:var(--accent);font-weight:600">${g.won}</td>
+      <td style="padding:8px 10px;text-align:center;color:var(--text-muted)">${rate}%</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:14px;
+                 overflow:hidden;margin-bottom:16px">
+    <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+      <h3 style="margin:0;font-size:15px;color:var(--text)">⭐ Nos invités à l'honneur</h3>
+      <p style="margin:2px 0 0;font-size:12px;color:var(--text-faint)">Les joueurs non inscrits qui passent à la table.</p>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="color:var(--text-faint);font-size:11px;text-transform:uppercase;letter-spacing:.04em">
+        <th style="padding:6px 10px"></th>
+        <th style="padding:6px 10px;text-align:left">Invité</th>
+        <th style="padding:6px 10px">Parties</th>
+        <th style="padding:6px 10px">Victoires</th>
+        <th style="padding:6px 10px">%</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+};
+
 const renderCoop = () => {
   const el = document.getElementById('coop-list');
   if (!el) return;
   const addBtn = document.getElementById('coop-add-btn');
   if (addBtn) addBtn.style.display = currentUser ? 'inline-flex' : 'none';
+  renderCoopGuestBoard();
   if (!coopSessions.length) {
     el.innerHTML = `<div class="empty"><div class="empty-icon">🤝</div>
       <p>Aucune partie coopérative enregistrée.</p>
