@@ -396,6 +396,22 @@ const playableGames = () => {
   return games.filter((g) => (isClubGame(g) && g.status === 'own') || mine.has(g.id));
 };
 
+// Dans le formulaire de partie : les collections des PARTICIPANTS cochés (+ la
+// mienne) débloquent leurs jeux. Quand Tom indique qu'il joue avec Joshua, les
+// jeux de Joshua deviennent sélectionnables.
+const matchOwnerUids = () => {
+  const uids = new Set();
+  if (myUid()) uids.add(myUid());
+  document.querySelectorAll('.mcb:checked').forEach((c) => {
+    const pl = players.find((p) => p.id === parseInt(c.value));
+    if (pl && pl.user_id) uids.add(pl.user_id);
+  });
+  return uids;
+};
+const gameAvailableForMatch = (g, uids) =>
+  isClubGame(g) ? g.status === 'own'
+                : gameOwners.some((o) => o.game_id === g.id && uids.has(o.user_id));
+
 const ini = (name) =>
   (name || '?').trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2) || '?';
 
@@ -4735,7 +4751,7 @@ const openMatchModal = () => {
     ? players.map((p) =>
         `<div class="pcheck-row">
            <label>
-             <input type="checkbox" value="${p.id}" class="mcb">
+             <input type="checkbox" value="${p.id}" class="mcb" onchange="onMatchPlayersChange()">
              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
              ${esc(p.name)}
            </label>
@@ -4954,8 +4970,9 @@ const filterGameSearch = () => {
   const q  = document.getElementById('fm-game-search')?.value.toLowerCase() || '';
   const dd = document.getElementById('fm-game-dropdown');
   if (!dd) return;
-  const list = playableGames()
-    .filter((g) => (isClubGame(g) ? g.status === 'own' : iOwnGame(g.id)) && (!q || g.name.toLowerCase().includes(q)))
+  const uids = matchOwnerUids();
+  const list = games
+    .filter((g) => gameAvailableForMatch(g, uids) && (!q || g.name.toLowerCase().includes(q)))
     .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   if (!list.length) {
     dd.innerHTML = '<div style="padding:10px 12px;font-size:13px;color:var(--text-faint)">Aucun jeu trouvé</div>';
@@ -4963,8 +4980,15 @@ const filterGameSearch = () => {
     return;
   }
   dd.innerHTML = list.map((g) => {
-    const mine = iOwnGame(g.id);
-    const tag  = mine ? ' <span style="font-size:11px;color:var(--accent)">· ma collection</span>' : '';
+    let tag = '';
+    if (iOwnGame(g.id)) {
+      tag = ' <span style="font-size:11px;color:var(--accent)">· ma collection</span>';
+    } else if (!isClubGame(g)) {
+      const owner = [...document.querySelectorAll('.mcb:checked')]
+        .map((c) => players.find((p) => p.id === parseInt(c.value)))
+        .find((pl) => pl && pl.user_id && gameOwners.some((o) => o.game_id === g.id && o.user_id === pl.user_id));
+      if (owner) tag = ` <span style="font-size:11px;color:var(--gold)">· collection de ${esc(owner.name)}</span>`;
+    }
     return `<div onclick="selectMatchGame(${g.id},'${esc(g.name).replace(/'/g, "\\'")}')"
           style="padding:9px 12px;font-size:14px;color:var(--text);cursor:pointer;
                  border-bottom:1px solid var(--border);transition:background .1s"
@@ -4977,6 +5001,21 @@ const filterGameSearch = () => {
 };
 
 const showGameDropdown = () => filterGameSearch();
+
+// Quand on coche/décoche un participant, les jeux dispo changent (collections).
+const onMatchPlayersChange = () => {
+  const gid = parseInt(document.getElementById('fm-game').value);
+  if (gid) {
+    const g = games.find((x) => x.id === gid);
+    if (g && !gameAvailableForMatch(g, matchOwnerUids())) {
+      document.getElementById('fm-game').value = '';
+      document.getElementById('fm-game-search').value = '';
+      toast('Le jeu choisi n\'est plus disponible (participant retiré)');
+    }
+  }
+  const dd = document.getElementById('fm-game-dropdown');
+  if (dd && dd.style.display === 'block') filterGameSearch();
+};
 
 const selectMatchGame = (id, name) => {
   document.getElementById('fm-game').value       = id;
