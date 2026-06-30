@@ -413,6 +413,36 @@ const gameAvailableForMatch = (g, uids) =>
   isClubGame(g) ? g.status === 'own'
                 : gameOwners.some((o) => o.game_id === g.id && uids.has(o.user_id));
 
+// ─── Coop → exploitable dans stats/succès/historique (JAMAIS dans les points) ───
+// Gagnants d'une partie coop (joueurs inscrits) :
+//  • si des gagnants sont cochés (jeu compétitif type Skull King) → ceux-là ;
+//  • sinon si résultat collectif « Gagné » → tout le monde gagne ;
+//  • sinon → aucun gagnant (partie en cours / sans résultat).
+const coopWinners = (s) => {
+  const marked = (s.players || []).filter((pp) => pp.won).map((pp) => pp.id);
+  if (marked.length) return marked;
+  if (s.outcome === 'win') return (s.players || []).map((pp) => pp.id);
+  return [];
+};
+const coopScores = (s) => {
+  const o = {};
+  (s.players || []).forEach((pp) => { if (pp.score != null) o[pp.id] = pp.score; });
+  return o;
+};
+// Parties coop sous forme d'objets « match » (pour l'historique et les succès).
+const coopAsMatches = () => coopSessions.map((s) => ({
+  id:        'coop-' + s.id,
+  coop_id:   s.id,
+  is_coop:   true,
+  game_id:   s.game_id,
+  game_name: s.game_name,
+  date:      s.date,
+  players:   (s.players || []).map((pp) => ({ id: pp.id })),
+  winners:   coopWinners(s),
+  scores:    coopScores(s),
+  notes:     s.notes,
+}));
+
 const ini = (name) =>
   (name || '?').trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2) || '?';
 
@@ -702,10 +732,19 @@ const playerStats = (pid) => {
   const won     = matches.filter((m) => m.winners?.includes(pid));
   const scored  = played.filter((m) => m.scores?.[pid] !== undefined);
   const scores  = scored.map((m) => Number(m.scores[pid]));
+  // Coop : compte dans parties / victoires / défaites, mais JAMAIS dans les points.
+  let coopPlayed = 0, coopWon = 0, coopLost = 0;
+  coopSessions.forEach((s) => {
+    if (!(s.players || []).some((pp) => pp.id === pid)) return;
+    coopPlayed++;
+    const w = coopWinners(s);
+    if (w.includes(pid)) coopWon++;
+    else if (w.length > 0 || s.outcome === 'loss') coopLost++;   // sinon : jouée, sans V/D
+  });
   return {
-    played:     played.length,
-    won:        won.length,
-    lost:       played.length - won.length,
+    played:     played.length + coopPlayed,
+    won:        won.length + coopWon,
+    lost:       (played.length - won.length) + coopLost,
     avgScore:   scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10 : null,
     bestScore:  scores.length ? Math.max(...scores) : null,
   };
@@ -4261,7 +4300,7 @@ const applyHistFilters = (list) => {
     if (q) {
       const g = games.find((x) => x.id === m.game_id);
       const hay = [
-        g ? g.name : '',
+        g ? g.name : (m.game_name || ''),
         m.notes || '',
         ...(m.players || []).map((pp) => { const pl = players.find((x) => x.id === pp.id); return pl ? pl.name : ''; }),
       ].join(' ').toLowerCase();
@@ -4562,9 +4601,13 @@ const renderMatchList = () => {
        </div>`
     : '';
 
-  const mine = myPlayer
-    ? matches.filter((m) => (m.players || []).some((pp) => pp.id === myPlayer.id))
+  const myCoop = myPlayer
+    ? coopAsMatches().filter((m) => (m.players || []).some((pp) => pp.id === myPlayer.id))
     : [];
+  const mine = (myPlayer
+    ? matches.filter((m) => (m.players || []).some((pp) => pp.id === myPlayer.id))
+    : []).concat(myCoop)
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   const filtered = applyHistFilters(mine);
 
   const countEl = document.getElementById('hist-count');
@@ -4575,7 +4618,9 @@ const renderMatchList = () => {
   }
 
   const confirmedHtml = filtered.length
-    ? filtered.map(buildMatchCard).join('')
+    ? filtered.map((m) => m.is_coop
+        ? buildCoopCard(coopSessions.find((s) => s.id === m.coop_id) || {})
+        : buildMatchCard(m)).join('')
     : (histFiltersActive()
         ? '<div class="empty"><div class="empty-icon">🔍</div><p>Aucune partie ne correspond aux filtres.</p></div>'
         : (pendingHtml ? '' : '<div class="empty"><div class="empty-icon">🎮</div><p>Tu n\'as encore aucune partie enregistrée.</p></div>'));
@@ -6392,7 +6437,7 @@ const deleteCoopSession = async (id) => {
   try {
     await sb.del('coop_sessions', { id });
     await loadAll();
-    renderCoop();
+    renderCurrentPage();   // rafraîchit la page active (coop OU historique)
     toast('Partie supprimée');
   } catch (e) { toastErr('Erreur : ' + e.message); }
 };
@@ -6790,7 +6835,8 @@ const ACHIEVEMENTS = [
 ];
 
 const computeAchievementStats = (pid) => {
-  const playerMatches = matches.filter((m) => m.players?.some((p) => p.id === pid));
+  // Les parties coop comptent pour les succès (mais jamais pour les points).
+  const playerMatches = [...matches, ...coopAsMatches()].filter((m) => m.players?.some((p) => p.id === pid));
   const won           = playerMatches.filter((m) => m.winners?.includes(pid));
 
   // Parties de Dune Imperium Insurrection (résolu par nom, repli id 7)
