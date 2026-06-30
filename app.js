@@ -317,6 +317,7 @@ let games        = [];
 let gameOwners   = [];   // [{game_id, user_id}] — possession (collections perso)
 let players      = [];
 let matches      = [];
+let coopSessions = [];   // parties coopératives (table séparée, aucun point)
 let pendingMatches = [];   // parties enregistrées en attente de validation
 let ratingsCache = {};   // { gameId: { sum, count, myScore } }
 let comments     = {};   // { gameId: Comment[] }
@@ -1029,6 +1030,7 @@ async function loadAll() {
     safeGet('seasons', { order: 'number.desc' }).catch(() => []),
     safeGet('game_owners', {}).catch(() => []),
   ]);
+  coopSessions = await safeGet('coop_sessions', { order: 'date.desc' }).catch(() => []);
   games   = g;
   players = p;
   gameOwners = go || [];
@@ -1883,6 +1885,7 @@ const showPage = (page, el) => {
   else if (page === 'history') renderHistory();
   else if (page === 'social')  loadSocial().then(() => { renderCurrentSocialTab(); loadChat(); });
   else if (page === 'events')  loadSocial().then(renderEvents);
+  else if (page === 'coop')    renderCoop();
 };
 
 const renderCurrentPage = () => {
@@ -1892,10 +1895,11 @@ const renderCurrentPage = () => {
   else if (curPage === 'history') renderHistory();
   else if (curPage === 'social')  renderCurrentSocialTab();
   else if (curPage === 'events')  renderEvents();
+  else if (curPage === 'coop')    renderCoop();
 };
 
 const syncMobileNav = (page) => {
-  ['classement', 'games', 'players', 'history', 'social', 'events'].forEach((p) => {
+  ['classement', 'games', 'players', 'history', 'social', 'events', 'coop'].forEach((p) => {
     document.getElementById(`mnav-${p}`)?.classList.toggle('active', p === page);
   });
 };
@@ -1903,7 +1907,7 @@ const syncMobileNav = (page) => {
 const updateAddBtn = () => {
   const btn = document.getElementById('main-add-btn');
   if (!btn) return;
-  if (curPage === 'social' || curPage === 'events' || curPage === 'players' || curPage === 'classement') {
+  if (curPage === 'social' || curPage === 'events' || curPage === 'players' || curPage === 'classement' || curPage === 'coop') {
     btn.style.display = 'none';
   } else if (curPage === 'games') {
     btn.style.display = isAdmin ? 'flex' : 'none';
@@ -1936,7 +1940,7 @@ const updateFab = () => {
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
         12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
   } else {
-    fab.title = curPage === 'players' ? 'Ajouter un joueur' : 'Enregistrer une partie';
+    fab.title = curPage === 'players' ? 'Ajouter un joueur' : curPage === 'coop' ? 'Nouvelle partie coop' : 'Enregistrer une partie';
     fab.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
       stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
       <line x1="12" y1="5" x2="12" y2="19"/>
@@ -1946,6 +1950,7 @@ const updateFab = () => {
 
 const handleFab = () => {
   if (curPage === 'games')   { isAdmin ? openGameModal() : openRecoModal(); return; }
+  if (curPage === 'coop')    { openCoopModal(); return; }
   if (!currentUser)          { showAuthWall(); return; }
   if (curPage === 'players') openProfileEdit();
   else                       openMatchModal();
@@ -4745,14 +4750,14 @@ const openMatchModal = () => {
   openModal('modal-match');
 };
 
-// Sélection de la durée de la partie (segmented control, réutilisable).
+// Sélection dans un segmented control (durée, type coop, résultat…).
 const togD = (btn) => {
   const seg = btn.closest('.dur-seg');
   if (!seg) return;
   seg.querySelectorAll('.dur-opt').forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
   const inp = seg.dataset.target ? document.getElementById(seg.dataset.target) : null;
-  if (inp) inp.value = btn.dataset.dur;
+  if (inp) inp.value = (btn.dataset.val !== undefined ? btn.dataset.val : btn.dataset.dur) || '';
 };
 
 const togW = (btn) => {
@@ -6194,6 +6199,184 @@ const sendPush = async (userIds, title, body, url, tag) => {
 // ═══════════════════════════════════════════════════════════════
 // EVENTS PAGE
 // ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// COOP — parties coopératives / campagnes (table séparée, AUCUN point)
+// ═══════════════════════════════════════════════════════════════
+const COOP_KIND_LABELS = { coop: '🤝 Coop', campagne: '📖 Campagne', autre: '🎲 Autre' };
+const COOP_OUTCOME = {
+  win:     { label: 'Gagné',   color: 'var(--accent)' },
+  loss:    { label: 'Perdu',   color: 'var(--danger)' },
+  ongoing: { label: 'En cours', color: 'var(--gold)' },
+};
+
+let _coopGuests = [];
+
+const renderCoopGuests = () => {
+  const el = document.getElementById('coop-guests-list');
+  if (!el) return;
+  el.innerHTML = _coopGuests.map((name, i) =>
+    `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);
+                  border:1px solid var(--border);border-radius:999px;padding:4px 6px 4px 10px;font-size:12px;color:var(--text)">
+       👤 ${esc(name)}
+       <button type="button" onclick="removeCoopGuest(${i})" style="border:none;background:none;color:var(--text-faint);
+               cursor:pointer;font-size:13px;line-height:1;padding:0 2px">✕</button>
+     </span>`).join('');
+};
+
+const addCoopGuest = () => {
+  const inp = document.getElementById('coop-guest-input');
+  if (!inp) return;
+  const name = (inp.value || '').trim();
+  if (!name) return;
+  if (_coopGuests.length >= 16) { toast('Maximum 16 invités'); return; }
+  if (_coopGuests.some((g) => g.toLowerCase() === name.toLowerCase())) { inp.value = ''; return; }
+  _coopGuests.push(name);
+  inp.value = '';
+  renderCoopGuests();
+  inp.focus();
+};
+
+const removeCoopGuest = (i) => { _coopGuests.splice(i, 1); renderCoopGuests(); };
+
+const updateCoopCampaignVis = () => {
+  const kind = document.getElementById('coop-kind')?.value;
+  const row  = document.getElementById('coop-campaign-row');
+  if (row) row.style.display = kind === 'campagne' ? '' : 'none';
+};
+
+const openCoopModal = () => {
+  if (!currentUser) { showAuthWall(); return; }
+  // Liste des jeux du catalogue pour l'autocomplétion (jeu libre autorisé aussi).
+  const dl = document.getElementById('coop-game-options');
+  if (dl) dl.innerHTML = clubGames().map((g) => `<option value="${esc(g.name)}">`).join('');
+  document.getElementById('coop-game').value = '';
+  document.getElementById('coop-campaign').value = '';
+  document.getElementById('coop-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('coop-notes').value = '';
+
+  // Type → coop par défaut
+  document.getElementById('coop-kind').value = 'coop';
+  document.querySelectorAll('[data-target="coop-kind"] .dur-opt').forEach((b) =>
+    b.classList.toggle('active', b.dataset.val === 'coop'));
+  updateCoopCampaignVis();
+
+  // Résultat → — par défaut
+  document.getElementById('coop-outcome').value = '';
+  document.querySelectorAll('[data-target="coop-outcome"] .dur-opt').forEach((b) =>
+    b.classList.toggle('active', b.dataset.val === ''));
+
+  // Joueurs inscrits
+  document.getElementById('coop-players').innerHTML = players.length
+    ? players.map((p) =>
+        `<div class="pcheck-row"><label>
+           <input type="checkbox" value="${p.id}" class="coop-cb">
+           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
+           ${esc(p.name)}
+         </label></div>`).join('')
+    : '<p style="font-size:13px;color:var(--text-faint)">Aucun joueur inscrit.</p>';
+
+  _coopGuests = [];
+  renderCoopGuests();
+  openModal('modal-coop');
+};
+
+const saveCoopSession = async () => {
+  if (!currentUser) { showAuthWall(); return; }
+  const gameText = (document.getElementById('coop-game').value || '').trim();
+  if (!gameText) { toast('Indique un jeu'); return; }
+  const pids = [...document.querySelectorAll('.coop-cb:checked')].map((c) => parseInt(c.value));
+  if (!pids.length && !_coopGuests.length) { toast('Ajoute au moins un participant'); return; }
+
+  const kind        = document.getElementById('coop-kind').value || 'coop';
+  const matchedGame = games.find((g) => (g.name || '').toLowerCase() === gameText.toLowerCase());
+  const data = {
+    game_id:   matchedGame ? matchedGame.id : null,
+    game_name: gameText,
+    date:      document.getElementById('coop-date').value || new Date().toISOString().split('T')[0],
+    kind,
+    campaign:  kind === 'campagne' ? ((document.getElementById('coop-campaign').value || '').trim() || null) : null,
+    players:   pids.map((id) => ({ id })),
+    guests:    _coopGuests.slice(),
+    outcome:   document.getElementById('coop-outcome').value || null,
+    notes:     (document.getElementById('coop-notes').value || '').trim() || null,
+    created_by: currentUser.id,
+  };
+  try {
+    await sb.post('coop_sessions', data);
+    closeModal('modal-coop');
+    await loadAll();
+    renderCoop();
+    toast('Partie coop enregistrée 🤝');
+  } catch (e) { toastErr('Erreur : ' + e.message); }
+};
+
+const deleteCoopSession = async (id) => {
+  if (!confirm('Supprimer cette partie coop ?')) return;
+  try {
+    await sb.del('coop_sessions', { id });
+    await loadAll();
+    renderCoop();
+    toast('Partie supprimée');
+  } catch (e) { toastErr('Erreur : ' + e.message); }
+};
+
+const buildCoopCard = (s) => {
+  const g       = s.game_id ? games.find((x) => x.id === s.game_id) : null;
+  const gameName = g ? g.name : (s.game_name || 'Jeu');
+  const kindLbl  = COOP_KIND_LABELS[s.kind] || COOP_KIND_LABELS.coop;
+  const out      = s.outcome ? COOP_OUTCOME[s.outcome] : null;
+  const myPid    = (players.find((p) => p.user_id === currentUser?.id) || {}).id;
+  const canDel   = isAdmin || (currentUser && s.created_by === currentUser.id);
+
+  const regHtml = (s.players || []).map((pp) => {
+    const pl = players.find((x) => x.id === pp.id);
+    if (!pl) return '';
+    const c = pl.color || '#4ade80';
+    return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text)">
+        <span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;width:24px;height:24px;
+                     border-radius:50%;background:${c}22;color:${c};font-size:9px;font-weight:700">${playerAvatarInner(pl, c)}</span>
+        ${esc(pl.name)}
+      </span>`;
+  }).join('');
+  const guestHtml = (s.guests || []).map((name) =>
+    `<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted)">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
+                     background:var(--surface-2);border:1px solid var(--border);font-size:12px">👤</span>
+        ${esc(name)} <span style="font-size:10px;color:var(--text-faint)">(invité)</span>
+      </span>`).join('');
+
+  return `<div class="hist-card" style="margin-bottom:10px">
+    <div class="hist-hdr"><div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="hist-game">${esc(gameName)}</span>
+        <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted)">${kindLbl}</span>
+        ${out ? `<span style="font-size:11px;padding:2px 8px;border-radius:999px;background:${out.color}1f;color:${out.color};border:1px solid ${out.color}55">${out.label}</span>` : ''}
+      </div>
+      <div class="hist-date">${s.date ? fmtDate(s.date) : ''}${s.campaign ? ` · 📖 ${esc(s.campaign)}` : ''}</div>
+      ${s.notes ? `<div class="hist-notes">${esc(s.notes)}</div>` : ''}
+    </div>
+    ${canDel ? `<button class="btn-icon danger" onclick="deleteCoopSession(${s.id})" title="Supprimer" style="flex-shrink:0">${SVG_TRASH}</button>` : ''}
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:8px">${regHtml}${guestHtml}</div>
+  </div>`;
+};
+
+const renderCoop = () => {
+  const el = document.getElementById('coop-list');
+  if (!el) return;
+  const addBtn = document.getElementById('coop-add-btn');
+  if (addBtn) addBtn.style.display = currentUser ? 'inline-flex' : 'none';
+  if (!coopSessions.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🤝</div>
+      <p>Aucune partie coopérative enregistrée.</p>
+      <p style="font-size:13px;color:var(--text-faint)">Coop, campagnes ou parties détente — elles ne rapportent aucun point.</p></div>`;
+    return;
+  }
+  const sorted = [...coopSessions].sort((a, b) =>
+    String(b.date || '').localeCompare(String(a.date || '')) || ((b.id || 0) - (a.id || 0)));
+  el.innerHTML = sorted.map(buildCoopCard).join('');
+};
 
 const renderEvents = () => {
   const el = document.getElementById('events-list');

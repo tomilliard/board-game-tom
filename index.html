@@ -164,6 +164,15 @@
         </svg>
         Parties
       </button>
+      <button class="nav-tab" onclick="showPage('coop',this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        Coop
+      </button>
       <button class="nav-tab" onclick="showPage('social',this)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -290,6 +299,16 @@
         <polyline points="12 6 12 12 16 14"/>
       </svg>
       Parties
+    </button>
+    <button class="mobile-nav-tab" id="mnav-coop"
+            onclick="showPage('coop',this);syncMobileNav('coop')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Coop
     </button>
     <button class="mobile-nav-tab" id="mnav-social"
             onclick="showPage('social',this);syncMobileNav('social')">
@@ -547,6 +566,23 @@
       </button>
     </div>
     <div class="events-list" id="events-list"></div>
+  </div>
+
+  <div class="page" id="page-coop">
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                margin-bottom:1rem;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2 class="section-title" style="margin-bottom:2px">🤝 Parties coopératives</h2>
+        <p style="font-size:13px;color:var(--text-faint);margin:0">Coop, campagnes ou parties détente — sans points, avec ou sans invités.</p>
+      </div>
+      <button class="btn-sec" id="coop-add-btn" onclick="openCoopModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Nouvelle partie
+      </button>
+    </div>
+    <div id="coop-list"></div>
   </div>
 
 </main>
@@ -1067,6 +1103,82 @@
       </button>
     </div>
     <div class="palmares-modal-content" id="feed-content"></div>
+  </div>
+</div>
+
+<!-- Nouvelle partie coop -->
+<div class="modal-overlay" id="modal-coop" onclick="bgClose(event,'modal-coop')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 class="modal-title">🤝 Nouvelle partie coop</h2>
+      <button class="btn-close" onclick="closeModal('modal-coop')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="form-row">
+      <label>Jeu <span class="req">*</span></label>
+      <input class="finput" id="coop-game" list="coop-game-options" placeholder="Choisis ou tape un nom" autocomplete="off">
+      <datalist id="coop-game-options"></datalist>
+    </div>
+
+    <div class="form-row">
+      <label>Type</label>
+      <input type="hidden" id="coop-kind" value="coop">
+      <div class="dur-seg" data-target="coop-kind">
+        <button type="button" class="dur-opt active" data-val="coop"     onclick="togD(this);updateCoopCampaignVis()">🤝 Coop</button>
+        <button type="button" class="dur-opt"        data-val="campagne" onclick="togD(this);updateCoopCampaignVis()">📖 Campagne</button>
+        <button type="button" class="dur-opt"        data-val="autre"    onclick="togD(this);updateCoopCampaignVis()">🎲 Autre</button>
+      </div>
+    </div>
+
+    <div class="form-row" id="coop-campaign-row" style="display:none">
+      <label>Campagne / chapitre</label>
+      <input class="finput" id="coop-campaign" placeholder="Ex : Gloomhaven — Scénario 12" autocomplete="off">
+    </div>
+
+    <div class="form-row">
+      <label>Date</label>
+      <input class="finput" type="date" id="coop-date">
+    </div>
+
+    <div class="form-row">
+      <label>Joueurs inscrits</label>
+      <div id="coop-players" class="player-checks" style="max-height:180px"></div>
+    </div>
+
+    <div class="form-row">
+      <label>Invités (sans compte)</label>
+      <div style="display:flex;gap:6px">
+        <input class="finput" id="coop-guest-input" placeholder="Nom de l'invité"
+               autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();addCoopGuest();}">
+        <button type="button" class="btn-sec" style="white-space:nowrap" onclick="addCoopGuest()">+ Ajouter</button>
+      </div>
+      <div id="coop-guests-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+    </div>
+
+    <div class="form-row">
+      <label>Résultat</label>
+      <input type="hidden" id="coop-outcome" value="">
+      <div class="dur-seg" data-target="coop-outcome">
+        <button type="button" class="dur-opt" data-val="win"     onclick="togD(this)">✅ Gagné</button>
+        <button type="button" class="dur-opt" data-val="loss"    onclick="togD(this)">❌ Perdu</button>
+        <button type="button" class="dur-opt" data-val="ongoing" onclick="togD(this)">⏳ En cours</button>
+        <button type="button" class="dur-opt active" data-val=""  onclick="togD(this)">—</button>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>Notes</label>
+      <textarea class="ftextarea" id="coop-notes" placeholder="Déroulé, anecdotes, progression…" style="height:54px"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-coop')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveCoopSession()">Enregistrer</button>
+    </div>
   </div>
 </div>
 
