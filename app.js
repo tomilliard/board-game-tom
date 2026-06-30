@@ -399,15 +399,16 @@ const playableGames = () => {
 // Dans le formulaire de partie : les collections des PARTICIPANTS cochés (+ la
 // mienne) débloquent leurs jeux. Quand Tom indique qu'il joue avec Joshua, les
 // jeux de Joshua deviennent sélectionnables.
-const matchOwnerUids = () => {
+const ownerUidsFromChecks = (selector) => {
   const uids = new Set();
   if (myUid()) uids.add(myUid());
-  document.querySelectorAll('.mcb:checked').forEach((c) => {
+  document.querySelectorAll(selector).forEach((c) => {
     const pl = players.find((p) => p.id === parseInt(c.value));
     if (pl && pl.user_id) uids.add(pl.user_id);
   });
   return uids;
 };
+const matchOwnerUids = () => ownerUidsFromChecks('.mcb:checked');
 const gameAvailableForMatch = (g, uids) =>
   isClubGame(g) ? g.status === 'own'
                 : gameOwners.some((o) => o.game_id === g.id && uids.has(o.user_id));
@@ -6284,11 +6285,20 @@ const updateCoopCampaignVis = () => {
   if (row) row.style.display = kind === 'campagne' ? '' : 'none';
 };
 
+// Suggestions de jeux pour la coop : club possédé + collections des participants
+// cochés (comme dans Parties). La saisie libre reste possible pour un jeu hors catalogue.
+const refreshCoopGames = () => {
+  const dl = document.getElementById('coop-game-options');
+  if (!dl) return;
+  const uids = ownerUidsFromChecks('.coop-cb:checked');
+  dl.innerHTML = games
+    .filter((g) => gameAvailableForMatch(g, uids))
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    .map((g) => `<option value="${esc(g.name)}">`).join('');
+};
+
 const openCoopModal = () => {
   if (!currentUser) { showAuthWall(); return; }
-  // Liste des jeux du catalogue pour l'autocomplétion (jeu libre autorisé aussi).
-  const dl = document.getElementById('coop-game-options');
-  if (dl) dl.innerHTML = clubGames().map((g) => `<option value="${esc(g.name)}">`).join('');
   document.getElementById('coop-game').value = '';
   document.getElementById('coop-campaign').value = '';
   document.getElementById('coop-date').value = new Date().toISOString().split('T')[0];
@@ -6309,7 +6319,7 @@ const openCoopModal = () => {
   document.getElementById('coop-players').innerHTML = players.length
     ? players.map((p) =>
         `<div class="pcheck-row"><label>
-           <input type="checkbox" value="${p.id}" class="coop-cb">
+           <input type="checkbox" value="${p.id}" class="coop-cb" onchange="refreshCoopGames()">
            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
            ${esc(p.name)}
          </label></div>`).join('')
@@ -6317,6 +6327,7 @@ const openCoopModal = () => {
 
   _coopGuests = [];
   renderCoopGuests();
+  refreshCoopGames();
   openModal('modal-coop');
 };
 
