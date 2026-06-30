@@ -4792,11 +4792,11 @@ const saveMatch = async () => {
   const cbs  = [...document.querySelectorAll('.mcb:checked')];
   if (!cbs.length) { toast('Sélectionnez au moins un joueur'); return; }
   const pids = cbs.map((c) => parseInt(c.value));
-  const wids = [...document.querySelectorAll('.wstar.active')]
+  const wids = [...document.querySelectorAll('#fm-players .wstar.active')]
     .map((b) => parseInt(b.dataset.pid))
     .filter((id) => pids.includes(id));
   const scores = {};
-  document.querySelectorAll('.score-inp').forEach((inp) => {
+  document.querySelectorAll('#fm-players .score-inp').forEach((inp) => {
     const pid = parseInt(inp.dataset.pid);
     const v   = inp.value.trim();
     if (pids.includes(pid) && v !== '') scores[pid] = parseFloat(v);
@@ -6250,18 +6250,24 @@ const COOP_OUTCOME = {
   ongoing: { label: 'En cours', color: 'var(--gold)' },
 };
 
-let _coopGuests = [];
+let _coopGuests = [];   // [{name, won, score}]
 
 const renderCoopGuests = () => {
   const el = document.getElementById('coop-guests-list');
   if (!el) return;
-  el.innerHTML = _coopGuests.map((name, i) =>
-    `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);
-                  border:1px solid var(--border);border-radius:999px;padding:4px 6px 4px 10px;font-size:12px;color:var(--text)">
-       👤 ${esc(name)}
-       <button type="button" onclick="removeCoopGuest(${i})" style="border:none;background:none;color:var(--text-faint);
-               cursor:pointer;font-size:13px;line-height:1;padding:0 2px">✕</button>
-     </span>`).join('');
+  el.innerHTML = _coopGuests.map((g, i) =>
+    `<div class="pcheck-row">
+       <label style="cursor:default">
+         <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
+                      background:var(--surface-2);border:1px solid var(--border);font-size:12px">👤</span>
+         ${esc(g.name)} <span style="font-size:11px;color:var(--text-faint)">(invité)</span>
+       </label>
+       <button type="button" class="wstar ${g.won ? 'active' : ''}" onclick="toggleCoopGuestWin(${i})" title="Gagnant">⭐</button>
+       <input type="number" class="score-inp" placeholder="Score" min="0" step="1"
+              value="${g.score == null ? '' : g.score}" onchange="setCoopGuestScore(${i}, this.value)">
+       <button type="button" onclick="removeCoopGuest(${i})" title="Retirer"
+               style="border:none;background:none;color:var(--text-faint);cursor:pointer;font-size:14px;flex-shrink:0">✕</button>
+     </div>`).join('');
 };
 
 const addCoopGuest = () => {
@@ -6270,13 +6276,15 @@ const addCoopGuest = () => {
   const name = (inp.value || '').trim();
   if (!name) return;
   if (_coopGuests.length >= 16) { toast('Maximum 16 invités'); return; }
-  if (_coopGuests.some((g) => g.toLowerCase() === name.toLowerCase())) { inp.value = ''; return; }
-  _coopGuests.push(name);
+  if (_coopGuests.some((g) => g.name.toLowerCase() === name.toLowerCase())) { inp.value = ''; return; }
+  _coopGuests.push({ name, won: false, score: null });
   inp.value = '';
   renderCoopGuests();
   inp.focus();
 };
 
+const toggleCoopGuestWin = (i) => { if (_coopGuests[i]) { _coopGuests[i].won = !_coopGuests[i].won; renderCoopGuests(); } };
+const setCoopGuestScore = (i, val) => { if (_coopGuests[i]) _coopGuests[i].score = (val === '' ? null : Number(val)); };
 const removeCoopGuest = (i) => { _coopGuests.splice(i, 1); renderCoopGuests(); };
 
 const updateCoopCampaignVis = () => {
@@ -6318,11 +6326,15 @@ const openCoopModal = () => {
   // Joueurs inscrits
   document.getElementById('coop-players').innerHTML = players.length
     ? players.map((p) =>
-        `<div class="pcheck-row"><label>
-           <input type="checkbox" value="${p.id}" class="coop-cb" onchange="refreshCoopGames()">
-           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
-           ${esc(p.name)}
-         </label></div>`).join('')
+        `<div class="pcheck-row">
+           <label>
+             <input type="checkbox" value="${p.id}" class="coop-cb" onchange="refreshCoopGames()">
+             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
+             ${esc(p.name)}
+           </label>
+           <button class="wstar" data-pid="${p.id}" onclick="togW(this)" title="Gagnant">⭐</button>
+           <input type="number" class="score-inp" data-pid="${p.id}" placeholder="Score" min="0" step="1">
+         </div>`).join('')
     : '<p style="font-size:13px;color:var(--text-faint)">Aucun joueur inscrit.</p>';
 
   _coopGuests = [];
@@ -6340,14 +6352,28 @@ const saveCoopSession = async () => {
 
   const kind        = document.getElementById('coop-kind').value || 'coop';
   const matchedGame = games.find((g) => (g.name || '').toLowerCase() === gameText.toLowerCase());
+
+  // Score + gagnant par participant (n'affecte JAMAIS le classement).
+  const regPlayers = pids.map((id) => {
+    const star = document.querySelector(`#coop-players .wstar[data-pid="${id}"]`);
+    const sInp = document.querySelector(`#coop-players .score-inp[data-pid="${id}"]`);
+    const score = (sInp && sInp.value.trim() !== '' && !isNaN(parseFloat(sInp.value))) ? parseFloat(sInp.value) : null;
+    return { id, won: !!(star && star.classList.contains('active')), score };
+  });
+  const guestData = _coopGuests.map((g) => ({
+    name:  g.name,
+    won:   !!g.won,
+    score: (g.score == null || g.score === '' || isNaN(g.score)) ? null : Number(g.score),
+  }));
+
   const data = {
     game_id:   matchedGame ? matchedGame.id : null,
     game_name: gameText,
     date:      document.getElementById('coop-date').value || new Date().toISOString().split('T')[0],
     kind,
     campaign:  kind === 'campagne' ? ((document.getElementById('coop-campaign').value || '').trim() || null) : null,
-    players:   pids.map((id) => ({ id })),
-    guests:    _coopGuests.slice(),
+    players:   regPlayers,
+    guests:    guestData,
     outcome:   document.getElementById('coop-outcome').value || null,
     notes:     (document.getElementById('coop-notes').value || '').trim() || null,
     created_by: currentUser.id,
@@ -6383,18 +6409,26 @@ const buildCoopCard = (s) => {
     const pl = players.find((x) => x.id === pp.id);
     if (!pl) return '';
     const c = pl.color || '#4ade80';
+    const star = pp.won ? '⭐ ' : '';
+    const sc   = (pp.score != null) ? ` <b style="color:var(--text-muted)">· ${pp.score}</b>` : '';
     return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text)">
         <span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;width:24px;height:24px;
                      border-radius:50%;background:${c}22;color:${c};font-size:9px;font-weight:700">${playerAvatarInner(pl, c)}</span>
-        ${esc(pl.name)}
+        ${star}${esc(pl.name)}${sc}
       </span>`;
   }).join('');
-  const guestHtml = (s.guests || []).map((name) =>
-    `<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted)">
+  const guestHtml = (s.guests || []).map((guest) => {
+    const gname  = typeof guest === 'string' ? guest : (guest.name || '');
+    const gwon   = typeof guest === 'object' && guest.won;
+    const gscore = (typeof guest === 'object' && guest.score != null) ? guest.score : null;
+    const star   = gwon ? '⭐ ' : '';
+    const sc     = gscore != null ? ` <b style="color:var(--text-faint)">· ${gscore}</b>` : '';
+    return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted)">
         <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
                      background:var(--surface-2);border:1px solid var(--border);font-size:12px">👤</span>
-        ${esc(name)} <span style="font-size:10px;color:var(--text-faint)">(invité)</span>
-      </span>`).join('');
+        ${star}${esc(gname)} <span style="font-size:10px;color:var(--text-faint)">(invité)</span>${sc}
+      </span>`;
+  }).join('');
 
   return `<div class="hist-card" style="margin-bottom:10px">
     <div class="hist-hdr"><div style="flex:1;min-width:0">
