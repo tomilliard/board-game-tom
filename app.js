@@ -5083,7 +5083,7 @@ document.addEventListener('click', (e) => {
 // Cœur de calcul d'une partie — PUR (aucune lecture/écriture d'état global).
 // pre = { [id]: { pts, elo, streak, games } } : état AVANT la partie.
 // Renvoie { [id]: { net, newPts, newStreak, newElo } }.
-const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre) => {
+const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre, mDur) => {
   const n = ids.length;
   const losers = ids.filter((id) => !winnerIds.includes(id));
   if (scores && Object.keys(scores).length)
@@ -5154,7 +5154,7 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
     const p = players.find((x) => x.id === id);
     pre[id] = { pts: p.points || 0, elo: getElo(p), streak: p.streak || 0, games: eloGamesPlayed(id) };
   });
-  const res = computeMatch(ids, winnerIds, scores || {}, isChallengeWin, gameId, pre);
+  const res = computeMatch(ids, winnerIds, scores || {}, isChallengeWin, gameId, pre, mDur);
 
   // Trône projeté après la partie (n°1 aux points, ≥ palier Maître).
   const projPts = {};
@@ -5218,7 +5218,7 @@ const recomputeSeason = async () => {
       const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
       const pre = {};
       ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
-      const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
+      const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre, m.duration);
       ids.forEach((id) => {
         sim[id].pts     = res[id].newPts;
         sim[id].elo     = res[id].newElo;
@@ -7562,7 +7562,7 @@ const eloHistories = () => {
     const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
     const pre = {};
     ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
-    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
+    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre, m.duration);
     ids.forEach((id) => {
       sim[id].pts    = res[id].newPts;
       sim[id].elo    = res[id].newElo;
@@ -7606,7 +7606,7 @@ const allPlayersProgression = () => {
     const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
     const pre = {};
     ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
-    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
+    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre, m.duration);
     const d = String(m.date || '').split('T')[0];
     ids.forEach((id) => {
       sim[id].pts    = res[id].newPts;
