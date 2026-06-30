@@ -6498,13 +6498,14 @@ const buildCoopCard = (s) => {
 const computeGuestStats = () => {
   const map = {};
   coopSessions.forEach((s) => {
+    const collectiveWin = s.outcome === 'win';   // « Gagné » collectif → tout le monde gagne
     (s.guests || []).forEach((g) => {
       const name = typeof g === 'string' ? g : (g.name || '');
       if (!name) return;
       const key = name.toLowerCase();
       if (!map[key]) map[key] = { name, played: 0, won: 0 };
       map[key].played++;
-      if (typeof g === 'object' && g.won) map[key].won++;
+      if (collectiveWin || (typeof g === 'object' && g.won)) map[key].won++;
     });
   });
   return Object.values(map).sort((a, b) =>
