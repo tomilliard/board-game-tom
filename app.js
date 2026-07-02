@@ -2320,6 +2320,39 @@ const computeGameStats = (gid) => {
   return { total: gMatches.length, rows, lastDate };
 };
 
+// ─── Elo PAR JEU : rejoue toutes les parties confirmées de ce jeu ───
+// Chacun part de 1000 et n'évolue que sur ce jeu (le roi de Skull King n'est
+// pas forcément celui de 7 Wonders). Minimum 3 parties pour figurer.
+const computeGameElo = (gid) => {
+  const list = matches
+    .filter((m) => m.game_id === gid)
+    .sort((a, b) => {
+      const da = String(a.date || ''), db = String(b.date || '');
+      if (da !== db) return da < db ? -1 : 1;
+      return (a.id || 0) - (b.id || 0);
+    });
+  const sim = {};
+  players.forEach((p) => { sim[p.id] = { pts: 0, elo: ELO_BASE, streak: 0, games: 0 }; });
+  for (const m of list) {
+    const ids = [...new Set((m.players || []).map((pp) => pp && pp.id).filter((id) => id && sim[id]))];
+    if (ids.length < 2) continue;   // l'Elo n'a de sens qu'à 2+
+    const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+    const pre = {};
+    ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
+    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre, m.duration);
+    ids.forEach((id) => {
+      sim[id].pts    = res[id].newPts;
+      sim[id].elo    = res[id].newElo;
+      sim[id].streak = res[id].newStreak;
+      sim[id].games += 1;
+    });
+  }
+  return players
+    .map((p) => ({ player: p, elo: Math.round(sim[p.id].elo), games: sim[p.id].games }))
+    .filter((r) => r.games >= 3)
+    .sort((a, b) => b.elo - a.elo);
+};
+
 const openGameStats = (gid) => {
   const g  = games.find((x) => x.id === gid);
   const el = document.getElementById('gamestats-content');
@@ -2403,6 +2436,27 @@ const openGameStats = (gid) => {
       Classement (winrate ajusté)
     </div>
     ${rowsHtml}
+    ${(() => {
+      const eloRows = computeGameElo(gid);
+      if (!eloRows.length) return '';
+      return `<div style="font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 2px">
+          Elo spécifique au jeu
+        </div>` + eloRows.map((r, i) => {
+        const bg = r.player.color || '#4ade80';
+        const medal = i === 0 ? '👑' : `<span style="display:inline-block;width:18px;text-align:center;color:var(--text-faint);font-size:11px">${i + 1}</span>`;
+        return `
+        <div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)">
+          <span style="width:20px;text-align:center;font-size:13px">${medal}</span>
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
+                       background:${bg}22;color:${bg};font-size:10px;font-weight:600;flex-shrink:0">${ini(r.player.name)}</span>
+          <span style="flex:1;min-width:0;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.player.name)}</span>
+          <span style="font-size:14px;font-weight:700;color:var(--text);flex-shrink:0">${r.elo}</span>
+          <span style="width:44px;text-align:right;font-size:11px;color:var(--text-faint);flex-shrink:0">${r.games}p</span>
+        </div>`;
+      }).join('') + `<div style="font-size:10px;color:var(--text-faint);margin-top:6px">
+        Elo recalculé uniquement sur les parties de ce jeu (min. 3 parties).
+      </div>`;
+    })()}
     <div style="font-size:10px;color:var(--text-faint);margin-top:9px;line-height:1.4">
       Le classement utilise un winrate « honnête » qui pénalise les petits échantillons.
       « ᵉ » = place moyenne à ce jeu.
