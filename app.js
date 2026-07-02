@@ -4910,7 +4910,7 @@ const renderMatchList = () => {
 };
 
 // ── Page d'accueil « Classement » : hero + podium + leaderboard ──
-const renderHome = () => { renderHomeHero(); renderPodium(); renderLeaderboard(); };
+const renderHome = () => { renderHomeHero(); renderPodium(); renderLeaderboard(); renderDuos(); };
 
 const renderHomeHero = () => {
   const snum = document.getElementById('home-season-num');
@@ -6229,10 +6229,10 @@ const computeDuos = () => {
 };
 
 const renderDuos = () => {
-  const el = document.getElementById('duos');
-  if (!el) return;
+  const els = ['duos', 'duos-home'].map((id) => document.getElementById(id)).filter(Boolean);
+  if (!els.length) return;
   const duos = computeDuos().slice(0, 5);
-  if (!duos.length) { el.innerHTML = ''; return; }
+  if (!duos.length) { els.forEach((el) => { el.innerHTML = ''; }); return; }
 
   const av = (p, c) => `<span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;
       width:26px;height:26px;border-radius:50%;background:${c}22;color:${c};font-size:10px;font-weight:700;flex-shrink:0">${playerAvatarInner(p, c)}</span>`;
@@ -6260,10 +6260,11 @@ const renderDuos = () => {
     </div>`;
   }).join('');
 
-  el.innerHTML = `<div style="margin:14px 0 16px">
+  const html = `<div style="margin:14px 0 16px">
     <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:8px">💞 Meilleurs duos du club</div>
     ${cards}
   </div>`;
+  els.forEach((el) => { el.innerHTML = html; });
 };
 
 // Avatar d'un joueur : image réelle si elle existe (comme dans le classement),
