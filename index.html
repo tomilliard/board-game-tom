@@ -452,6 +452,7 @@
             <button onclick="openClubRecords()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">📖 Records</button>
             <button onclick="openSeasonsHistory()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">🏆 Palmarès</button>
             <button onclick="openSeasonRecap()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent-text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">📸 Récap</button>
+            <button onclick="openSoirees()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">🌙 Soirées</button>
             <button onclick="openTeamBalancer()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">⚖️ Équipes</button>
             <button onclick="openSeasonTrophies()" style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">🏅 Trophées</button>
           </div>
@@ -1106,6 +1107,21 @@
       </button>
     </div>
     <div class="palmares-modal-content" id="feed-content"></div>
+  </div>
+</div>
+
+<!-- Soirées du club -->
+<div class="modal-overlay" id="modal-soirees" onclick="bgClose(event,'modal-soirees')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="soirees-title">🌙 Soirées du club</h2>
+      <button class="btn-close" onclick="closeModal('modal-soirees')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div id="soirees-body"></div>
   </div>
 </div>
 

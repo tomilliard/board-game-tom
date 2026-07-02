@@ -3674,6 +3674,135 @@ const computeTrophyList = () => {
   ];
 };
 
+// ─── Mode Soirée : regroupement automatique des parties PAR DATE ─────
+// Une « soirée » = une date où au moins une partie (classée ou coop) a été
+// jouée dans le club. Aucune manipulation : tout est déduit de l'historique.
+const computeSoirees = () => {
+  const map = {};
+  const add = (date, kind, item) => {
+    const d = String(date || '').split('T')[0];
+    if (!d) return;
+    if (!map[d]) map[d] = { date: d, matches: [], coops: [] };
+    map[d][kind].push(item);
+  };
+  matches.forEach((m) => add(m.date, 'matches', m));
+  coopSessions.forEach((s) => add(s.date, 'coops', s));
+  return Object.values(map)
+    .map((s) => {
+      const pids = new Set();
+      s.matches.forEach((m) => (m.players || []).forEach((pp) => pids.add(pp.id)));
+      s.coops.forEach((c) => (c.players || []).forEach((pp) => pids.add(pp.id)));
+      const guests = new Set();
+      s.coops.forEach((c) => (c.guests || []).forEach((g) => guests.add(typeof g === 'string' ? g : g.name)));
+      s.nGames   = s.matches.length + s.coops.length;
+      s.nPlayers = pids.size;
+      s.nGuests  = guests.size;
+      return s;
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+};
+
+const openSoirees = () => {
+  const soirees = computeSoirees();
+  document.getElementById('soirees-title').textContent = '🌙 Soirées du club';
+  const body = document.getElementById('soirees-body');
+  if (!soirees.length) {
+    body.innerHTML = '<div class="empty"><div class="empty-icon">🌙</div><p>Aucune partie enregistrée pour le moment.</p></div>';
+    openModal('modal-soirees');
+    return;
+  }
+  body.innerHTML = soirees.slice(0, 40).map((s) => `
+    <div onclick="openSoiree('${s.date}')" style="display:flex;align-items:center;justify-content:space-between;gap:10px;
+         padding:11px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;
+         background:var(--surface-2);cursor:pointer">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">${fmtDate(s.date)}</div>
+        <div style="font-size:12px;color:var(--text-faint)">
+          ${s.nGames} partie${s.nGames > 1 ? 's' : ''} · ${s.nPlayers} joueur${s.nPlayers > 1 ? 's' : ''}${s.nGuests ? ` · ${s.nGuests} invité${s.nGuests > 1 ? 's' : ''}` : ''}
+        </div>
+      </div>
+      <span style="color:var(--text-faint);font-size:18px;flex-shrink:0">›</span>
+    </div>`).join('');
+  openModal('modal-soirees');
+};
+
+const openSoiree = (date) => {
+  const s = computeSoirees().find((x) => x.date === date);
+  if (!s) return;
+  document.getElementById('soirees-title').innerHTML =
+    `<span onclick="openSoirees()" style="cursor:pointer;color:var(--text-faint)">‹</span> 🌙 ${fmtDate(s.date)}`;
+
+  // Victoires du soir (classées + coop, invités compris) → MVP.
+  const winCount = {};   // clé = 'p<id>' ou 'g<nom>'
+  const nameOf   = {};
+  const bump = (key, name) => { winCount[key] = (winCount[key] || 0) + 1; nameOf[key] = name; };
+  s.matches.forEach((m) => (m.winners || []).forEach((pid) => {
+    const pl = players.find((x) => x.id === pid);
+    if (pl) bump('p' + pid, pl.name);
+  }));
+  s.coops.forEach((c) => {
+    coopWinners(c).forEach((pid) => {
+      const pl = players.find((x) => x.id === pid);
+      if (pl) bump('p' + pid, pl.name);
+    });
+    (c.guests || []).forEach((g) => {
+      const won = c.outcome === 'win' || (typeof g === 'object' && g.won);
+      if (won) bump('g' + (typeof g === 'string' ? g : g.name), (typeof g === 'string' ? g : g.name) + ' (invité)');
+    });
+  });
+  const top = Object.entries(winCount).sort((a, b) => b[1] - a[1]);
+  const mvp = top.length && top[0][1] > 0
+    ? `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;margin-bottom:12px;
+           border:1px solid var(--gold);border-radius:10px;background:var(--surface-2)">
+         <span style="font-size:20px">👑</span>
+         <div><b style="color:var(--gold);font-size:14px">MVP de la soirée : ${esc(nameOf[top[0][0]])}</b>
+         <div style="font-size:12px;color:var(--text-faint)">${top[0][1]} victoire${top[0][1] > 1 ? 's' : ''}</div></div>
+       </div>`
+    : '';
+
+  const line = (label, winners) => `
+    <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis">${label}</span>
+      <span style="font-size:12px;color:var(--text-muted);flex-shrink:0">${winners ? '⭐ ' + esc(winners) : ''}</span>
+    </div>`;
+
+  const matchLines = s.matches.map((m) => {
+    const g = games.find((x) => x.id === m.game_id);
+    const wn = (m.winners || []).map((pid) => (players.find((x) => x.id === pid) || {}).name).filter(Boolean).join(', ');
+    return line(esc(g ? g.name : 'Jeu inconnu') + (m.is_challenge ? ' <span style="font-size:10px;color:var(--gold)">⚔️ défi</span>' : ''), wn);
+  }).join('');
+  const coopLines = s.coops.map((c) => {
+    const g = c.game_id ? games.find((x) => x.id === c.game_id) : null;
+    const nm = g ? g.name : (c.game_name || 'Jeu');
+    const wn = coopWinners(c).map((pid) => (players.find((x) => x.id === pid) || {}).name).filter(Boolean).join(', ');
+    return line('🤝 ' + esc(nm), wn || (c.outcome === 'win' ? 'victoire' : c.outcome === 'loss' ? 'défaite' : ''));
+  }).join('');
+
+  const presents = [...new Set([
+    ...s.matches.flatMap((m) => (m.players || []).map((pp) => pp.id)),
+    ...s.coops.flatMap((c) => (c.players || []).map((pp) => pp.id)),
+  ])].map((pid) => (players.find((x) => x.id === pid) || {}).name).filter(Boolean);
+
+  document.getElementById('soirees-body').innerHTML = `
+    ${mvp}
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1;text-align:center;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)">
+        <div style="font-size:18px;font-weight:700;color:var(--text)">${s.nGames}</div>
+        <div style="font-size:11px;color:var(--text-faint)">parties</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)">
+        <div style="font-size:18px;font-weight:700;color:var(--text)">${s.nPlayers}</div>
+        <div style="font-size:11px;color:var(--text-faint)">joueurs</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)">
+        <div style="font-size:18px;font-weight:700;color:var(--text)">${s.nGuests}</div>
+        <div style="font-size:11px;color:var(--text-faint)">invités</div>
+      </div>
+    </div>
+    ${matchLines}${coopLines}
+    ${presents.length ? `<div style="font-size:12px;color:var(--text-faint);margin-top:10px">Présents : ${esc(presents.join(', '))}</div>` : ''}`;
+};
+
 // ─── Équilibrage automatique des équipes (par Elo) ──────────
 // Serpentin sur l'ordre Elo (avec un léger mélange aléatoire des joueurs de
 // niveau proche pour varier les propositions), puis échanges d'optimisation
