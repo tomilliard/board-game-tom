@@ -6146,7 +6146,70 @@ const renderH2HSelects = () => {
     sel.value = cur;
   });
   renderRivalries();
+  renderDuos();
   renderH2H();
+};
+
+// ─── Meilleurs duos : les paires qui GAGNENT ensemble ─────────
+// Co-victoire = les deux joueurs figurent parmi les gagnants d'une même partie
+// (victoire partagée en classé, ou coop gagnée ensemble). Minimum 2 co-victoires.
+const computeDuos = () => {
+  const pair = {};   // clé 'a-b' (a<b) → { a, b, wins, together }
+  const touch = (a, b) => {
+    const k = a < b ? `${a}-${b}` : `${b}-${a}`;
+    if (!pair[k]) pair[k] = { a: Math.min(a, b), b: Math.max(a, b), wins: 0, together: 0 };
+    return pair[k];
+  };
+  const addGame = (ids, winIds) => {
+    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+      const rec = touch(ids[i], ids[j]);
+      rec.together++;
+      if (winIds.includes(ids[i]) && winIds.includes(ids[j])) rec.wins++;
+    }
+  };
+  matches.forEach((m) => addGame((m.players || []).map((pp) => pp.id), m.winners || []));
+  coopSessions.forEach((s) => addGame((s.players || []).map((pp) => pp.id), coopWinners(s)));
+  return Object.values(pair)
+    .filter((d) => d.wins >= 2)
+    .sort((x, y) => y.wins - x.wins || (y.wins / y.together) - (x.wins / x.together));
+};
+
+const renderDuos = () => {
+  const el = document.getElementById('duos');
+  if (!el) return;
+  const duos = computeDuos().slice(0, 5);
+  if (!duos.length) { el.innerHTML = ''; return; }
+
+  const av = (p, c) => `<span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;
+      width:26px;height:26px;border-radius:50%;background:${c}22;color:${c};font-size:10px;font-weight:700;flex-shrink:0">${playerAvatarInner(p, c)}</span>`;
+
+  const cards = duos.map((d, i) => {
+    const pa = players.find((p) => p.id === d.a);
+    const pb = players.find((p) => p.id === d.b);
+    if (!pa || !pb) return '';
+    const ca = pa.color || '#4ade80', cb = pb.color || '#60a5fa';
+    const rate = Math.round(d.wins / d.together * 100);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);
+         border-radius:10px;margin-bottom:8px;background:var(--surface-2)">
+      <span style="font-size:16px;flex-shrink:0">${i === 0 ? '💞' : '🤝'}</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        ${av(pa, ca)}${av(pb, cb)}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${esc(pa.name)} &amp; ${esc(pb.name)}
+        </div>
+        <div style="font-size:11.5px;color:var(--text-faint)">
+          ${d.wins} victoire${d.wins > 1 ? 's' : ''} ensemble · ${rate}% de leurs ${d.together} parties communes
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div style="margin:14px 0 16px">
+    <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:8px">💞 Meilleurs duos du club</div>
+    ${cards}
+  </div>`;
 };
 
 // Avatar d'un joueur : image réelle si elle existe (comme dans le classement),
