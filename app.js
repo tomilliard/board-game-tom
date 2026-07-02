@@ -3674,6 +3674,85 @@ const computeTrophyList = () => {
   ];
 };
 
+// ─── Équilibrage automatique des équipes (par Elo) ──────────
+// Serpentin sur l'ordre Elo (avec un léger mélange aléatoire des joueurs de
+// niveau proche pour varier les propositions), puis échanges d'optimisation
+// pour resserrer l'écart entre équipes.
+const openTeamBalancer = () => {
+  const el = document.getElementById('tb-players');
+  el.innerHTML = players.length
+    ? [...players].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr')).map((p) =>
+        `<div class="pcheck-row"><label>
+           <input type="checkbox" value="${p.id}" class="tb-cb">
+           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
+           ${esc(p.name)}
+           <span style="margin-left:auto;font-size:11px;color:var(--text-faint)">${getElo(p)} Elo</span>
+         </label></div>`).join('')
+    : '<p style="font-size:13px;color:var(--text-faint)">Aucun joueur.</p>';
+  document.getElementById('tb-result').innerHTML = '';
+  openModal('modal-teams');
+};
+
+const generateTeams = () => {
+  const ids = [...document.querySelectorAll('.tb-cb:checked')].map((c) => parseInt(c.value));
+  const nTeams = parseInt(document.getElementById('tb-count').value) || 2;
+  const out = document.getElementById('tb-result');
+  if (ids.length < nTeams) {
+    out.innerHTML = `<p style="font-size:13px;color:var(--danger)">Coche au moins ${nTeams} joueurs pour faire ${nTeams} équipes.</p>`;
+    return;
+  }
+  const pool = ids.map((id) => players.find((p) => p.id === id)).filter(Boolean)
+    // Tri Elo desc avec bruit léger (±20) → propositions différentes à chaque clic
+    .sort((a, b) => (getElo(b) + Math.random() * 40 - 20) - (getElo(a) + Math.random() * 40 - 20));
+
+  // Serpentin : 1,2,3,3,2,1,1,2,3…
+  const teams = Array.from({ length: nTeams }, () => []);
+  let idx = 0, dir = 1;
+  pool.forEach((p) => {
+    teams[idx].push(p);
+    idx += dir;
+    if (idx === nTeams) { idx = nTeams - 1; dir = -1; }
+    else if (idx === -1) { idx = 0; dir = 1; }
+  });
+
+  // Optimisation : échanges 1↔1 tant que ça réduit l'écart d'Elo MOYEN entre
+  // équipes (identique aux sommes à tailles égales, plus juste sinon).
+  const sum = (t) => t.reduce((s, p) => s + getElo(p), 0);
+  const avg = (t) => t.length ? sum(t) / t.length : 0;
+  const spread = () => Math.round(Math.max(...teams.map(avg)) - Math.min(...teams.map(avg)));
+  let improved = true, guard = 0;
+  while (improved && guard++ < 200) {
+    improved = false;
+    for (let a = 0; a < nTeams; a++) for (let b = a + 1; b < nTeams; b++) {
+      for (let i = 0; i < teams[a].length; i++) for (let j = 0; j < teams[b].length; j++) {
+        const before = spread();
+        [teams[a][i], teams[b][j]] = [teams[b][j], teams[a][i]];
+        if (spread() < before) { improved = true; }
+        else { [teams[a][i], teams[b][j]] = [teams[b][j], teams[a][i]]; }
+      }
+    }
+  }
+
+  const colors = ['var(--accent)', 'var(--gold)', '#60a5fa', '#f472b6'];
+  out.innerHTML = teams.map((t, i) => {
+    const total = sum(t);
+    const avg   = t.length ? Math.round(total / t.length) : 0;
+    return `<div style="border:1px solid var(--border);border-left:3px solid ${colors[i % colors.length]};
+                border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--surface-2)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+        <b style="font-size:14px;color:var(--text)">Équipe ${i + 1}</b>
+        <span style="font-size:11px;color:var(--text-faint)">${avg} Elo moyen</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${t.map((p) => `<span style="font-size:13px;padding:3px 9px;border-radius:999px;background:var(--bg);
+             border:1px solid var(--border);color:var(--text)">${esc(p.name)} <span style="color:var(--text-faint);font-size:11px">${getElo(p)}</span></span>`).join('')}
+      </div>
+    </div>`;
+  }).join('') + `<div style="text-align:center;font-size:12px;color:var(--text-faint);margin-top:4px">
+      Écart moyen : ${spread()} Elo — reclique sur 🎲 pour une autre répartition
+    </div>`;
+};
+
 const openSeasonTrophies = () => {
   const el = document.getElementById('trophies-content');
   if (!el) return;
