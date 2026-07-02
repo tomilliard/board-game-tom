@@ -6223,9 +6223,12 @@ const computeDuos = () => {
   };
   matches.forEach((m) => addGame((m.players || []).map((pp) => pp.id), m.winners || []));
   coopSessions.forEach((s) => addGame((s.players || []).map((pp) => pp.id), coopWinners(s)));
-  return Object.values(pair)
-    .filter((d) => d.wins >= 2)
+  const all = Object.values(pair).filter((d) => d.wins >= 1)
     .sort((x, y) => y.wins - x.wins || (y.wins / y.together) - (x.wins / x.together));
+  // Seuil adaptatif : idéalement ≥ 2 co-victoires, sinon on montre dès 1
+  // (utile au début, tant que le club a peu de victoires partagées).
+  const solid = all.filter((d) => d.wins >= 2);
+  return solid.length ? solid : all;
 };
 
 const renderDuos = () => {
