@@ -6604,11 +6604,100 @@ const renderCoopGuestBoard = () => {
   </div>`;
 };
 
+// ─── Suivi de campagne : regroupe les sessions « Campagne » par jeu ───
+const computeCampaigns = () => {
+  const map = {};
+  coopSessions.filter((s) => s.kind === 'campagne').forEach((s) => {
+    const g    = s.game_id ? games.find((x) => x.id === s.game_id) : null;
+    const name = g ? g.name : (s.game_name || 'Jeu');
+    const key  = name.toLowerCase();
+    if (!map[key]) map[key] = { key, gameName: name, game: g, sessions: [] };
+    map[key].sessions.push(s);
+  });
+  return Object.values(map).map((c) => {
+    c.sessions.sort((a, b) =>
+      String(a.date || '').localeCompare(String(b.date || '')) || ((a.id || 0) - (b.id || 0)));
+    c.wins    = c.sessions.filter((s) => s.outcome === 'win').length;
+    c.losses  = c.sessions.filter((s) => s.outcome === 'loss').length;
+    c.ongoing = c.sessions.some((s) => s.outcome === 'ongoing');
+    const last = c.sessions[c.sessions.length - 1];
+    c.lastDate    = last ? last.date : null;
+    c.lastChapter = last ? (last.campaign || null) : null;
+    return c;
+  }).sort((a, b) => String(b.lastDate || '').localeCompare(String(a.lastDate || '')));
+};
+
+const renderCoopCampaigns = () => {
+  const el = document.getElementById('coop-campaigns');
+  if (!el) return;
+  const camps = computeCampaigns();
+  if (!camps.length) { el.innerHTML = ''; return; }
+  const cards = camps.map((c) => {
+    const gbg  = gameBgSrc(c.game || { name: c.gameName });
+    const bilan = `${c.wins}V · ${c.losses}D` + (c.ongoing ? ' · ⏳' : '');
+    return `<div class="hist-card${gbg ? ' has-gbg' : ''}" onclick="openCampaign('${esc(c.key).replace(/'/g, "\\'")}')"
+         style="cursor:pointer;margin-bottom:10px;${gbg
+           ? `background:linear-gradient(180deg,rgba(10,15,24,.74),rgba(10,15,24,.9)),url('${gbg}') center/cover;`
+           : ''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div class="hist-game">📖 ${esc(c.gameName)}</div>
+          <div class="hist-date">
+            ${c.sessions.length} session${c.sessions.length > 1 ? 's' : ''} · ${bilan}
+            ${c.lastChapter ? ` · dernier : ${esc(c.lastChapter)}` : ''}
+          </div>
+        </div>
+        <span style="color:var(--text-faint);font-size:18px;flex-shrink:0">›</span>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div style="margin-bottom:16px">
+    <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:8px">📖 Campagnes</div>
+    ${cards}
+  </div>`;
+};
+
+const openCampaign = (key) => {
+  const c = computeCampaigns().find((x) => x.key === key);
+  if (!c) return;
+  document.getElementById('campaign-title').textContent = `📖 ${c.gameName}`;
+  const rows = c.sessions.map((s, i) => {
+    const out = s.outcome ? COOP_OUTCOME[s.outcome] : null;
+    const names = [
+      ...(s.players || []).map((pp) => { const pl = players.find((x) => x.id === pp.id); return pl ? pl.name : null; }),
+      ...(s.guests || []).map((g) => (typeof g === 'string' ? g : g.name)),
+    ].filter(Boolean).join(', ');
+    return `<div style="display:flex;gap:12px;padding:10px 2px;border-bottom:1px solid var(--border)">
+      <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--surface-2);
+                  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+                  font-size:11px;font-weight:700;color:var(--text-muted)">${i + 1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;color:var(--text);font-weight:600">
+          ${s.campaign ? esc(s.campaign) : 'Session ' + (i + 1)}
+          ${out ? `<span style="font-size:11px;padding:1px 7px;border-radius:999px;margin-left:6px;
+                       background:${out.color}1f;color:${out.color};border:1px solid ${out.color}55">${out.label}</span>` : ''}
+        </div>
+        <div style="font-size:12px;color:var(--text-faint)">
+          ${s.date ? fmtDate(s.date) : ''}${names ? ' · ' + esc(names) : ''}
+        </div>
+        ${s.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-top:3px">${esc(s.notes)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('campaign-body').innerHTML = `
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">
+      ${c.sessions.length} session${c.sessions.length > 1 ? 's' : ''} · ${c.wins} gagnée${c.wins > 1 ? 's' : ''} · ${c.losses} perdue${c.losses > 1 ? 's' : ''}${c.ongoing ? ' · ⏳ en cours' : ''}
+    </div>
+    ${rows}`;
+  openModal('modal-campaign');
+};
+
 const renderCoop = () => {
   const el = document.getElementById('coop-list');
   if (!el) return;
   const addBtn = document.getElementById('coop-add-btn');
   if (addBtn) addBtn.style.display = currentUser ? 'inline-flex' : 'none';
+  renderCoopCampaigns();
   renderCoopGuestBoard();
   if (!coopSessions.length) {
     el.innerHTML = `<div class="empty"><div class="empty-icon">🤝</div>

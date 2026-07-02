@@ -582,6 +582,7 @@
         Nouvelle partie
       </button>
     </div>
+    <div id="coop-campaigns"></div>
     <div id="coop-guestboard"></div>
     <div id="coop-list"></div>
   </div>
@@ -1104,6 +1105,21 @@
       </button>
     </div>
     <div class="palmares-modal-content" id="feed-content"></div>
+  </div>
+</div>
+
+<!-- Fil d'une campagne -->
+<div class="modal-overlay" id="modal-campaign" onclick="bgClose(event,'modal-campaign')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="campaign-title">📖 Campagne</h2>
+      <button class="btn-close" onclick="closeModal('modal-campaign')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div id="campaign-body"></div>
   </div>
 </div>
 
