@@ -3428,6 +3428,7 @@ const renderPlayerStats = () => {
     <div class="stat-card" style="justify-content:center;align-items:center;text-align:center;gap:8px">
       <div class="stat-sub">Saison ${currentSeason ? currentSeason.number : 1} — admin</div>
       <button id="recalc-season-btn" class="btn-icon" onclick="recomputeSeason()" style="white-space:nowrap">♻️ Recalculer la saison</button>
+      <button id="export-backup-btn" class="btn-icon" onclick="exportBackup()" style="white-space:nowrap">💾 Sauvegarde</button>
       <button id="close-season-btn" class="btn-icon danger" onclick="closeSeason()" style="white-space:nowrap">&#127942; Clôturer la saison</button>
     </div>` : ''}`;
 };
@@ -5205,6 +5206,43 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
     }
   }
   await loadAll();
+};
+
+// Sauvegarde complète (admin) : télécharge toutes les tables en un fichier JSON
+// horodaté. Chaque table est lue indépendamment — si l'une échoue (RLS, table
+// absente), elle est marquée en erreur sans faire échouer le reste.
+const exportBackup = async () => {
+  if (!isAdmin) return;
+  const btn = document.getElementById('export-backup-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Export…'; }
+  try {
+    const tables = ['games', 'players', 'matches', 'ratings', 'seasons', 'game_owners',
+                    'coop_sessions', 'challenges', 'events', 'suggestions', 'comments', 'profiles'];
+    const backup = {
+      exported_at: new Date().toISOString(),
+      site: 'boardgametom.com',
+      tables: {},
+    };
+    for (const t of tables) {
+      try { backup.tables[t] = await sb.get(t, {}); }
+      catch (e) { backup.tables[t] = { _error: String(e.message || e) }; }
+    }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `boardgametom-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    const nOk = Object.values(backup.tables).filter((v) => Array.isArray(v)).length;
+    toast(`Sauvegarde téléchargée — ${nOk}/${tables.length} tables 💾`);
+  } catch (e) {
+    toastErr('Erreur export : ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Sauvegarde'; }
+  }
 };
 
 // Rejoue TOUTE la saison depuis zéro avec la formule actuelle et réécrit
