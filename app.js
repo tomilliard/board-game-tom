@@ -4310,11 +4310,17 @@ const applyHistFilters = (list) => {
   });
 };
 
+// Pagination de l'historique : on n'affiche que N cartes, bouton « Afficher plus ».
+const HIST_PAGE = 20;
+let _histShown  = HIST_PAGE;
+const showMoreHist = () => { _histShown += HIST_PAGE; renderMatchList(); };
+
 const setHistFilter = (key, val) => {
   if (key === 'search')      _histSearch = val;
   else if (key === 'game')   _histGame   = val;
   else if (key === 'with')   _histWith   = val;
   else if (key === 'period') _histPeriod = val;
+  _histShown = HIST_PAGE;                  // repartir en haut de la pagination
   renderMatchList();                       // ne rebâtit que #hlist → focus de la recherche préservé
   const clr = document.getElementById('hist-clear');
   if (clr) clr.style.display = histFiltersActive() ? 'inline-flex' : 'none';
@@ -4322,6 +4328,7 @@ const setHistFilter = (key, val) => {
 
 const clearHistFilters = () => {
   _histSearch = ''; _histGame = ''; _histWith = ''; _histPeriod = '';
+  _histShown = HIST_PAGE;
   renderHistFilters();
   renderMatchList();
 };
@@ -4371,6 +4378,7 @@ const renderHistFilters = () => {
 };
 
 const renderHistory = () => {
+  _histShown = HIST_PAGE;   // on repart sur la 1re page à chaque ouverture
   renderHistoryStats();
   renderHistFilters();
   renderMatchList();
@@ -4617,10 +4625,20 @@ const renderMatchList = () => {
       : '';
   }
 
+  const visible  = filtered.slice(0, _histShown);
+  const moreLeft = filtered.length - visible.length;
+  const moreBtn  = moreLeft > 0
+    ? `<div style="text-align:center;margin-top:14px">
+         <button class="btn-sec" onclick="showMoreHist()">
+           Afficher plus (${moreLeft} restante${moreLeft > 1 ? 's' : ''})
+         </button>
+       </div>`
+    : '';
+
   const confirmedHtml = filtered.length
-    ? filtered.map((m) => m.is_coop
+    ? visible.map((m) => m.is_coop
         ? buildCoopCard(coopSessions.find((s) => s.id === m.coop_id) || {})
-        : buildMatchCard(m)).join('')
+        : buildMatchCard(m)).join('') + moreBtn
     : (histFiltersActive()
         ? '<div class="empty"><div class="empty-icon">🔍</div><p>Aucune partie ne correspond aux filtres.</p></div>'
         : (pendingHtml ? '' : '<div class="empty"><div class="empty-icon">🎮</div><p>Tu n\'as encore aucune partie enregistrée.</p></div>'));
@@ -6483,6 +6501,7 @@ const buildCoopCard = (s) => {
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="hist-game">${esc(gameName)}</span>
         <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted)">${kindLbl}</span>
+        <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px dashed var(--border);color:var(--text-faint)">sans points</span>
         ${out ? `<span style="font-size:11px;padding:2px 8px;border-radius:999px;background:${out.color}1f;color:${out.color};border:1px solid ${out.color}55">${out.label}</span>` : ''}
       </div>
       <div class="hist-date">${s.date ? fmtDate(s.date) : ''}${s.campaign ? ` · 📖 ${esc(s.campaign)}` : ''}</div>
