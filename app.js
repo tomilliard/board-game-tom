@@ -247,11 +247,6 @@ const DURATION_LABELS = {
 
 const DURATION_MULT = { court: 1, moyen: 1.5, long: 2 };
 
-// Durée saisie À CHAQUE PARTIE (4 paliers) → multiplicateur des points de base.
-// Barème « marqué » : plus la partie est longue, plus elle rapporte.
-const MATCH_DURATION_MULT   = { lt30: 1, lt60: 1.5, lt120: 2.5, gt120: 4 };
-const MATCH_DURATION_LABELS = { lt30: '< 30 min', lt60: '< 1h', lt120: '< 2h', gt120: '> 2h' };
-
 const RANKS = (() => {
   const DIVS = [
     { name:'Bois',       key:'bois',       color:'#8B6914', start:0,    end:49,   count:5 },
@@ -480,17 +475,13 @@ const durationMult = (gameId) => {
   return g ? (DURATION_MULT[g.duration] || 1) : 1;
 };
 
-const calcPoints = (rank, totalPlayers, gameId, mDur) => {
+const calcPoints = (rank, totalPlayers, gameId) => {
   let base;
   if      (rank === 1) base = 10 + (totalPlayers - 1) * 3;
   else if (rank === 2) base = 6 + Math.max(0, (totalPlayers - 2) * 2);
   else if (rank === 3) base = 3 + Math.max(0, totalPlayers - 3);
   else                 base = 1;
-  // Durée de la PARTIE si renseignée, sinon repli sur la durée du JEU (anciennes parties).
-  const mult = (mDur != null && MATCH_DURATION_MULT[mDur] != null)
-    ? MATCH_DURATION_MULT[mDur]
-    : durationMult(gameId);
-  return Math.round(base * mult);
+  return Math.round(base * durationMult(gameId));
 };
 
 const calcLoss = (pts, placement, totalPlayers) => {
@@ -2339,7 +2330,7 @@ const computeGameElo = (gid) => {
     const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
     const pre = {};
     ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
-    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre, m.duration);
+    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
     ids.forEach((id) => {
       sim[id].pts    = res[id].newPts;
       sim[id].elo    = res[id].newElo;
@@ -4684,7 +4675,6 @@ const renderHistoryStats = () => {
 const histDateLabel = (m) => {
   const parts = [];
   if (m.date) parts.push(fmtDate(m.date));
-  if (m.duration && MATCH_DURATION_LABELS[m.duration]) parts.push(MATCH_DURATION_LABELS[m.duration]);
   return parts.length ? `<div class="hist-date">${parts.join(' · ')}</div>` : '';
 };
 
@@ -4727,7 +4717,7 @@ const buildMatchCard = (m) => {
           const pl   = players.find((x) => x.id === pid);
           const isW  = winIds.includes(pid);
           const rank = isW ? 1 : loserPlace(losers, pid, m.scores, winIds.length);
-          const gain = calcPoints(rank, n, m.game_id, m.duration);
+          const gain = calcPoints(rank, n, m.game_id);
           const loss = calcLoss(pl?.points || 0, rank, n);
           const net  = gain - loss;
           const col  = net >= 0 ? 'var(--accent)' : 'var(--danger)';
@@ -4816,7 +4806,7 @@ const buildPendingCard = (m) => {
           const pl   = players.find((x) => x.id === pid);
           const isW  = winIds.includes(pid);
           const rank = isW ? 1 : loserPlace(losers, pid, m.scores, winIds.length);
-          const gain = calcPoints(rank, n, m.game_id, m.duration);
+          const gain = calcPoints(rank, n, m.game_id);
           const loss = calcLoss(pl?.points || 0, rank, n);
           const net  = gain - loss;
           const col  = net >= 0 ? 'var(--accent)' : 'var(--danger)';
@@ -4827,8 +4817,6 @@ const buildPendingCard = (m) => {
         }).join('')}
        </div>`
     : '';
-
-  const durTxt = (m.duration && MATCH_DURATION_LABELS[m.duration]) ? ` · ${MATCH_DURATION_LABELS[m.duration]}` : '';
 
   const actions = canValidate
     ? `<div style="display:flex;gap:8px;margin-top:10px">
@@ -4843,7 +4831,7 @@ const buildPendingCard = (m) => {
   return `<div class="hist-card" id="pending-${m.id}" style="border:1px solid var(--gold)">
     <div class="hist-hdr"><div>
       <div class="hist-game">${g ? esc(g.name) : 'Jeu inconnu'}</div>
-      <div class="hist-date">${m.date ? fmtDate(m.date) : ''}${durTxt} · par ${recorder ? esc(recorder.name) : '?'}</div>
+      <div class="hist-date">${m.date ? fmtDate(m.date) : ''} · par ${recorder ? esc(recorder.name) : '?'}</div>
       ${notesHtml}
     </div></div>
     <div class="hist-players">${playersHtml}</div>
@@ -5088,8 +5076,6 @@ const openMatchModal = () => {
       ).join('')
     : '<p style="font-size:13px;color:var(--text-faint)">Aucun joueur inscrit.</p>';
   document.getElementById('fm-notes').value = '';
-  document.getElementById('fm-duration').value = '';
-  document.querySelectorAll('#fm-duration-seg .dur-opt').forEach((b) => b.classList.remove('active'));
   openModal('modal-match');
 };
 
@@ -5113,8 +5099,6 @@ const saveMatch = async () => {
   if (!currentUser) { showAuthWall(); return; }
   const gid  = parseInt(document.getElementById('fm-game').value);
   if (!gid) { document.getElementById('fm-game-search').focus(); return; }
-  const dur  = document.getElementById('fm-duration').value;
-  if (!dur) { toast('Indiquez la durée de la partie'); return; }
   const cbs  = [...document.querySelectorAll('.mcb:checked')];
   if (!cbs.length) { toast('Sélectionnez au moins un joueur'); return; }
   const pids = cbs.map((c) => parseInt(c.value));
@@ -5142,7 +5126,6 @@ const saveMatch = async () => {
   const mdata = {
     game_id: gid,
     date:    document.getElementById('fm-date').value,
-    duration: dur,
     players: pids.map((id) => ({ id })),
     winners: finW,
     scores,
@@ -5160,7 +5143,7 @@ const saveMatch = async () => {
     if (!others.length) {
       // Aucun validateur possible → on confirme et on attribue tout de suite.
       await sb.patch('matches', { confirmed_at: new Date().toISOString() }, { id: matchId });
-      await awardPoints(matchId, finW, pids, false, gid, scores, dur);
+      await awardPoints(matchId, finW, pids, false, gid, scores);
       await loadAll();
       closeModal('modal-match');
       renderHistory();
@@ -5219,7 +5202,7 @@ const confirmMatch = async (id) => {
   try {
     await sb.patch('matches', { status: 'confirmed', confirmed_at: new Date().toISOString() }, { id });
     const pids = (m.players || []).map((pp) => pp.id);
-    await awardPoints(id, m.winners || [], pids, !!m.is_challenge, m.game_id, m.scores || {}, m.duration);
+    await awardPoints(id, m.winners || [], pids, !!m.is_challenge, m.game_id, m.scores || {});
     await loadAll();
     renderHistory();
     toast('Partie validée — points attribués ✨');
@@ -5364,7 +5347,7 @@ document.addEventListener('click', (e) => {
 // Cœur de calcul d'une partie — PUR (aucune lecture/écriture d'état global).
 // pre = { [id]: { pts, elo, streak, games } } : état AVANT la partie.
 // Renvoie { [id]: { net, newPts, newStreak, newElo } }.
-const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre, mDur) => {
+const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre) => {
   const n = ids.length;
   const losers = ids.filter((id) => !winnerIds.includes(id));
   if (scores && Object.keys(scores).length)
@@ -5389,7 +5372,7 @@ const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre, mDur) =>
   ids.forEach((id) => {
     const isW    = winnerIds.includes(id);
     const curPts = pre[id].pts;
-    const basePts = calcPoints(place(id), n, gameId, mDur);
+    const basePts = calcPoints(place(id), n, gameId);
     let gain = basePts;
     if (isChallenge && isW) gain += 5;
     const newStreak = isW ? pre[id].streak + 1 : 0;
@@ -5425,7 +5408,7 @@ const computeMatch = (ids, winnerIds, scores, isChallenge, gameId, pre, mDur) =>
   return out;
 };
 
-const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gameId, scores, mDur) => {
+const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gameId, scores) => {
   const ids = allPlayerIds.filter((id) => players.some((x) => x.id === id));
   if (!ids.length) { await loadAll(); return; }
 
@@ -5435,7 +5418,7 @@ const awardPoints = async (matchId, winnerIds, allPlayerIds, isChallengeWin, gam
     const p = players.find((x) => x.id === id);
     pre[id] = { pts: p.points || 0, elo: getElo(p), streak: p.streak || 0, games: eloGamesPlayed(id) };
   });
-  const res = computeMatch(ids, winnerIds, scores || {}, isChallengeWin, gameId, pre, mDur);
+  const res = computeMatch(ids, winnerIds, scores || {}, isChallengeWin, gameId, pre);
 
   // Trône projeté après la partie (n°1 aux points, ≥ palier Maître).
   const projPts = {};
@@ -5536,7 +5519,7 @@ const recomputeSeason = async () => {
       const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
       const pre = {};
       ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
-      const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre, m.duration);
+      const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
       ids.forEach((id) => {
         sim[id].pts     = res[id].newPts;
         sim[id].elo     = res[id].newElo;
@@ -6006,8 +5989,6 @@ const openChallengeResult = (chId) => {
        </div>`
     ).join('');
   document.getElementById('cr-notes').value = '';
-  document.getElementById('cr-duration').value = '';
-  document.querySelectorAll('#cr-duration-seg .dur-opt').forEach((b) => b.classList.remove('active'));
   openModal('modal-challenge-result');
 };
 
@@ -6015,8 +5996,6 @@ const saveChallengeResult = async () => {
   if (!currentChallengeId) return;
   const ch        = challenges.find((c) => c.id === currentChallengeId);
   if (!ch) return;
-  const dur = document.getElementById('cr-duration').value;
-  if (!dur) { toastErr('Indiquez la durée de la partie.'); return; }
   const winnerIds = [...document.querySelectorAll('.cr-winner-cb:checked')].map((c) => parseInt(c.value));
   const toIds  = Array.isArray(ch.to_player_ids) && ch.to_player_ids.length ? ch.to_player_ids : [ch.to_player_id].filter(Boolean);
   const allIds = [ch.from_player_id, ...toIds];
@@ -6049,7 +6028,6 @@ const saveChallengeResult = async () => {
     const mdata = {
       game_id: ch.game_id,
       date:    new Date().toISOString().split('T')[0],
-      duration: dur,
       players: allIds.map((id) => ({ id })),
       winners: finalWinners,
       scores:  scores,
@@ -6065,7 +6043,7 @@ const saveChallengeResult = async () => {
 
     if (!others.length) {
       await sb.patch('matches', { confirmed_at: new Date().toISOString() }, { id: matchId });
-      await awardPoints(matchId, finalWinners, allIds, true, ch.game_id, scores, dur);
+      await awardPoints(matchId, finalWinners, allIds, true, ch.game_id, scores);
       await loadSocial();
       closeModal('modal-challenge-result');
       renderChallenges();
@@ -8037,7 +8015,7 @@ const eloHistories = () => {
     const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
     const pre = {};
     ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
-    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre, m.duration);
+    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
     ids.forEach((id) => {
       sim[id].pts    = res[id].newPts;
       sim[id].elo    = res[id].newElo;
@@ -8081,7 +8059,7 @@ const allPlayersProgression = () => {
     const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
     const pre = {};
     ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
-    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre, m.duration);
+    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
     const d = String(m.date || '').split('T')[0];
     ids.forEach((id) => {
       sim[id].pts    = res[id].newPts;
@@ -8390,7 +8368,7 @@ const drawProgressionChart = (pid, color) => {
       const losers  = sortedLosers((m.players || []).map((p) => p.id), winIds, m.scores);
       const place   = winIds.includes(pid)
         ? 1 : loserPlace(losers, pid, m.scores, winIds.length);
-      const gain    = calcPoints(place, n, m.game_id, m.duration);
+      const gain    = calcPoints(place, n, m.game_id);
       const loss    = calcLoss(pts, place, n);
       pts = Math.max(0, pts + gain - loss);
       dataPoints.push({ date: m.date.split('T')[0], v: pts });
