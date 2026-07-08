@@ -3719,6 +3719,52 @@ const computeTrophyList = () => {
   ];
 };
 
+// ─── Présents du soir : définis une fois, pré-cochés à chaque partie ───
+// Stocké en local sur l'appareil, valable pour la journée en cours uniquement.
+const getTonight = () => {
+  try {
+    const raw = localStorage.getItem('bgtTonight');
+    if (!raw) return null;
+    const t = JSON.parse(raw);
+    if (t.date !== new Date().toISOString().split('T')[0]) return null;
+    return (Array.isArray(t.ids) && t.ids.length) ? t : null;
+  } catch { return null; }
+};
+const clearTonight = () => {
+  try { localStorage.removeItem('bgtTonight'); } catch {}
+  openSoirees();
+};
+const openTonightSetup = () => {
+  const tonight = getTonight();
+  document.getElementById('soirees-title').innerHTML =
+    `<span onclick="openSoirees()" style="cursor:pointer;color:var(--text-faint)">‹</span> 🎯 Ce soir, qui est là ?`;
+  document.getElementById('soirees-body').innerHTML = `
+    <div class="player-checks" style="max-height:260px;margin-bottom:12px">
+      ${[...players].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr')).map((p) =>
+        `<div class="pcheck-row"><label>
+           <input type="checkbox" value="${p.id}" class="tonight-cb" ${tonight && tonight.ids.includes(p.id) ? 'checked' : ''}>
+           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
+           ${esc(p.name)}
+         </label></div>`).join('')}
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="openSoirees()">Annuler</button>
+      <button class="btn-save-m"   onclick="saveTonight()">Enregistrer</button>
+    </div>`;
+};
+const saveTonight = () => {
+  const ids = [...document.querySelectorAll('.tonight-cb:checked')].map((c) => parseInt(c.value));
+  try {
+    if (ids.length) {
+      localStorage.setItem('bgtTonight', JSON.stringify({ date: new Date().toISOString().split('T')[0], ids }));
+      toast(`${ids.length} présent${ids.length > 1 ? 's' : ''} ce soir 🎯`);
+    } else {
+      localStorage.removeItem('bgtTonight');
+    }
+  } catch {}
+  openSoirees();
+};
+
 // ─── Mode Soirée : regroupement automatique des parties PAR DATE ─────
 // Une « soirée » = une date où au moins une partie (classée ou coop) a été
 // jouée dans le club. Aucune manipulation : tout est déduit de l'historique.
@@ -3751,12 +3797,33 @@ const openSoirees = () => {
   const soirees = computeSoirees();
   document.getElementById('soirees-title').textContent = '🌙 Soirées du club';
   const body = document.getElementById('soirees-body');
+
+  const tonight = getTonight();
+  const tonightNames = tonight
+    ? tonight.ids.map((id) => (players.find((p) => p.id === id) || {}).name).filter(Boolean).join(', ')
+    : '';
+  const tonightCard = `
+    <div style="padding:11px 12px;border:1px solid var(--accent);border-radius:10px;margin-bottom:12px;background:var(--surface-2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <b style="font-size:13.5px;color:var(--text)">🎯 Ce soir</b>
+        <div style="display:flex;gap:6px">
+          <button onclick="openTonightSetup()" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:11.5px;cursor:pointer">${tonight ? 'Modifier' : 'Définir les présents'}</button>
+          ${tonight ? `<button onclick="clearTonight()" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text-faint);font-family:inherit;font-size:11.5px;cursor:pointer">Effacer</button>` : ''}
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-faint);margin-top:4px">
+        ${tonight
+          ? `${esc(tonightNames)} — pré-cochés à chaque nouvelle partie.`
+          : 'Indique qui participe : ils seront pré-cochés à chaque partie enregistrée aujourd\'hui.'}
+      </div>
+    </div>`;
+
   if (!soirees.length) {
-    body.innerHTML = '<div class="empty"><div class="empty-icon">🌙</div><p>Aucune partie enregistrée pour le moment.</p></div>';
+    body.innerHTML = tonightCard + '<div class="empty"><div class="empty-icon">🌙</div><p>Aucune partie enregistrée pour le moment.</p></div>';
     openModal('modal-soirees');
     return;
   }
-  body.innerHTML = soirees.slice(0, 40).map((s) => `
+  body.innerHTML = tonightCard + soirees.slice(0, 40).map((s) => `
     <div onclick="openSoiree('${s.date}')" style="display:flex;align-items:center;justify-content:space-between;gap:10px;
          padding:11px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;
          background:var(--surface-2);cursor:pointer">
@@ -5064,7 +5131,7 @@ const openMatchModal = () => {
   document.getElementById('fm-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('fm-players').innerHTML = players.length
     ? players.map((p) =>
-        `<div class="pcheck-row">
+        `<div class="pcheck-row" data-name="${_normName(p.name)}">
            <label>
              <input type="checkbox" value="${p.id}" class="mcb" onchange="onMatchPlayersChange()">
              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
@@ -5076,7 +5143,26 @@ const openMatchModal = () => {
       ).join('')
     : '<p style="font-size:13px;color:var(--text-faint)">Aucun joueur inscrit.</p>';
   document.getElementById('fm-notes').value = '';
+  const search = document.getElementById('fm-player-search');
+  if (search) search.value = '';
+  // Présents du soir : pré-cocher les participants définis dans 🌙 Soirées.
+  const tonight = getTonight();
+  if (tonight) {
+    document.querySelectorAll('#fm-players .mcb').forEach((c) => {
+      if (tonight.ids.includes(parseInt(c.value))) c.checked = true;
+    });
+    onMatchPlayersChange();
+  }
   openModal('modal-match');
+};
+
+// Filtre de la liste des joueurs du formulaire (insensible aux accents).
+const _normName = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const filterMatchPlayers = () => {
+  const q = _normName(document.getElementById('fm-player-search')?.value);
+  document.querySelectorAll('#fm-players .pcheck-row').forEach((row) => {
+    row.style.display = (!q || (row.dataset.name || '').includes(q)) ? '' : 'none';
+  });
 };
 
 // Sélection dans un segmented control (durée, type coop, résultat…).
@@ -6747,6 +6833,13 @@ const openCoopModal = () => {
 
   _coopGuests = [];
   renderCoopGuests();
+  // Présents du soir : pré-cocher aussi en coop.
+  const tonightC = getTonight();
+  if (tonightC) {
+    document.querySelectorAll('#coop-players .coop-cb').forEach((c) => {
+      if (tonightC.ids.includes(parseInt(c.value))) c.checked = true;
+    });
+  }
   refreshCoopGames();
   openModal('modal-coop');
 };
