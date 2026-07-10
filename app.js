@@ -4595,11 +4595,15 @@ let _histGame   = '';
 let _histWith   = '';
 let _histPeriod = '';   // '' | 'month' | 'year'
 
-const _histMine = () => {
-  if (!currentUser) return [];
-  const me = players.find((p) => p.user_id === currentUser.id);
-  if (!me) return [];
-  return matches.filter((m) => (m.players || []).some((pp) => pp.id === me.id));
+// Historique du CLUB : toutes les parties (classées + coop), les mêmes pour
+// tout le monde, triées de la plus récente à la plus ancienne.
+const _histAll = () => {
+  const numId = (m) => m.is_coop ? (m.coop_id || 0) : (m.id || 0);
+  return [...matches, ...coopAsMatches()].sort((a, b) => {
+    const da = String(a.date || ''), db = String(b.date || '');
+    if (da !== db) return db.localeCompare(da);
+    return numId(b) - numId(a);           // même jour : dernière enregistrée en premier
+  });
 };
 
 const histFiltersActive = () => !!(_histSearch || _histGame || _histWith || _histPeriod);
@@ -4657,18 +4661,16 @@ const clearHistFilters = () => {
 const renderHistFilters = () => {
   const el = document.getElementById('hist-filters');
   if (!el) return;
-  const mine = _histMine();
-  if (mine.length < 2) { el.innerHTML = ''; return; }   // inutile de filtrer 0/1 partie
-  const me = players.find((p) => p.user_id === currentUser.id);
+  const all = _histAll();
+  if (all.length < 2) { el.innerHTML = ''; return; }   // inutile de filtrer 0/1 partie
 
-  const gOpts = [...new Set(mine.map((m) => m.game_id))]
+  const gOpts = [...new Set(all.map((m) => m.game_id))]
     .map((id) => games.find((x) => x.id === id))
     .filter(Boolean)
     .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
     .map((g) => `<option value="${g.id}"${String(g.id) === _histGame ? ' selected' : ''}>${esc(g.name)}</option>`)
     .join('');
-  const pOpts = [...new Set(mine.flatMap((m) => (m.players || []).map((pp) => pp.id)))]
-    .filter((id) => !me || id !== me.id)
+  const pOpts = [...new Set(all.flatMap((m) => (m.players || []).map((pp) => pp.id)))]
     .map((id) => players.find((x) => x.id === id))
     .filter((p) => p && p.name)
     .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
@@ -4685,7 +4687,7 @@ const renderHistFilters = () => {
         <option value="">Tous les jeux</option>${gOpts}
       </select>
       <select onchange="setHistFilter('with',this.value)" style="${sel}">
-        <option value="">Avec qui…</option>${pOpts}
+        <option value="">Tous les joueurs</option>${pOpts}
       </select>
       <select onchange="setHistFilter('period',this.value)" style="${sel}">
         <option value=""${_histPeriod === ''      ? ' selected' : ''}>Toute période</option>
@@ -4911,7 +4913,7 @@ const buildPendingCard = (m) => {
 const renderMatchList = () => {
   const el = document.getElementById('hlist');
   if (!currentUser) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">🔒</div><p>Connecte-toi pour voir tes parties.</p></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🔒</div><p>Connecte-toi pour voir l\'historique du club.</p></div>';
     return;
   }
   const myPlayer = players.find((p) => p.user_id === currentUser.id);
@@ -4927,19 +4929,13 @@ const renderMatchList = () => {
        </div>`
     : '';
 
-  const myCoop = myPlayer
-    ? coopAsMatches().filter((m) => (m.players || []).some((pp) => pp.id === myPlayer.id))
-    : [];
-  const mine = (myPlayer
-    ? matches.filter((m) => (m.players || []).some((pp) => pp.id === myPlayer.id))
-    : []).concat(myCoop)
-    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-  const filtered = applyHistFilters(mine);
+  const all      = _histAll();
+  const filtered = applyHistFilters(all);
 
   const countEl = document.getElementById('hist-count');
   if (countEl) {
-    countEl.textContent = (histFiltersActive() && mine.length)
-      ? `${filtered.length} partie${filtered.length > 1 ? 's' : ''} sur ${mine.length}`
+    countEl.textContent = (histFiltersActive() && all.length)
+      ? `${filtered.length} partie${filtered.length > 1 ? 's' : ''} sur ${all.length}`
       : '';
   }
 
@@ -8853,9 +8849,11 @@ const initDecorations = () => {
 
       const el    = document.createElement('img');
       el.src      = src;
+      el.className = 'deco-img';
       const kName = `df${isLeft ? 'l' : 'r'}${i}`;
       const end   = angle + (i % 2 ? 4 : -4);
       const style = document.createElement('style');
+      style.dataset.deco = '1';
       style.textContent = `@keyframes ${kName}{
         0%{bottom:-200px;opacity:0;transform:rotate(${angle}deg)}
         7%{opacity:.65}
@@ -8882,6 +8880,23 @@ const initDecorations = () => {
   placeGroup(leftImgs,  true);
   placeGroup(rightImgs, false);
 };
+
+// Supprime le décor existant (images + keyframes) pour pouvoir le régénérer.
+const destroyDecorations = () => {
+  document.querySelectorAll('img.deco-img').forEach((el) => el.remove());
+  document.querySelectorAll('style[data-deco]').forEach((el) => el.remove());
+};
+
+// Recalcule le décor quand la taille de fenêtre change (maximisation sur grand
+// écran, zoom…) — sinon les vignettes restent calées sur l'ancienne largeur.
+let _decoResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_decoResizeTimer);
+  _decoResizeTimer = setTimeout(() => {
+    destroyDecorations();
+    initDecorations();
+  }, 350);
+});
 
 // ═══════════════════════════════════════════════════════════════
 // INITIALISATION
