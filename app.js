@@ -432,6 +432,7 @@ const coopAsMatches = () => coopSessions.map((s) => ({
   game_id:   s.game_id,
   game_name: s.game_name,
   date:      s.date,
+  time:      s.time,
   players:   (s.players || []).map((pp) => ({ id: pp.id })),
   winners:   coopWinners(s),
   scores:    coopScores(s),
@@ -440,6 +441,12 @@ const coopAsMatches = () => coopSessions.map((s) => ({
 
 const ini = (name) =>
   (name || '?').trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+
+// Heure locale « HH:MM » (pré-remplissage des formulaires).
+const nowHM = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
 
 const fmtDate = (d) => {
   if (!d) return '';
@@ -4602,7 +4609,9 @@ const _histAll = () => {
   return [...matches, ...coopAsMatches()].sort((a, b) => {
     const da = String(a.date || ''), db = String(b.date || '');
     if (da !== db) return db.localeCompare(da);
-    return numId(b) - numId(a);           // même jour : dernière enregistrée en premier
+    const ta = String(a.time || ''), tb = String(b.time || '');
+    if (ta !== tb) return tb.localeCompare(ta);   // même jour : heure la plus tardive d'abord
+    return numId(b) - numId(a);
   });
 };
 
@@ -4744,6 +4753,7 @@ const renderHistoryStats = () => {
 const histDateLabel = (m) => {
   const parts = [];
   if (m.date) parts.push(fmtDate(m.date));
+  if (m.time) parts.push(String(m.time).slice(0, 5));
   return parts.length ? `<div class="hist-date">${parts.join(' · ')}</div>` : '';
 };
 
@@ -4900,7 +4910,7 @@ const buildPendingCard = (m) => {
   return `<div class="hist-card" id="pending-${m.id}" style="border:1px solid var(--gold)">
     <div class="hist-hdr"><div>
       <div class="hist-game">${g ? esc(g.name) : 'Jeu inconnu'}</div>
-      <div class="hist-date">${m.date ? fmtDate(m.date) : ''} · par ${recorder ? esc(recorder.name) : '?'}</div>
+      <div class="hist-date">${m.date ? fmtDate(m.date) : ''}${m.time ? ' · ' + String(m.time).slice(0, 5) : ''} · par ${recorder ? esc(recorder.name) : '?'}</div>
       ${notesHtml}
     </div></div>
     <div class="hist-players">${playersHtml}</div>
@@ -5125,6 +5135,7 @@ const openMatchModal = () => {
   document.getElementById('fm-game-dropdown').style.display = 'none';
   filterGameSearch();
   document.getElementById('fm-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fm-time').value = nowHM();
   document.getElementById('fm-players').innerHTML = players.length
     ? players.map((p) =>
         `<div class="pcheck-row" data-name="${_normName(p.name)}">
@@ -5208,6 +5219,7 @@ const saveMatch = async () => {
   const mdata = {
     game_id: gid,
     date:    document.getElementById('fm-date').value,
+    time:    document.getElementById('fm-time').value || null,
     players: pids.map((id) => ({ id })),
     winners: finW,
     scores,
@@ -6110,6 +6122,7 @@ const saveChallengeResult = async () => {
     const mdata = {
       game_id: ch.game_id,
       date:    new Date().toISOString().split('T')[0],
+      time:    nowHM(),
       players: allIds.map((id) => ({ id })),
       winners: finalWinners,
       scores:  scores,
@@ -6800,6 +6813,7 @@ const openCoopModal = () => {
   document.getElementById('coop-game').value = '';
   document.getElementById('coop-campaign').value = '';
   document.getElementById('coop-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('coop-time').value = nowHM();
   document.getElementById('coop-notes').value = '';
 
   // Type → coop par défaut
@@ -6867,6 +6881,7 @@ const saveCoopSession = async () => {
     game_id:   matchedGame ? matchedGame.id : null,
     game_name: gameText,
     date:      document.getElementById('coop-date').value || new Date().toISOString().split('T')[0],
+    time:      document.getElementById('coop-time').value || null,
     kind,
     campaign:  kind === 'campagne' ? ((document.getElementById('coop-campaign').value || '').trim() || null) : null,
     players:   regPlayers,
@@ -6938,7 +6953,7 @@ const buildCoopCard = (s) => {
         <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px dashed var(--border);color:var(--text-faint)">sans points</span>
         ${out ? `<span style="font-size:11px;padding:2px 8px;border-radius:999px;background:${out.color}1f;color:${out.color};border:1px solid ${out.color}55">${out.label}</span>` : ''}
       </div>
-      <div class="hist-date">${s.date ? fmtDate(s.date) : ''}${s.campaign ? ` · 📖 ${esc(s.campaign)}` : ''}</div>
+      <div class="hist-date">${s.date ? fmtDate(s.date) : ''}${s.time ? ' · ' + String(s.time).slice(0, 5) : ''}${s.campaign ? ` · 📖 ${esc(s.campaign)}` : ''}</div>
       ${s.notes ? `<div class="hist-notes">${esc(s.notes)}</div>` : ''}
     </div>
     ${canDel ? `<button class="btn-icon danger" onclick="deleteCoopSession(${s.id})" title="Supprimer" style="flex-shrink:0">${SVG_TRASH}</button>` : ''}

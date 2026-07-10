@@ -875,6 +875,10 @@
         <label>Date</label>
         <input class="finput" type="date" id="fm-date">
       </div>
+      <div class="form-row">
+        <label>Heure</label>
+        <input class="finput" type="time" id="fm-time">
+      </div>
     </div>
     <div class="form-row">
       <label>Joueurs — ⭐ vainqueur · score optionnel</label>
@@ -1193,9 +1197,15 @@
       <input class="finput" id="coop-campaign" placeholder="Ex : Gloomhaven — Scénario 12" autocomplete="off">
     </div>
 
-    <div class="form-row">
-      <label>Date</label>
-      <input class="finput" type="date" id="coop-date">
+    <div class="form-row" style="display:flex;gap:8px">
+      <div style="flex:1">
+        <label>Date</label>
+        <input class="finput" type="date" id="coop-date">
+      </div>
+      <div style="flex:1">
+        <label>Heure</label>
+        <input class="finput" type="time" id="coop-time">
+      </div>
     </div>
 
     <div class="form-row">
