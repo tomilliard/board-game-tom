@@ -1227,6 +1227,8 @@ const bgClose = (e, id) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
+  const tv = document.getElementById('tv-overlay');
+  if (tv && tv.style.display === 'block') { closeTvMode(); return; }
   [
     'modal-game', 'modal-match', 'modal-reco', 'modal-admin',
     'modal-profile', 'modal-challenge', 'modal-challenge-result',
@@ -2039,6 +2041,174 @@ const renderCurrentPage = () => {
   else if (curPage === 'social')  renderCurrentSocialTab();
   else if (curPage === 'events')  renderEvents();
   else if (curPage === 'coop')    renderCoop();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MODE TV — plein écran auto-défilant (soirées club, écran projeté)
+// ═══════════════════════════════════════════════════════════════
+const TV_SLIDE_MS = 12000;
+let _tvTimer = null, _tvClockTimer = null, _tvIdx = 0, _tvCycles = 0;
+
+const _tvAvatar = (p, size, ring) => {
+  const c = p.color || '#4ade80';
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;
+      width:${size}px;height:${size}px;border-radius:50%;border:3px solid ${ring || c};
+      background:${c}22;color:${c};font-size:${Math.round(size / 3)}px;font-weight:700">${playerAvatarInner(p, c)}</span>`;
+};
+const _tvTitle = (emoji, txt) =>
+  `<div style="text-align:center;font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:44px;
+       color:var(--text);margin-bottom:30px">${emoji} ${txt}</div>`;
+
+const tvSlideRanking = () => {
+  const ranked = [...players].sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 10);
+  if (!ranked.length) return null;
+  const half = Math.ceil(ranked.length / 2);
+  const col = (list, offset) => `<div style="flex:1;display:flex;flex-direction:column;gap:12px">
+    ${list.map((p, i) => {
+      const rk = displayRank(p);
+      const pos = offset + i + 1;
+      const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : pos;
+      return `<div style="display:flex;align-items:center;gap:16px;background:var(--surface-2);
+           border:1px solid var(--border);border-radius:14px;padding:12px 18px">
+        <span style="width:44px;text-align:center;font-size:26px;font-weight:800;color:var(--text-muted)">${medal}</span>
+        ${_tvAvatar(p, 52)}
+        <span style="flex:1;font-size:26px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span>
+        ${rankImg(rk, 30)}
+        <b style="font-size:27px;color:var(--gold);min-width:100px;text-align:right">${p.points || 0} pts</b>
+      </div>`;
+    }).join('')}
+  </div>`;
+  return _tvTitle('🏆', 'Classement du club') +
+    `<div style="display:flex;gap:22px;max-width:1500px;margin:0 auto;width:100%">
+       ${col(ranked.slice(0, half), 0)}${ranked.length > half ? col(ranked.slice(half), half) : ''}
+     </div>`;
+};
+
+const tvSlideRecent = () => {
+  const recent = _histAll().slice(0, 6);
+  if (!recent.length) return null;
+  return _tvTitle('🎲', 'Dernières parties') +
+    `<div style="display:flex;flex-direction:column;gap:13px;max-width:1250px;margin:0 auto;width:100%">
+      ${recent.map((m) => {
+        const g = games.find((x) => x.id === m.game_id);
+        const gname = g ? g.name : (m.game_name || '?');
+        const wn = (m.winners || []).map((pid) => (players.find((x) => x.id === pid) || {}).name).filter(Boolean).join(', ');
+        return `<div style="display:flex;align-items:center;gap:18px;background:var(--surface-2);
+             border:1px solid var(--border);border-radius:14px;padding:14px 22px">
+          <span style="font-size:25px;font-weight:700;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            ${m.is_coop ? '🤝 ' : ''}${esc(gname)}
+          </span>
+          <span style="font-size:20px;color:var(--text-faint)">${m.date ? fmtDate(m.date) : ''}${m.time ? ' · ' + String(m.time).slice(0, 5) : ''}</span>
+          ${wn ? `<span style="font-size:22px;color:var(--gold);font-weight:600">⭐ ${esc(wn)}</span>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+};
+
+const tvSlideDuos = () => {
+  const duos = computeDuos().slice(0, 4);
+  if (!duos.length) return null;
+  return _tvTitle('💞', 'Meilleurs duos') +
+    `<div style="display:flex;flex-direction:column;gap:16px;max-width:1000px;margin:0 auto;width:100%">
+      ${duos.map((d, i) => {
+        const pa = players.find((p) => p.id === d.a), pb = players.find((p) => p.id === d.b);
+        if (!pa || !pb) return '';
+        return `<div style="display:flex;align-items:center;gap:20px;background:var(--surface-2);
+             border:1px solid var(--border);border-radius:16px;padding:16px 24px">
+          <span style="font-size:30px">${i === 0 ? '💞' : '🤝'}</span>
+          <span style="display:inline-flex">${_tvAvatar(pa, 56)}<span style="margin-left:-14px">${_tvAvatar(pb, 56)}</span></span>
+          <span style="flex:1;font-size:26px;font-weight:700;color:var(--text)">${esc(pa.name)} & ${esc(pb.name)}</span>
+          <span style="font-size:23px;color:var(--text-muted)">${d.wins} victoires ensemble · ${Math.round(d.wins / d.together * 100)}%</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+};
+
+const tvSlideMini = () => {
+  const live = miniSeasons.filter((ms) => miniStatus(ms) === 'live');
+  if (!live.length) return null;
+  return _tvTitle('🏆', 'Mini-saisons en cours') +
+    `<div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;max-width:1500px;margin:0 auto;width:100%">
+      ${live.slice(0, 3).map((ms) => {
+        const board = computeMiniSeason(ms).slice(0, 3);
+        return `<div style="flex:1;min-width:340px;max-width:470px;background:var(--surface-2);
+             border:1px solid var(--accent);border-radius:16px;padding:20px 22px">
+          <div style="font-size:25px;font-weight:700;color:var(--text);margin-bottom:14px">🏆 ${esc(ms.name)}</div>
+          ${board.map((r, i) => `<div style="display:flex;align-items:center;gap:13px;padding:8px 0">
+              <span style="font-size:22px">${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+              ${_tvAvatar(r.player, 42)}
+              <span style="flex:1;font-size:22px;font-weight:600;color:var(--text)">${esc(r.player.name)}</span>
+              <b style="font-size:22px;color:var(--gold)">${r.pts} pts</b>
+            </div>`).join('')}
+          <div style="font-size:16px;color:var(--text-faint);margin-top:8px">${fmtDate(ms.date_start)} → ${fmtDate(ms.date_end)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+};
+
+const tvSlideStats = () => {
+  const season = seasonMatches();
+  if (!season.length && !coopSessions.length) return null;
+  const distinct = new Set(season.map((m) => m.game_id)).size;
+  const active = new Set(season.flatMap((m) => (m.players || []).map((pp) => pp.id))).size;
+  const leader = [...players].sort((a, b) => (b.points || 0) - (a.points || 0))[0];
+  const big = (v, l) => `<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:18px;
+        padding:34px 20px;text-align:center;flex:1;min-width:230px">
+      <div style="font-family:'Chakra Petch',sans-serif;font-size:72px;font-weight:700;color:var(--accent)">${v}</div>
+      <div style="font-size:23px;color:var(--text-muted);margin-top:6px">${l}</div>
+    </div>`;
+  return _tvTitle('📈', `Saison ${currentSeason ? currentSeason.number : ''} en chiffres`) +
+    `<div style="display:flex;gap:22px;flex-wrap:wrap;max-width:1300px;margin:0 auto;width:100%">
+      ${big(season.length, 'parties classées')}
+      ${big(coopSessions.length, 'parties coop')}
+      ${big(distinct, 'jeux différents')}
+      ${big(active, 'joueurs actifs')}
+    </div>
+    ${leader ? `<div style="text-align:center;margin-top:34px;font-size:27px;color:var(--text-muted)">
+        👑 En tête : <b style="color:var(--gold)">${esc(leader.name)}</b> avec ${leader.points || 0} pts
+      </div>` : ''}`;
+};
+
+const TV_SLIDES = [tvSlideRanking, tvSlideRecent, tvSlideDuos, tvSlideMini, tvSlideStats];
+
+const _tvRender = () => {
+  const slides = TV_SLIDES.map((f) => { try { return f(); } catch { return null; } }).filter(Boolean);
+  if (!slides.length) { closeTvMode(); return; }
+  _tvIdx = _tvIdx % slides.length;
+  const box = document.getElementById('tv-slide');
+  box.style.opacity = '0';
+  setTimeout(() => { box.innerHTML = slides[_tvIdx]; box.style.opacity = '1'; }, 320);
+  document.getElementById('tv-dots').innerHTML = slides.map((_, i) =>
+    `<span style="width:${i === _tvIdx ? 26 : 9}px;height:9px;border-radius:99px;transition:all .3s;
+         background:${i === _tvIdx ? 'var(--accent)' : 'var(--border)'}"></span>`).join('');
+};
+
+const _tvTick = async () => {
+  _tvIdx++; _tvCycles++;
+  if (_tvCycles % 10 === 0) { try { await loadAll(); } catch {} }   // données fraîches ~toutes les 2 min
+  _tvRender();
+};
+
+const openTvMode = () => {
+  document.getElementById('tv-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  _tvIdx = 0; _tvCycles = 0;
+  _tvRender();
+  _tvTimer = setInterval(_tvTick, TV_SLIDE_MS);
+  const clock = () => { const d = new Date();
+    document.getElementById('tv-clock').textContent =
+      `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  clock();
+  _tvClockTimer = setInterval(clock, 15000);
+  try { document.documentElement.requestFullscreen?.(); } catch {}
+};
+
+const closeTvMode = () => {
+  document.getElementById('tv-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  clearInterval(_tvTimer); clearInterval(_tvClockTimer);
+  _tvTimer = _tvClockTimer = null;
+  try { if (document.fullscreenElement) document.exitFullscreen?.(); } catch {}
 };
 
 // Clic sur le logo → retour à l'accueil (Classement), nav synchronisée.
@@ -5307,7 +5477,106 @@ const renderMatchList = () => {
 };
 
 // ── Page d'accueil « Classement » : hero + podium + leaderboard ──
-const renderHome = () => { renderHomeHero(); renderPodium(); renderLeaderboard(); renderDuos(); };
+const renderHome = () => { renderHomeHero(); renderPodium(); renderLeaderboard(); renderDuos(); renderClubStats(); };
+
+// ═══ Stats du club (bas de la page Classement) ═══
+// Activité = toutes les parties (classées + coop), à partir des dates.
+const _allActivityDates = () => [
+  ...matches.map((m) => m.date),
+  ...coopSessions.map((sess) => sess.date),
+].map((d) => String(d || '').split('T')[0]).filter(Boolean);
+
+const renderClubStats = () => {
+  const el = document.getElementById('club-stats');
+  if (!el) return;
+  const dates = _allActivityDates();
+  if (dates.length < 3) { el.innerHTML = ''; return; }
+
+  // ── 1. Parties par mois (12 derniers mois) ──
+  const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+  const now = new Date();
+  const months = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: MONTHS[d.getMonth()], n: 0 });
+  }
+  dates.forEach((d) => { const k = d.slice(0, 7); const m = months.find((x) => x.key === k); if (m) m.n++; });
+  const maxM = Math.max(1, ...months.map((m) => m.n));
+  const barsHtml = months.map((m) => `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
+      <span style="font-size:10px;color:var(--text-muted)">${m.n || ''}</span>
+      <div style="width:70%;max-width:26px;height:${Math.max(3, Math.round(m.n / maxM * 90))}px;
+                  border-radius:5px 5px 0 0;background:linear-gradient(180deg, var(--accent), rgba(74,222,128,.35))"></div>
+      <span style="font-size:9.5px;color:var(--text-faint)">${m.label}</span>
+    </div>`).join('');
+
+  // ── 2. Calendrier d'activité (20 dernières semaines, façon GitHub) ──
+  const byDay = {};
+  dates.forEach((d) => { byDay[d] = (byDay[d] || 0) + 1; });
+  const weeks = [];
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  const dow = (today.getDay() + 6) % 7;                       // lundi = 0
+  const end = new Date(today); end.setDate(end.getDate() + (6 - dow));   // dimanche de cette semaine
+  for (let wk = 19; wk >= 0; wk--) {
+    const col = [];
+    for (let dy = 0; dy < 7; dy++) {
+      const d = new Date(end); d.setDate(end.getDate() - wk * 7 - (6 - dy));
+      const key = d.toISOString().split('T')[0];
+      col.push({ key, n: byDay[key] || 0, future: d > today });
+    }
+    weeks.push(col);
+  }
+  const maxD = Math.max(1, ...Object.values(byDay));
+  const cell = (c) => {
+    if (c.future) return '<div style="width:11px;height:11px"></div>';
+    const op = c.n === 0 ? 0 : 0.25 + 0.75 * Math.min(1, c.n / maxD);
+    return `<div title="${fmtDate(c.key)} — ${c.n} partie${c.n > 1 ? 's' : ''}"
+      style="width:11px;height:11px;border-radius:3px;background:${c.n === 0 ? 'var(--surface-2)' : `rgba(74,222,128,${op.toFixed(2)})`};
+             border:1px solid var(--border)"></div>`;
+  };
+  const heatHtml = `<div style="display:flex;gap:3px;justify-content:center;overflow-x:auto;padding-bottom:4px">
+    ${weeks.map((col) => `<div style="display:flex;flex-direction:column;gap:3px">${col.map(cell).join('')}</div>`).join('')}
+  </div>`;
+
+  // ── 3. Jeux en tendance (30 derniers jours) ──
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+  const ck = cutoff.toISOString().split('T')[0];
+  const trend = {};
+  const bump = (gid, gname) => {
+    const g = gid ? games.find((x) => x.id === gid) : null;
+    const name = g ? g.name : (gname || null);
+    if (!name) return;
+    trend[name] = (trend[name] || 0) + 1;
+  };
+  matches.forEach((m) => { if (String(m.date || '') >= ck) bump(m.game_id); });
+  coopSessions.forEach((sess) => { if (String(sess.date || '') >= ck) bump(sess.game_id, sess.game_name); });
+  const top = Object.entries(trend).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxT = top.length ? top[0][1] : 1;
+  const trendHtml = top.length
+    ? top.map(([name, n], i) => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+        <span style="width:18px;text-align:center;font-size:12px">${['🥇', '🥈', '🥉', '4', '5'][i]}</span>
+        <span style="flex:0 0 auto;max-width:45%;font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</span>
+        <div style="flex:1;height:9px;border-radius:99px;background:var(--surface-2);overflow:hidden">
+          <div style="height:100%;width:${Math.round(n / maxT * 100)}%;border-radius:99px;
+                      background:linear-gradient(90deg, var(--accent), rgba(74,222,128,.4))"></div>
+        </div>
+        <b style="font-size:12px;color:var(--text);width:26px;text-align:right">${n}×</b>
+      </div>`).join('')
+    : '<p style="font-size:12px;color:var(--text-faint)">Aucune partie ces 30 derniers jours.</p>';
+
+  const card = (title, inner) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 16px 12px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:12px">${title}</div>
+      ${inner}
+    </div>`;
+
+  el.innerHTML = `
+    <h2 class="section-title">📈 L'activité du club</h2>
+    ${card('Parties par mois', `<div style="display:flex;align-items:flex-end;gap:2px;height:130px">${barsHtml}</div>`)}
+    ${card('Calendrier d\'activité — 20 dernières semaines', heatHtml)}
+    ${card('Jeux en tendance — 30 derniers jours', trendHtml)}`;
+};
 
 const renderHomeHero = () => {
   const snum = document.getElementById('home-season-num');
