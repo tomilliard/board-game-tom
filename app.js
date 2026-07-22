@@ -2041,6 +2041,14 @@ const renderCurrentPage = () => {
   else if (curPage === 'coop')    renderCoop();
 };
 
+// Clic sur le logo → retour à l'accueil (Classement), nav synchronisée.
+const goHome = () => {
+  const tab = document.querySelector('.nav-tabs .nav-tab');   // 1er onglet = Classement
+  showPage('classement', tab);
+  syncMobileNav('classement');
+  window.scrollTo({ top: 0 });
+};
+
 const syncMobileNav = (page) => {
   ['classement', 'games', 'players', 'history', 'social', 'events', 'coop'].forEach((p) => {
     document.getElementById(`mnav-${p}`)?.classList.toggle('active', p === page);
