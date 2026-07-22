@@ -7363,13 +7363,20 @@ const sendNewsletter = async () => {
   if (!isAdmin) return;
   const subject = document.getElementById('nl-subject').value.trim();
   const body    = document.getElementById('nl-body').value.trim();
+  const isHtml  = document.getElementById('nl-format')?.value === 'html';
   if (!subject || !body) { toastErr('Objet et message requis.'); return; }
+  if (isHtml && !/</.test(body)) { toastErr('Le champ ne contient pas de HTML — colle le code complet du fichier.'); return; }
   const emails  = subscribers.map((s) => s.email).filter(Boolean);
   if (!emails.length) { toastErr('Aucun abonné avec email.'); return; }
+  if (!confirm(`Envoyer « ${subject} » (${isHtml ? 'HTML' : 'texte'}) à ${emails.length} abonné(s) ?`)) return;
   showLoading(`Envoi à ${emails.length} abonné(s)…`);
   let sent = 0, failed = 0, lastErr = '';
   for (const email of emails) {
-    try { await sendBrevoEmail(email, '', subject, body); sent++; }
+    try {
+      if (isHtml) await sendBrevoEmail(email, '', subject, null, body);
+      else        await sendBrevoEmail(email, '', subject, body);
+      sent++;
+    }
     catch (e) { failed++; lastErr = (e && e.message) || lastErr; }
   }
   hideLoading();
@@ -7383,21 +7390,27 @@ const sendNewsletter = async () => {
 const previewNewsletter = () => {
   const subject = document.getElementById('nl-subject').value || '(sans objet)';
   const body    = document.getElementById('nl-body').value    || '(vide)';
-  const w       = window.open('', '_blank', 'width=600,height=500');
-  w.document.write(
-    `<html><head><title>Aperçu</title></head><body style="font-family:sans-serif;max-width:600px;margin:2rem auto;padding:1rem">
-     <h2>${subject}</h2><hr><pre style="white-space:pre-wrap;font-family:sans-serif">${body}</pre></body></html>`
-  );
+  const isHtml  = document.getElementById('nl-format')?.value === 'html';
+  const w       = window.open('', '_blank', 'width=660,height=700');
+  if (isHtml) {
+    w.document.write(body);          // rendu réel du HTML collé
+  } else {
+    w.document.write(
+      `<html><head><title>Aperçu</title></head><body style="font-family:sans-serif;max-width:600px;margin:2rem auto;padding:1rem">
+       <h2>${subject}</h2><hr><pre style="white-space:pre-wrap;font-family:sans-serif">${body}</pre></body></html>`
+    );
+  }
+  w.document.close();
 };
 
 // ─── Brevo email sender ───────────────────────────────────────
 
-const sendBrevoEmail = async (toEmail, toName, subject, text) => {
+const sendBrevoEmail = async (toEmail, toName, subject, text, html = null) => {
   // L'envoi passe par une fonction Netlify : la cle Brevo reste cote serveur.
   const res = await fetch('/.netlify/functions/send-email', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ toEmail, toName, subject, text }),
+    body:    JSON.stringify({ toEmail, toName, subject, text, html }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();

@@ -20,7 +20,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'JSON invalide' };
   }
 
-  const { toEmail, toName, subject, text } = payload;
+  const { toEmail, toName, subject, text, html } = payload;
   if (!toEmail || !subject) {
     return { statusCode: 400, body: 'Champs requis manquants (toEmail, subject)' };
   }
@@ -33,7 +33,8 @@ exports.handler = async (event) => {
         sender:      { name: 'Board Game Tom', email: from },
         to:          [{ email: toEmail, name: toName || toEmail }],
         subject,
-        textContent: text,
+        ...(html ? { htmlContent: html } : {}),
+        ...(text ? { textContent: text } : {}),
       }),
     });
 

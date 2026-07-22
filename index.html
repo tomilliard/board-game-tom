@@ -535,6 +535,17 @@
           <input class="finput" type="text" id="nl-subject" placeholder="Ex : Soirée jeux ce vendredi !">
         </div>
         <div class="form-row">
+          <label>Format</label>
+          <input type="hidden" id="nl-format" value="text">
+          <div class="dur-seg" data-target="nl-format">
+            <button type="button" class="dur-opt active" data-val="text" onclick="togD(this)">✍️ Texte</button>
+            <button type="button" class="dur-opt"        data-val="html" onclick="togD(this)">🎨 HTML</button>
+          </div>
+          <p style="font-size:11px;color:var(--text-faint);margin:6px 0 0">
+            HTML : colle le code complet d'une newsletter (fichier .html) dans le champ ci-dessous.
+          </p>
+        </div>
+        <div class="form-row">
           <label>Message</label>
           <textarea class="ftextarea" id="nl-body"
                     placeholder="Votre message…" style="height:150px"></textarea>
