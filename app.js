@@ -4352,6 +4352,211 @@ const openSeasonRecap = async () => {
   }
 };
 
+// ═══════════════════════════════════════════════════════════════
+// WRAPPED — rétrospective PERSONNELLE d'un joueur, en image partageable.
+// Fonctionne sur la saison (scope='season') ou une mini-saison ({mini:id}).
+// ═══════════════════════════════════════════════════════════════
+const computeWrapped = (pid, list) => {
+  const mine = list.filter((m) => (m.players || []).some((pp) => pp.id === pid));
+  const won  = mine.filter((m) => (m.winners || []).includes(pid));
+  // Jeu le plus joué / meilleur jeu
+  const byGame = {};
+  mine.forEach((m) => {
+    const g = games.find((x) => x.id === m.game_id);
+    const name = g ? g.name : (m.game_name || '?');
+    if (!byGame[name]) byGame[name] = { name, n: 0, w: 0 };
+    byGame[name].n++;
+    if ((m.winners || []).includes(pid)) byGame[name].w++;
+  });
+  const gamesArr = Object.values(byGame);
+  const topGame  = gamesArr.sort((a, b) => b.n - a.n)[0] || null;
+  const bestG    = gamesArr.filter((g) => g.n >= 3 && g.w > 0)
+    .sort((a, b) => (b.w / b.n) - (a.w / a.n) || b.w - a.w)[0] || null;
+  // Némésis / victime / duo
+  const beatMe = {}, iBeat = {}, coWin = {};
+  mine.forEach((m) => {
+    const ids  = (m.players || []).map((pp) => pp.id);
+    const wIds = m.winners || [];
+    const iWon = wIds.includes(pid);
+    ids.filter((id) => id !== pid).forEach((id) => {
+      if (!iWon && wIds.includes(id)) beatMe[id] = (beatMe[id] || 0) + 1;
+      if (iWon && !wIds.includes(id)) iBeat[id]  = (iBeat[id]  || 0) + 1;
+      if (iWon && wIds.includes(id))  coWin[id]  = (coWin[id]  || 0) + 1;
+    });
+  });
+  const topOf = (o) => {
+    const e = Object.entries(o).sort((a, b) => b[1] - a[1])[0];
+    if (!e) return null;
+    const pl = players.find((x) => x.id === parseInt(e[0]));
+    return pl ? { name: pl.name, n: e[1], player: pl } : null;
+  };
+  // Meilleure série (chronologique)
+  const chrono = [...mine].sort((a, b) => {
+    const da = String(a.date || ''), db = String(b.date || '');
+    if (da !== db) return da < db ? -1 : 1;
+    const ta = String(a.time || ''), tb = String(b.time || '');
+    if (ta !== tb) return ta < tb ? -1 : 1;
+    return (parseInt(a.id) || 0) - (parseInt(b.id) || 0);
+  });
+  let streak = 0, bestStreak = 0;
+  chrono.forEach((m) => {
+    if ((m.winners || []).includes(pid)) { streak++; bestStreak = Math.max(bestStreak, streak); }
+    else streak = 0;
+  });
+  // Jour préféré
+  const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  const byDay = {};
+  mine.forEach((m) => { if (m.date) { const d = new Date(String(m.date).split('T')[0]).getDay(); byDay[d] = (byDay[d] || 0) + 1; } });
+  const favDayE = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0];
+  return {
+    played: mine.length, won: won.length, lost: mine.length - won.length,
+    rate: mine.length ? Math.round(won.length / mine.length * 100) : 0,
+    topGame, bestGame: bestG,
+    nemesis: topOf(beatMe), victim: topOf(iBeat), buddy: topOf(coWin),
+    bestStreak,
+    favDay: favDayE ? days[favDayE[0]] : null,
+  };
+};
+
+const drawWrapped = async (canvas, p, w, subtitle, pts, rk) => {
+  const W = 1080, H = 1620;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const loadImg = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  const av    = AVATARS.find((x) => x.id === (p.avatar || 1));
+  const bgSrc = w.topGame ? gameBgSrc({ name: w.topGame.name }) : null;
+  const [avImg, bgImg] = await Promise.all([av ? loadImg(av.src) : null, bgSrc ? loadImg(bgSrc) : null]);
+
+  // Fond : dégradé « wrapped » + illustration du jeu fétiche en transparence
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#2a1458'); bg.addColorStop(0.5, '#511f7a'); bg.addColorStop(1, '#8a1e5c');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  if (bgImg) {
+    ctx.globalAlpha = 0.16;
+    const ir = bgImg.width / bgImg.height, cr = W / H;
+    let dw, dh, dx, dy;
+    if (ir > cr) { dh = H; dw = H * ir; dx = (W - dw) / 2; dy = 0; }
+    else { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2; }
+    ctx.drawImage(bgImg, dx, dy, dw, dh);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.textAlign = 'center';
+  // En-tête
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  ctx.font = '700 34px "Chakra Petch", Inter, sans-serif';
+  ctx.fillText('★ BOARD GAME TOM ★', W / 2, 92);
+  ctx.fillStyle = '#ffd166';
+  ctx.font = '700 88px "Chakra Petch", Inter, sans-serif';
+  ctx.fillText('MON WRAPPED', W / 2, 190);
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.font = '600 40px Inter, sans-serif';
+  ctx.fillText(subtitle, W / 2, 248);
+
+  // Avatar + nom + rang
+  _recapAvatar(ctx, avImg, p, W / 2, 400, 108, '#ffd166', 8);
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 62px Inter, sans-serif';
+  ctx.fillText(p.name, W / 2, 592);
+  if (rk) {
+    ctx.fillStyle = '#ffd166';
+    ctx.font = '700 36px Inter, sans-serif';
+    ctx.fillText(`${rk.label} · ${pts} pts`, W / 2, 646);
+  }
+
+  // Grille 2×2 de gros chiffres
+  const tile = (x, y, big, label) => {
+    _recapRoundRect(ctx, x, y, 470, 172, 22);
+    ctx.fillStyle = 'rgba(255,255,255,.10)'; ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 72px "Chakra Petch", Inter, sans-serif';
+    ctx.fillText(String(big), x + 235, y + 92);
+    ctx.fillStyle = 'rgba(255,255,255,.7)';
+    ctx.font = '600 28px Inter, sans-serif';
+    ctx.fillText(label, x + 235, y + 142);
+  };
+  tile(60,  706, w.played, 'parties jouées');
+  tile(550, 706, w.won, 'victoires');
+  tile(60,  898, w.rate + '%', 'de winrate');
+  tile(550, 898, w.bestStreak, 'victoires d\'affilée (max)');
+
+  // Lignes « story »
+  let y = 1160;
+  const line = (emoji, label, value) => {
+    if (!value) return;
+    ctx.textAlign = 'left';
+    ctx.font = '600 34px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.fillText(`${emoji} ${label}`, 70, y);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 36px Inter, sans-serif';
+    ctx.fillText(value, W - 70, y);
+    ctx.textAlign = 'center';
+    y += 74;
+  };
+  line('🎲', 'Jeu fétiche',      w.topGame  ? `${w.topGame.name} (${w.topGame.n}×)` : null);
+  line('🏆', 'Terrain de chasse', w.bestGame ? `${w.bestGame.name} (${Math.round(w.bestGame.w / w.bestGame.n * 100)}% de wins)` : null);
+  line('😈', 'Némésis',           w.nemesis  ? `${w.nemesis.name} (battu ${w.nemesis.n}×)` : null);
+  line('🎯', 'Proie favorite',    w.victim   ? `${w.victim.name} (${w.victim.n} victoires)` : null);
+  line('💞', 'Meilleur allié',    w.buddy    ? `${w.buddy.name} (${w.buddy.n} wins ensemble)` : null);
+  line('📅', 'Jour de jeu',       w.favDay);
+
+  // Pied
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.font = '600 30px Inter, sans-serif';
+  ctx.fillText('boardgametom.com', W / 2, H - 46);
+};
+
+let _wrappedName = 'wrapped';
+const openWrapped = async (pid, scope = 'season') => {
+  const p = players.find((x) => x.id === pid);
+  if (!p) return;
+  let list, subtitle, pts, rk;
+  if (scope === 'season') {
+    list     = seasonMatches();
+    subtitle = currentSeason ? `Saison ${currentSeason.number}` : 'Saison en cours';
+    pts      = p.points || 0;
+    rk       = displayRank(p);
+    rk = { label: rk.label || rk.name };
+  } else {
+    const ms = miniSeasons.find((x) => x.id === scope.mini);
+    if (!ms) return;
+    list     = miniSeasonMatches(ms);
+    subtitle = ms.name;
+    const row = computeMiniSeason(ms).find((r) => r.player.id === pid);
+    pts = row ? row.pts : 0;
+    rk  = { label: getRank(pts).label };
+  }
+  const w = computeWrapped(pid, list);
+  if (!w.played) { toast(`${p.name} n'a pas encore joué sur cette période.`); return; }
+  _wrappedName = `wrapped-${(p.name || 'joueur').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  document.getElementById('wrapped-title').textContent = `🎁 Wrapped — ${p.name}`;
+  openModal('modal-wrapped');
+  await drawWrapped(document.getElementById('wrapped-canvas'), p, w, subtitle, pts, rk);
+};
+
+const downloadWrapped = () => {
+  const canvas = document.getElementById('wrapped-canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = `${_wrappedName}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+};
+const shareWrapped = async () => {
+  const canvas = document.getElementById('wrapped-canvas');
+  if (!canvas) return;
+  try {
+    const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+    const file = new File([blob], `${_wrappedName}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Mon Wrapped', text: 'Mon Wrapped Board Game Tom 🎁' });
+    } else { downloadWrapped(); }
+  } catch (e) { if (e.name !== 'AbortError') downloadWrapped(); }
+};
+
 const downloadRecap = () => {
   const canvas = document.getElementById('recap-canvas');
   if (!canvas) return;
@@ -7563,6 +7768,12 @@ const openMiniSeason = (id) => {
     ${podium}
     ${top3Detail ? `<div style="text-align:center;margin:4px 0 12px">${top3Detail}</div>` : ''}
     ${rows}
+    ${(() => {
+      const me = players.find((x) => x.user_id === currentUser?.id);
+      return (me && (ms.players || []).includes(me.id))
+        ? `<button class="pp-history-btn" style="margin-top:12px;width:100%" onclick="openWrapped(${me.id}, {mini:${ms.id}})">🎁 Mon Wrapped de « ${esc(ms.name)} »</button>`
+        : '';
+    })()}
     <p style="font-size:11px;color:var(--text-faint);margin:10px 0 0;line-height:1.5">
       Seules les parties entre participants pendant la période comptent ici — elles comptent aussi pour le classement global.
     </p>`;
@@ -9127,6 +9338,9 @@ const openPlayerProfile = (pid) => {
     </div>
     <button class="pp-history-btn" onclick="openPlayerHistory(${pid})">
       🎲 Voir l'historique des parties
+    </button>
+    <button class="pp-history-btn" onclick="openWrapped(${pid})" style="margin-top:8px">
+      🎁 Wrapped de la saison
     </button>
     <button class="pp-history-btn" onclick="openPlayerCard(${pid})" style="margin-top:8px">
       📸 Carte de joueur partageable
