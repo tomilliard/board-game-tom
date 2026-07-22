@@ -1343,6 +1343,34 @@ const doLogout = async () => {
   toast('Déconnecté');
 };
 
+// ─── Suppression de compte (par le joueur lui-même) ───────────────
+// Efface le profil (cosmétiques, email de profil) et déconnecte.
+// S'il a déjà joué, sa fiche joueur est anonymisée (l'historique du club et
+// les stats des autres restent intacts) ; sinon elle est supprimée.
+const deleteMyAccount = async () => {
+  if (!currentUser) return;
+  const typed = prompt('Cette action est définitive.\n\nPour confirmer la suppression de ton compte, tape : SUPPRIMER');
+  if (typed !== 'SUPPRIMER') { if (typed !== null) toastErr('Confirmation incorrecte — compte conservé.'); return; }
+  try {
+    const me = players.find((p) => p.user_id === currentUser.id);
+    if (me) {
+      const played = matches.some((m) => (m.players || []).some((pp) => pp.id === me.id))
+                  || coopSessions.some((sess) => (sess.players || []).some((pp) => pp.id === me.id));
+      if (played) {
+        await sb.patch('players', {
+          name: 'Ancien joueur', user_id: null,
+          avatar: 1, frame: null, cardbg: null, title: null, color: '#6c7787',
+        }, { id: me.id });
+      } else {
+        await sb.del('players', { id: me.id });
+      }
+    }
+    await sb.del('profiles', { id: currentUser.id }).catch(() => {});
+    toast('Compte supprimé. Au revoir 👋');
+    setTimeout(() => doLogout(), 800);
+  } catch (e) { toastErr('Erreur : ' + e.message); }
+};
+
 // ─── User UI ─────────────────────────────────────────────────
 
 const updateUserUI = () => {
@@ -1420,6 +1448,8 @@ const _openProfileModal = (cfg) => {
   document.getElementById('pe-save-btn').textContent = cfg.saveLabel;
   document.getElementById('modal-profile').dataset.targetPlayer = cfg.targetId || '';
   document.getElementById('modal-profile').dataset.isCreate     = cfg.isCreate ? '1' : '';
+  const dz = document.getElementById('pe-danger');
+  if (dz) dz.style.display = (!cfg.targetId && !cfg.isCreate) ? '' : 'none';
 
   const nameIn = document.getElementById('pe-name');
   nameIn.value = cfg.name;
@@ -7249,28 +7279,61 @@ const renderMiniSeasons = () => {
   const order = { live: 0, upcoming: 1, done: 2 };
   const sorted = [...miniSeasons].sort((a, b) =>
     order[miniStatus(a)] - order[miniStatus(b)] || String(b.date_start).localeCompare(String(a.date_start)));
+
+  const GRAD = {
+    live:     'linear-gradient(135deg, rgba(74,222,128,.14), rgba(74,222,128,.03) 55%)',
+    done:     'linear-gradient(135deg, rgba(251,191,36,.16), rgba(168,85,247,.06) 60%)',
+    upcoming: 'linear-gradient(135deg, rgba(148,163,184,.10), transparent 60%)',
+  };
+  const EDGE = { live: 'var(--accent)', done: 'var(--gold)', upcoming: 'var(--border)' };
+
   el.innerHTML = sorted.map((ms) => {
     const st     = miniStatus(ms);
     const lbl    = MINI_STATUS_LABEL[st];
     const board  = computeMiniSeason(ms);
     const nGames = miniSeasonMatches(ms).length;
-    const leader = board.length && board[0].games > 0 ? board[0].player : null;
+    const leader = board.length && board[0].games > 0 ? board[0] : null;
     const canDel = isAdmin || (currentUser && ms.created_by === currentUser.id);
-    return `<div class="hist-card" onclick="openMiniSeason(${ms.id})" style="cursor:pointer;margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+
+    // Avancement temporel (pour les mini-saisons en cours).
+    let progressBar = '';
+    if (st === 'live') {
+      const t0 = new Date(ms.date_start).getTime(), t1 = new Date(ms.date_end).getTime() + 86399000;
+      const pct = Math.max(2, Math.min(100, Math.round((Date.now() - t0) / (t1 - t0) * 100)));
+      progressBar = `<div style="height:4px;border-radius:99px;background:var(--bg);margin-top:10px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;border-radius:99px;background:linear-gradient(90deg,var(--accent),#a7f3d0)"></div>
+        </div>`;
+    }
+
+    const leaderBadge = leader
+      ? `<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+           <div style="position:relative;width:44px;height:44px">
+             <span style="position:absolute;inset:0;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;
+                          border-radius:50%;border:2px solid ${st === 'done' ? 'var(--gold)' : (leader.player.color || 'var(--accent)')};
+                          background:${(leader.player.color || '#4ade80')}22;color:${leader.player.color || '#4ade80'};font-size:12px;font-weight:700">${playerAvatarInner(leader.player, leader.player.color || '#4ade80')}</span>
+             <span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:13px">${st === 'done' ? '👑' : '🥇'}</span>
+           </div>
+         </div>`
+      : '';
+
+    return `<div class="hist-card" onclick="openMiniSeason(${ms.id})"
+        style="cursor:pointer;margin-bottom:10px;background:${GRAD[st]}, var(--surface-2);border-left:3px solid ${EDGE[st]}">
+      <div style="display:flex;align-items:center;gap:12px">
+        ${leaderBadge}
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span class="hist-game">🏆 ${esc(ms.name)}</span>
-            <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px solid ${lbl.color};color:${lbl.color}">${lbl.txt}</span>
+            <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:var(--bg);border:1px solid ${lbl.color};color:${lbl.color}">${lbl.txt}</span>
           </div>
           <div class="hist-date">
-            ${fmtDate(ms.date_start)} → ${fmtDate(ms.date_end)} · ${(ms.players || []).length} participants · ${nGames} partie${nGames > 1 ? 's' : ''}
-            ${leader ? ` · ${st === 'done' ? '👑 vainqueur' : '1er'} : ${esc(leader.name)}` : ''}
+            ${fmtDate(ms.date_start)} → ${fmtDate(ms.date_end)} · ${(ms.players || []).length} joueurs · ${nGames} partie${nGames > 1 ? 's' : ''}
+            ${leader ? ` · ${st === 'done' ? 'vainqueur' : 'en tête'} : <b style="color:var(--text)">${esc(leader.player.name)}</b>` : ''}
           </div>
         </div>
         ${canDel ? `<button class="btn-icon danger" onclick="event.stopPropagation();deleteMiniSeason(${ms.id})" title="Supprimer" style="flex-shrink:0">${SVG_TRASH}</button>` : ''}
         <span style="color:var(--text-faint);font-size:18px;flex-shrink:0">›</span>
       </div>
+      ${progressBar}
     </div>`;
   }).join('');
 };
@@ -7283,29 +7346,68 @@ const openMiniSeason = (id) => {
   const board = computeMiniSeason(ms);
   const nGames = miniSeasonMatches(ms).length;
   document.getElementById('miniview-title').textContent = `🏆 ${ms.name}`;
-  const rows = board.map((r, i) => {
-    const rk  = getRank(r.pts);
-    const col = tierColor(rk);
-    const crown = (st === 'done' && i === 0 && r.games > 0) ? '👑 ' : '';
-    return `<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <span style="width:20px;text-align:center;font-size:12px;color:var(--text-faint)">${i + 1}</span>
-      <span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;width:26px;height:26px;border-radius:50%;
-                   background:${(r.player.color || '#4ade80')}22;color:${r.player.color || '#4ade80'};font-size:10px;font-weight:700;flex-shrink:0">${playerAvatarInner(r.player, r.player.color || '#4ade80')}</span>
-      <span style="flex:1;min-width:0;font-size:13.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${crown}${esc(r.player.name)}</span>
-      <span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:${col};flex-shrink:0">${rankImg(rk, 16)} ${rk.label}</span>
-      <span style="width:52px;text-align:right;font-size:13.5px;font-weight:700;color:var(--text);flex-shrink:0">${r.pts} pts</span>
-      <span style="width:70px;text-align:right;font-size:11px;color:var(--text-faint);flex-shrink:0">${r.elo} Elo · ${r.won}V/${r.lost}D</span>
+
+  // ── Podium top 3 (ordre visuel : 2e · 1er · 3e) ──
+  const top3 = board.slice(0, 3);
+  const PODIUM = [
+    { pos: 1, h: 74, av: 64, grad: 'linear-gradient(180deg, rgba(251,191,36,.55), rgba(251,191,36,.12))', ring: 'var(--gold)',  medal: st === 'done' ? '👑' : '🥇' },
+    { pos: 2, h: 52, av: 52, grad: 'linear-gradient(180deg, rgba(203,213,225,.45), rgba(203,213,225,.10))', ring: '#cbd5e1', medal: '🥈' },
+    { pos: 3, h: 40, av: 52, grad: 'linear-gradient(180deg, rgba(217,119,6,.45), rgba(217,119,6,.10))',   ring: '#d97706', medal: '🥉' },
+  ];
+  const col = (slot) => {
+    const r = top3[slot.pos - 1];
+    if (!r) return '<div style="flex:1"></div>';
+    const c  = r.player.color || '#4ade80';
+    const rk = getRank(r.pts);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0">
+      <span style="font-size:15px">${slot.medal}</span>
+      <span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;width:${slot.av}px;height:${slot.av}px;
+                   border-radius:50%;border:2.5px solid ${slot.ring};background:${c}22;color:${c};font-size:13px;font-weight:700">${playerAvatarInner(r.player, c)}</span>
+      <div style="font-size:12.5px;font-weight:700;color:var(--text);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.player.name)}</div>
+      <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:${tierColor(rk)}">${rankImg(rk, 15)} ${rk.label}</div>
+      <div style="width:88%;max-width:96px;height:${slot.h}px;border-radius:9px 9px 0 0;background:${slot.grad};
+                  display:flex;align-items:flex-start;justify-content:center;padding-top:7px">
+        <b style="font-size:14px;color:var(--text)">${r.pts}<span style="font-size:9px;color:var(--text-muted)"> pts</span></b>
+      </div>
+    </div>`;
+  };
+  const podium = top3.length
+    ? `<div style="display:flex;align-items:flex-end;gap:6px;margin:14px 0 4px">${col(PODIUM[1])}${col(PODIUM[0])}${col(PODIUM[2])}</div>`
+    : '';
+
+  // ── Suivants (4e et +) ──
+  const rows = board.slice(3).map((r, i) => {
+    const c  = r.player.color || '#4ade80';
+    const rk = getRank(r.pts);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--border);
+                 border-radius:10px;margin-bottom:6px;background:var(--surface-2)">
+      <span style="width:20px;text-align:center;font-size:12px;font-weight:700;color:var(--text-faint)">${i + 4}</span>
+      <span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;width:30px;height:30px;border-radius:50%;
+                   border:2px solid ${c};background:${c}22;color:${c};font-size:10px;font-weight:700;flex-shrink:0">${playerAvatarInner(r.player, c)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.player.name)}</div>
+        <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:${tierColor(rk)}">${rankImg(rk, 14)} ${rk.label} · <span style="color:var(--text-faint)">${r.elo} Elo · ${r.won}V/${r.lost}D</span></div>
+      </div>
+      <b style="font-size:14px;color:var(--text);flex-shrink:0">${r.pts} <span style="font-size:9px;color:var(--text-muted)">pts</span></b>
     </div>`;
   }).join('');
+
+  // ── Détail V/D du top 3 sous le podium ──
+  const top3Detail = top3.filter((r) => r).map((r) =>
+    `<span style="font-size:10.5px;color:var(--text-faint)">${esc(r.player.name)} : ${r.elo} Elo · ${r.won}V/${r.lost}D</span>`
+  ).join('<span style="color:var(--border);margin:0 6px">|</span>');
+
   document.getElementById('miniview-body').innerHTML = `
-    <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">
-      <span style="color:${lbl.color};font-weight:600">${lbl.txt}</span>
-      · ${fmtDate(ms.date_start)} → ${fmtDate(ms.date_end)} · ${nGames} partie${nGames > 1 ? 's' : ''} comptabilisée${nGames > 1 ? 's' : ''}
+    <div style="border-radius:12px;padding:10px 12px;margin-bottom:4px;
+                background:linear-gradient(135deg, rgba(139,92,246,.18), rgba(251,191,36,.10));border:1px solid var(--border)">
+      <span style="font-size:12px;color:${lbl.color};font-weight:700">${lbl.txt}</span>
+      <span style="font-size:12px;color:var(--text-muted)"> · ${fmtDate(ms.date_start)} → ${fmtDate(ms.date_end)} · ${nGames} partie${nGames > 1 ? 's' : ''}</span>
     </div>
+    ${podium}
+    ${top3Detail ? `<div style="text-align:center;margin:4px 0 12px">${top3Detail}</div>` : ''}
     ${rows}
     <p style="font-size:11px;color:var(--text-faint);margin:10px 0 0;line-height:1.5">
-      Seules les parties jouées entre participants pendant la période comptent ici.
-      Elles comptent aussi normalement pour le classement global du club.
+      Seules les parties entre participants pendant la période comptent ici — elles comptent aussi pour le classement global.
     </p>`;
   openModal('modal-miniview');
 };
