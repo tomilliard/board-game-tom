@@ -346,7 +346,7 @@ select:focus{border-color:var(--accent);outline:none}
 .user-chip:hover{background:var(--border-strong)}
 .user-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;font-family:"Chakra Petch",sans-serif}
 .user-name{font-size:13px;color:var(--text);font-weight:500;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.user-menu{position:absolute;top:52px;right:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:6px;min-width:180px;box-shadow:var(--shadow-md);z-index:100;display:none}
+.user-menu{position:fixed;top:52px;right:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:6px;min-width:180px;box-shadow:var(--shadow-md);z-index:100;display:none}
 .user-menu.open{display:block}
 .user-menu-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;font-size:13px;color:var(--text-muted);cursor:pointer;border:none;background:none;font-family:inherit;width:100%;text-align:left;transition:all .15s}
 .user-menu-item:hover{background:var(--bg);color:var(--text)}
