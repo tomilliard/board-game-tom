@@ -316,6 +316,7 @@ let coopSessions = [];   // parties coopératives (table séparée, aucun point)
 let miniSeasons  = [];   // mini-saisons (événements-tournois, classement dérivé)
 let pendingMatches = [];   // parties enregistrées en attente de validation
 let ratingsCache = {};   // { gameId: { sum, count, myScore } }
+let ratingRows   = [];   // lignes brutes {game_id, score, user_id} (succès de notation)
 let comments     = {};   // { gameId: Comment[] }
 let suggestions  = [];
 let challenges   = [];
@@ -1108,6 +1109,7 @@ async function loadAll() {
     if (uid && row.user_id === uid)
       ratingsCache[row.game_id].myScore = Number(row.score);
   });
+  ratingRows = r || [];
   syncAchievementUnlocks(false);   // notifie les nouveaux succès (si baseline déjà posée)
   syncRankChange(false);
 }
@@ -2194,6 +2196,20 @@ const renderGStats = () => {
   }, 0);
   const valWish = wish.reduce((s, g) => s + (g.price || 0), 0);
 
+  // Valeur de MA collection perso (chacun ne voit que la sienne).
+  const mineCol = myUid() ? collectionOf(myUid()) : [];
+  const valMine = mineCol.reduce((s, g) => {
+    const extV = (g.extensions || []).reduce((a, e) => a + (e.price || 0), 0);
+    return s + (g.price || 0) + extV;
+  }, 0);
+  const myColCard = mineCol.length
+    ? `<div class="stat-card">
+        <div class="stat-label">🎒 Ma collection</div>
+        <div class="stat-value">${Math.round(valMine)}&nbsp;€</div>
+        <div class="stat-sub">${mineCol.length} jeu${mineCol.length > 1 ? 'x' : ''} + extensions</div>
+      </div>`
+    : '';
+
   document.getElementById('stats').innerHTML = `
     <div class="stat-card">
       <div class="stat-label">Possédés</div>
@@ -2206,6 +2222,7 @@ const renderGStats = () => {
       <div class="stat-value">${Math.round(valOwn)}&nbsp;€</div>
       <div class="stat-sub">jeux + extensions</div>
     </div>
+    ${myColCard}
     <div class="stat-card">
       <div class="stat-label">Budget souhaits</div>
       <div class="stat-value">${Math.round(valWish)}&nbsp;€</div>
@@ -7673,6 +7690,10 @@ const ACHIEVEMENTS = [
   { id:'sent_challenge', icon:'⚔️', name:'Provocateur',              desc:'Envoyer un défi',                      check: (s) => s.sentChallenges >= 1 },
   { id:'won_challenge',  icon:'🤝', name:'Champion des défis',       desc:'Gagner un défi',                       check: (s) => s.wonChallenges >= 1 },
   { id:'comments_5',     icon:'💬', name:'Critique',                 desc:'Laisser 5 avis',                       check: (s) => s.commentCount >= 5 },
+  { id:'rate_5',         icon:'⭐', name:'Premiers avis',            desc:'Noter 5 jeux',                         check: (s) => (s.ratingsCount || 0) >= 5 },
+  { id:'rate_15',        icon:'🌟', name:'Critique amateur',         desc:'Noter 15 jeux',                        check: (s) => (s.ratingsCount || 0) >= 15 },
+  { id:'rate_35',        icon:'✨', name:'Critique confirmé',        desc:'Noter 35 jeux',                        check: (s) => (s.ratingsCount || 0) >= 35 },
+  { id:'rate_50',        icon:'🏅', name:'Critique étoilé',          desc:'Noter 50 jeux',                        check: (s) => (s.ratingsCount || 0) >= 50 },
   { id:'suggestion_ok',  icon:'💡', name:'Visionnaire',              desc:'Suggestion approuvée',                 check: (s) => s.approvedSuggestions >= 1 },
   // Régularité
   { id:'days_7',         icon:'📅', name:'7 jours consécutifs',      desc:'Jouer 7 jours de suite',               check: (s) => s.maxConsecDays >= 7 },
@@ -7933,6 +7954,11 @@ const computeAchievementStats = (pid) => {
   const allComments = Object.values(comments).flat();
   const commentCount = allComments.filter((c) => c.user_id === p?.user_id).length;
 
+  // Jeux notés (étoiles) par ce joueur.
+  const ratingsCount = p?.user_id
+    ? [...new Set(ratingRows.filter((r) => r.user_id === p.user_id).map((r) => r.game_id))].length
+    : 0;
+
   // Approved suggestions
   const approvedSuggestions = suggestions.filter((s) =>
     s.user_id === p?.user_id && s.status === 'approved'
@@ -8106,6 +8132,7 @@ const computeAchievementStats = (pid) => {
     sentChallenges,
     wonChallenges,
     commentCount,
+    ratingsCount,
     approvedSuggestions,
     maxConsecDays,
     maxMonthDays,
@@ -8257,6 +8284,10 @@ const ACH_PROGRESS = {
   diff_games_10:    [(s) => s.diffGames, 10],
   diff_games_20:    [(s) => s.diffGames, 20],
   comments_5:       [(s) => s.commentCount, 5],
+  rate_5:           [(s) => s.ratingsCount || 0, 5],
+  rate_15:          [(s) => s.ratingsCount || 0, 15],
+  rate_35:          [(s) => s.ratingsCount || 0, 35],
+  rate_50:          [(s) => s.ratingsCount || 0, 50],
   days_7:           [(s) => s.maxConsecDays, 7],
   days_30:          [(s) => s.maxMonthDays, 30],
   weekly_4:         [(s) => s.weekStreak, 4],
