@@ -557,6 +557,18 @@
   <!-- ÉVÉNEMENTS -->
   <div class="page" id="page-events">
     <div style="display:flex;justify-content:space-between;align-items:center;
+                margin-bottom:1rem;flex-wrap:wrap;gap:10px">
+      <h2 class="section-title" style="margin-bottom:0">🏆 Mini-saisons</h2>
+      <button class="btn-sec" id="mini-add-btn" onclick="openMiniCreate()" style="display:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Créer une mini-saison
+      </button>
+    </div>
+    <div id="mini-seasons-list" style="margin-bottom:1.8rem"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;
                 margin-bottom:1.5rem;flex-wrap:wrap;gap:10px">
       <h2 class="section-title" style="margin-bottom:0">Événements à venir</h2>
       <button class="btn-add" id="event-add-btn" onclick="openModal('modal-event')"
@@ -1095,6 +1107,61 @@
       </button>
     </div>
     <div class="palmares-modal-content" id="feed-content"></div>
+  </div>
+</div>
+
+<!-- Créer une mini-saison -->
+<div class="modal-overlay" id="modal-minicreate" onclick="bgClose(event,'modal-minicreate')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 class="modal-title">🏆 Nouvelle mini-saison</h2>
+      <button class="btn-close" onclick="closeModal('modal-minicreate')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="form-row">
+      <label>Nom <span class="req">*</span></label>
+      <input class="finput" id="mini-name" placeholder="Ex : Tournoi d'été" autocomplete="off">
+    </div>
+    <div class="form-row" style="display:flex;gap:8px">
+      <div style="flex:1">
+        <label>Début <span class="req">*</span></label>
+        <input class="finput" type="date" id="mini-start">
+      </div>
+      <div style="flex:1">
+        <label>Fin <span class="req">*</span></label>
+        <input class="finput" type="date" id="mini-end">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Participants <span class="req">*</span></label>
+      <div id="mini-players" class="player-checks" style="max-height:220px"></div>
+    </div>
+    <p style="font-size:12px;color:var(--text-faint);margin:0 0 12px">
+      Chaque participant démarre au rang Bois avec 1000 Elo, uniquement pour cette mini-saison.
+      Les parties entre participants pendant la période comptent pour le classement global <b>et</b> pour la mini-saison.
+    </p>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-minicreate')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveMiniSeason()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Classement d'une mini-saison -->
+<div class="modal-overlay" id="modal-miniview" onclick="bgClose(event,'modal-miniview')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="miniview-title">🏆 Mini-saison</h2>
+      <button class="btn-close" onclick="closeModal('modal-miniview')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div id="miniview-body"></div>
   </div>
 </div>
 

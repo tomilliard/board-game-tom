@@ -313,6 +313,7 @@ let gameOwners   = [];   // [{game_id, user_id}] — possession (collections per
 let players      = [];
 let matches      = [];
 let coopSessions = [];   // parties coopératives (table séparée, aucun point)
+let miniSeasons  = [];   // mini-saisons (événements-tournois, classement dérivé)
 let pendingMatches = [];   // parties enregistrées en attente de validation
 let ratingsCache = {};   // { gameId: { sum, count, myScore } }
 let comments     = {};   // { gameId: Comment[] }
@@ -1112,12 +1113,14 @@ async function loadAll() {
 }
 
 async function loadSocial() {
-  const [c, sg, ch, ev] = await Promise.all([
+  const [c, sg, ch, ev, ms] = await Promise.all([
     safeGet('comments',    { order: 'created_at.asc' }),
     safeGet('suggestions', { order: 'created_at.desc' }),
     safeGet('challenges',  { order: 'created_at.desc' }),
     safeGet('events',      { order: 'event_date.asc' }),
+    safeGet('mini_seasons', { order: 'date_start.desc' }).catch(() => []),
   ]);
+  miniSeasons = ms || [];
   comments = {};
   c.forEach((cm) => {
     if (!comments[cm.game_id]) comments[cm.game_id] = [];
@@ -7121,7 +7124,194 @@ const renderCoop = () => {
   el.innerHTML = sorted.map(buildCoopCard).join('');
 };
 
+// ═══════════════════════════════════════════════════════════════
+// MINI-SAISONS — tournois à durée limitée entre participants choisis.
+// Le classement (points, rang, Elo) est DÉRIVÉ à la volée en rejouant les
+// parties qualifiantes : rien n'est écrit en base, le classement global
+// n'est jamais touché.
+// ═══════════════════════════════════════════════════════════════
+const miniStatus = (ms) => {
+  const today = new Date().toISOString().split('T')[0];
+  if (ms.date_start > today) return 'upcoming';
+  if (ms.date_end   < today) return 'done';
+  return 'live';
+};
+const MINI_STATUS_LABEL = {
+  upcoming: { txt: 'À venir',  color: 'var(--text-faint)' },
+  live:     { txt: 'En cours', color: 'var(--accent)' },
+  done:     { txt: 'Terminée', color: 'var(--gold)' },
+};
+
+// Parties qualifiantes : confirmées, dans la période, et dont TOUS les
+// joueurs sont participants de la mini-saison.
+const miniSeasonMatches = (ms) => {
+  const ids = new Set(ms.players || []);
+  return matches
+    .filter((m) => {
+      const d = String(m.date || '').split('T')[0];
+      if (!d || d < ms.date_start || d > ms.date_end) return false;
+      const mp = (m.players || []).map((pp) => pp.id);
+      return mp.length >= 2 && mp.every((id) => ids.has(id));
+    })
+    .sort((a, b) => {
+      const da = String(a.date || ''), db = String(b.date || '');
+      if (da !== db) return da < db ? -1 : 1;
+      const ta = String(a.time || ''), tb = String(b.time || '');
+      if (ta !== tb) return ta < tb ? -1 : 1;
+      return (a.id || 0) - (b.id || 0);
+    });
+};
+
+// Rejoue les parties qualifiantes : chacun part de 0 pt (Bois) et 1000 Elo.
+const computeMiniSeason = (ms) => {
+  const sim = {};
+  (ms.players || []).forEach((id) => { sim[id] = { pts: 0, elo: ELO_BASE, streak: 0, games: 0, won: 0 }; });
+  for (const m of miniSeasonMatches(ms)) {
+    const ids = [...new Set((m.players || []).map((pp) => pp.id).filter((id) => sim[id]))];
+    if (ids.length < 2) continue;
+    const winnerIds = (Array.isArray(m.winners) ? m.winners : []).filter((id) => ids.includes(id));
+    const pre = {};
+    ids.forEach((id) => { pre[id] = { pts: sim[id].pts, elo: sim[id].elo, streak: sim[id].streak, games: sim[id].games }; });
+    const res = computeMatch(ids, winnerIds, m.scores || {}, !!m.is_challenge, m.game_id, pre);
+    ids.forEach((id) => {
+      sim[id].pts    = res[id].newPts;
+      sim[id].elo    = res[id].newElo;
+      sim[id].streak = res[id].newStreak;
+      sim[id].games += 1;
+      if (winnerIds.includes(id)) sim[id].won += 1;
+    });
+  }
+  return (ms.players || [])
+    .map((id) => {
+      const p = players.find((x) => x.id === id);
+      const st = sim[id];
+      return p ? { player: p, pts: st.pts, elo: Math.round(st.elo), games: st.games, won: st.won, lost: st.games - st.won } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.pts - a.pts || b.elo - a.elo || a.player.name.localeCompare(b.player.name, 'fr'));
+};
+
+const openMiniCreate = () => {
+  if (!currentUser) { showAuthWall(); return; }
+  document.getElementById('mini-name').value  = '';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('mini-start').value = today;
+  document.getElementById('mini-end').value   = '';
+  document.getElementById('mini-players').innerHTML = players.length
+    ? [...players].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr')).map((p) =>
+        `<div class="pcheck-row"><label>
+           <input type="checkbox" value="${p.id}" class="mini-cb">
+           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color || '#4ade80'}"></span>
+           ${esc(p.name)}
+         </label></div>`).join('')
+    : '<p style="font-size:13px;color:var(--text-faint)">Aucun joueur.</p>';
+  openModal('modal-minicreate');
+};
+
+const saveMiniSeason = async () => {
+  if (!currentUser) { showAuthWall(); return; }
+  const name  = (document.getElementById('mini-name').value || '').trim();
+  const start = document.getElementById('mini-start').value;
+  const end   = document.getElementById('mini-end').value;
+  const ids   = [...document.querySelectorAll('.mini-cb:checked')].map((c) => parseInt(c.value));
+  if (!name)          { toastErr('Donne un nom à la mini-saison.'); return; }
+  if (!start || !end) { toastErr('Indique les dates de début et de fin.'); return; }
+  if (end < start)    { toastErr('La date de fin doit être après le début.'); return; }
+  if (ids.length < 2) { toastErr('Choisis au moins 2 participants.'); return; }
+  try {
+    await sb.post('mini_seasons', { name, date_start: start, date_end: end, players: ids, created_by: currentUser.id });
+    closeModal('modal-minicreate');
+    await loadSocial();
+    renderEvents();
+    toast('Mini-saison créée 🏆');
+  } catch (e) { toastErr('Erreur : ' + e.message); }
+};
+
+const deleteMiniSeason = async (id) => {
+  if (!confirm('Supprimer cette mini-saison ? (aucune partie ne sera supprimée)')) return;
+  try {
+    await sb.del('mini_seasons', { id });
+    await loadSocial();
+    renderEvents();
+    toast('Mini-saison supprimée');
+  } catch (e) { toastErr('Erreur : ' + e.message); }
+};
+
+const renderMiniSeasons = () => {
+  const el = document.getElementById('mini-seasons-list');
+  if (!el) return;
+  const addBtn = document.getElementById('mini-add-btn');
+  if (addBtn) addBtn.style.display = currentUser ? 'inline-flex' : 'none';
+  if (!miniSeasons.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text-faint)">Aucune mini-saison — crée un tournoi à durée limitée entre les joueurs de ton choix.</p>';
+    return;
+  }
+  const order = { live: 0, upcoming: 1, done: 2 };
+  const sorted = [...miniSeasons].sort((a, b) =>
+    order[miniStatus(a)] - order[miniStatus(b)] || String(b.date_start).localeCompare(String(a.date_start)));
+  el.innerHTML = sorted.map((ms) => {
+    const st     = miniStatus(ms);
+    const lbl    = MINI_STATUS_LABEL[st];
+    const board  = computeMiniSeason(ms);
+    const nGames = miniSeasonMatches(ms).length;
+    const leader = board.length && board[0].games > 0 ? board[0].player : null;
+    const canDel = isAdmin || (currentUser && ms.created_by === currentUser.id);
+    return `<div class="hist-card" onclick="openMiniSeason(${ms.id})" style="cursor:pointer;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="hist-game">🏆 ${esc(ms.name)}</span>
+            <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px solid ${lbl.color};color:${lbl.color}">${lbl.txt}</span>
+          </div>
+          <div class="hist-date">
+            ${fmtDate(ms.date_start)} → ${fmtDate(ms.date_end)} · ${(ms.players || []).length} participants · ${nGames} partie${nGames > 1 ? 's' : ''}
+            ${leader ? ` · ${st === 'done' ? '👑 vainqueur' : '1er'} : ${esc(leader.name)}` : ''}
+          </div>
+        </div>
+        ${canDel ? `<button class="btn-icon danger" onclick="event.stopPropagation();deleteMiniSeason(${ms.id})" title="Supprimer" style="flex-shrink:0">${SVG_TRASH}</button>` : ''}
+        <span style="color:var(--text-faint);font-size:18px;flex-shrink:0">›</span>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+const openMiniSeason = (id) => {
+  const ms = miniSeasons.find((x) => x.id === id);
+  if (!ms) return;
+  const st    = miniStatus(ms);
+  const lbl   = MINI_STATUS_LABEL[st];
+  const board = computeMiniSeason(ms);
+  const nGames = miniSeasonMatches(ms).length;
+  document.getElementById('miniview-title').textContent = `🏆 ${ms.name}`;
+  const rows = board.map((r, i) => {
+    const rk  = getRank(r.pts);
+    const col = tierColor(rk);
+    const crown = (st === 'done' && i === 0 && r.games > 0) ? '👑 ' : '';
+    return `<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="width:20px;text-align:center;font-size:12px;color:var(--text-faint)">${i + 1}</span>
+      <span style="display:inline-flex;align-items:center;justify-content:center;overflow:hidden;width:26px;height:26px;border-radius:50%;
+                   background:${(r.player.color || '#4ade80')}22;color:${r.player.color || '#4ade80'};font-size:10px;font-weight:700;flex-shrink:0">${playerAvatarInner(r.player, r.player.color || '#4ade80')}</span>
+      <span style="flex:1;min-width:0;font-size:13.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${crown}${esc(r.player.name)}</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:${col};flex-shrink:0">${rankImg(rk, 16)} ${rk.label}</span>
+      <span style="width:52px;text-align:right;font-size:13.5px;font-weight:700;color:var(--text);flex-shrink:0">${r.pts} pts</span>
+      <span style="width:70px;text-align:right;font-size:11px;color:var(--text-faint);flex-shrink:0">${r.elo} Elo · ${r.won}V/${r.lost}D</span>
+    </div>`;
+  }).join('');
+  document.getElementById('miniview-body').innerHTML = `
+    <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">
+      <span style="color:${lbl.color};font-weight:600">${lbl.txt}</span>
+      · ${fmtDate(ms.date_start)} → ${fmtDate(ms.date_end)} · ${nGames} partie${nGames > 1 ? 's' : ''} comptabilisée${nGames > 1 ? 's' : ''}
+    </div>
+    ${rows}
+    <p style="font-size:11px;color:var(--text-faint);margin:10px 0 0;line-height:1.5">
+      Seules les parties jouées entre participants pendant la période comptent ici.
+      Elles comptent aussi normalement pour le classement global du club.
+    </p>`;
+  openModal('modal-miniview');
+};
+
 const renderEvents = () => {
+  renderMiniSeasons();
   const el = document.getElementById('events-list');
   document.getElementById('event-add-btn').style.display = isAdmin ? 'flex' : 'none';
   if (!events.length) {
