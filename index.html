@@ -1177,6 +1177,34 @@
   </div>
 </div>
 
+<!-- Prêter un jeu -->
+<div class="modal-overlay" id="modal-loan" onclick="bgClose(event,'modal-loan')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="loan-title">🤝 Prêter un jeu</h2>
+      <button class="btn-close" onclick="closeModal('modal-loan')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="form-row">
+      <label>À qui ?</label>
+      <select class="finput" id="loan-player">
+        <option value="">— Choisir un joueur —</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Ou quelqu'un d'autre</label>
+      <input class="finput" id="loan-name" placeholder="Nom (si pas inscrit au club)" autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal('modal-loan')">Annuler</button>
+      <button class="btn-save-m"   onclick="saveLoan()">Prêter</button>
+    </div>
+  </div>
+</div>
+
 <!-- Soirées du club -->
 <div class="modal-overlay" id="modal-soirees" onclick="bgClose(event,'modal-soirees')">
   <div class="modal" style="max-width:440px">

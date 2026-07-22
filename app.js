@@ -368,6 +368,50 @@ const ownedIds   = (uid) => new Set(gameOwners.filter((o) => o.user_id === uid).
 // La collection (objets jeu) d'un utilisateur donné.
 const collectionOf = (uid) => { if (!uid) return []; const ids = ownedIds(uid); return games.filter((g) => ids.has(g.id)); };
 const myGames    = (uid) => collectionOf(uid || myUid());
+
+// ─── Prêt de jeux : marqué sur le jeu, visible par tout le club ───
+let _loanGid = null;
+const openLoanModal = (gid) => {
+  const g = games.find((x) => x.id === gid);
+  if (!g) return;
+  _loanGid = gid;
+  document.getElementById('loan-title').textContent = `🤝 Prêter « ${g.name} »`;
+  const sel = document.getElementById('loan-player');
+  sel.innerHTML = '<option value="">— Choisir un joueur —</option>' +
+    [...players].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr'))
+      .map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  document.getElementById('loan-name').value = '';
+  openModal('modal-loan');
+};
+
+const saveLoan = async () => {
+  const g = games.find((x) => x.id === _loanGid);
+  if (!g) return;
+  const free = (document.getElementById('loan-name').value || '').trim();
+  const pid  = parseInt(document.getElementById('loan-player').value) || null;
+  const pl   = pid ? players.find((x) => x.id === pid) : null;
+  const name = free || (pl ? pl.name : '');
+  if (!name) { toastErr('Indique à qui tu prêtes le jeu.'); return; }
+  try {
+    await sb.patch('games', { loan: { name, pid: free ? null : pid, date: new Date().toISOString().split('T')[0] } }, { id: g.id });
+    closeModal('modal-loan');
+    await loadAll();
+    renderCurrentPage();
+    toast(`« ${g.name} » prêté à ${name} 🤝`);
+  } catch (e) { toastErr('Erreur : ' + e.message); }
+};
+
+const returnLoan = async (gid) => {
+  const g = games.find((x) => x.id === gid);
+  if (!g || !g.loan) return;
+  if (!confirm(`« ${g.name} » a été rendu par ${g.loan.name || '?'} ?`)) return;
+  try {
+    await sb.patch('games', { loan: null }, { id: gid });
+    await loadAll();
+    renderCurrentPage();
+    toast(`« ${g.name} » est de retour ↩️`);
+  } catch (e) { toastErr('Erreur : ' + e.message); }
+};
 // Ma collection « effective » pour la comparaison : ma collection perso, et —
 // si je suis admin — AUSSI le catalogue du club (le club, c'est moi).
 const myEffectiveCollection = () => {
@@ -2577,12 +2621,27 @@ const buildGameCard = (g) => {
     ? `${g.pmin} joueur${g.pmin > 1 ? 's' : ''}`
     : `${g.pmin}–${g.pmax} joueurs`;
 
-  const extraBtns = `<div style="display:flex;gap:8px;margin-top:6px">
+  // Prêt : le proprio (collection perso) ou l'admin (jeux du club) peut prêter.
+  const canLoan = (isClubGame(g) && isAdmin) || iOwnGame(g.id);
+  const loanBtn = canLoan
+    ? (g.loan
+        ? `<button class="palmares-card-btn" onclick="returnLoan(${g.id})">↩️ Rendu</button>`
+        : `<button class="palmares-card-btn" onclick="openLoanModal(${g.id})">🤝 Prêter</button>`)
+    : '';
+  const extraBtns = `<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
     <button class="palmares-card-btn" onclick="openComments(${g.id})">
       💬 Avis ${(comments[g.id] || []).length > 0 ? '(' + comments[g.id].length + ')' : ''}
     </button>
     ${tp > 0 ? `<button class="palmares-card-btn" onclick="openGameStats(${g.id})">📊 Stats</button>` : ''}
+    ${loanBtn}
   </div>`;
+  const loanBadge = g.loan
+    ? `<div style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:11px;
+                   padding:2px 9px;border-radius:999px;background:rgba(251,191,36,.1);
+                   border:1px dashed var(--gold);color:var(--gold)">
+         🤝 Prêté à ${esc(g.loan.name || '?')}${g.loan.date ? ` · ${fmtDate(g.loan.date)}` : ''}
+       </div>`
+    : '';
 
   const adminActions = isAdmin
     ? `<div class="card-footer">
@@ -2638,7 +2697,8 @@ const buildGameCard = (g) => {
       ${g.notes ? `<div class="card-notes">${esc(g.notes)}</div>` : ''}
       ${buildExtList(g)}
       ${buildMiniPalmares(g)}
-      ${extraBtns}
+      ${loanBadge}
+    ${extraBtns}
       ${adminActions}
     </div>
   </div>`;
