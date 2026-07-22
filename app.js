@@ -314,6 +314,7 @@ let players      = [];
 let matches      = [];
 let coopSessions = [];   // parties coopératives (table séparée, aucun point)
 let miniSeasons  = [];   // mini-saisons (événements-tournois, classement dérivé)
+let clubSettings = {};   // réglages du club (jeu du mois, …) — table club_settings
 let pendingMatches = [];   // parties enregistrées en attente de validation
 let ratingsCache = {};   // { gameId: { sum, count, myScore } }
 let ratingRows   = [];   // lignes brutes {game_id, score, user_id} (succès de notation)
@@ -1154,6 +1155,11 @@ async function loadAll() {
       ratingsCache[row.game_id].myScore = Number(row.score);
   });
   ratingRows = r || [];
+  try {
+    const cs = await safeGet('club_settings', {});
+    clubSettings = {};
+    (cs || []).forEach((row) => { clubSettings[row.key] = row.value; });
+  } catch { clubSettings = {}; }
   syncAchievementUnlocks(false);   // notifie les nouveaux succès (si baseline déjà posée)
   syncRankChange(false);
 }
@@ -5477,7 +5483,90 @@ const renderMatchList = () => {
 };
 
 // ── Page d'accueil « Classement » : hero + podium + leaderboard ──
-const renderHome = () => { renderHomeHero(); renderPodium(); renderLeaderboard(); renderDuos(); renderClubStats(); };
+const renderHome = () => { renderHomeHero(); renderGameOfMonth(); renderPodium(); renderLeaderboard(); renderDuos(); renderClubStats(); };
+
+// ═══ Jeu du mois : mis en avant par l'admin sur la page d'accueil ═══
+const renderGameOfMonth = () => {
+  const el = document.getElementById('gotm-home');
+  if (!el) return;
+  const gotm = clubSettings.game_of_month;
+  const g    = gotm ? games.find((x) => x.id === gotm.game_id) : null;
+  if (!g) {
+    el.innerHTML = isAdmin
+      ? `<button class="btn-sec" style="margin-bottom:1.2rem" onclick="openGotmModal()">🎯 Définir le jeu du mois</button>`
+      : '';
+    return;
+  }
+  const gbg = gameBgSrc(g);
+  const avg = avgRating(g);
+  const tp  = timesPlayed(g.id);
+  el.innerHTML = `
+    <div class="hist-card${gbg ? ' has-gbg' : ''}" style="margin-bottom:1.4rem;padding:18px 18px;${gbg
+        ? `background:linear-gradient(90deg, rgba(10,15,24,.92) 0%, rgba(10,15,24,.55) 60%, rgba(10,15,24,.35)), url('${gbg}') center/cover;`
+        : 'background:linear-gradient(135deg, rgba(74,222,128,.12), var(--surface-2));'}border-left:3px solid var(--accent)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:4px">
+            🎯 Jeu du mois
+          </div>
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:22px;font-weight:700;color:var(--text)">${esc(g.name)}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px">
+            ${g.pmin === g.pmax ? `${g.pmin} joueur${g.pmin > 1 ? 's' : ''}` : `${g.pmin}–${g.pmax} joueurs`}
+            ${avg > 0 ? ` · ★ ${avg.toFixed(1)}` : ''}
+            ${tp > 0 ? ` · ${tp} partie${tp > 1 ? 's' : ''} jouée${tp > 1 ? 's' : ''}` : ' · jamais joué — à vous de l\'étrenner !'}
+          </div>
+          ${gotm.note ? `<div style="font-size:13px;color:var(--text);margin-top:8px;font-style:italic">« ${esc(gotm.note)} »</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="palmares-card-btn" onclick="showPage('games', document.querySelectorAll('.nav-tabs .nav-tab')[1]);syncMobileNav('games');setTimeout(() => scrollToGame(${g.id}), 250)">Voir le jeu</button>
+          ${isAdmin ? `<button class="palmares-card-btn" onclick="openGotmModal()">✏️</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+};
+
+const openGotmModal = () => {
+  if (!isAdmin) return;
+  const cur = clubSettings.game_of_month || {};
+  const sel = document.getElementById('gotm-game');
+  sel.innerHTML = '<option value="">— Choisir un jeu —</option>' +
+    clubGames().filter((g) => g.status === 'own')
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+      .map((g) => `<option value="${g.id}"${g.id === cur.game_id ? ' selected' : ''}>${esc(g.name)}</option>`).join('');
+  document.getElementById('gotm-note').value = cur.note || '';
+  openModal('modal-gotm');
+};
+
+const _saveGotmValue = async (value) => {
+  const existing = await safeGet('club_settings', { eq: { key: 'game_of_month' } }).catch(() => []);
+  if (existing && existing.length) await sb.patch('club_settings', { value }, { key: 'game_of_month' });
+  else await sb.post('club_settings', { key: 'game_of_month', value });
+};
+
+const saveGameOfMonth = async () => {
+  if (!isAdmin) return;
+  const gid = parseInt(document.getElementById('gotm-game').value);
+  if (!gid) { toastErr('Choisis un jeu.'); return; }
+  const note = (document.getElementById('gotm-note').value || '').trim() || null;
+  try {
+    await _saveGotmValue({ game_id: gid, note, set_at: new Date().toISOString().split('T')[0] });
+    clubSettings.game_of_month = { game_id: gid, note };
+    closeModal('modal-gotm');
+    renderGameOfMonth();
+    toast('Jeu du mois mis en avant 🎯');
+  } catch (e) { toastErr('Erreur : ' + e.message); }
+};
+
+const clearGameOfMonth = async () => {
+  if (!isAdmin) return;
+  try {
+    await _saveGotmValue(null);
+    clubSettings.game_of_month = null;
+    closeModal('modal-gotm');
+    renderGameOfMonth();
+    toast('Jeu du mois retiré');
+  } catch (e) { toastErr('Erreur : ' + e.message); }
+};
 
 // ═══ Stats du club (bas de la page Classement) ═══
 // Activité = toutes les parties (classées + coop), à partir des dates.

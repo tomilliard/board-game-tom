@@ -370,6 +370,7 @@
       <p class="home-hero-sub" id="home-hero-sub"></p>
       <div class="home-hero-meta" id="home-hero-meta"></div>
     </section>
+    <div id="gotm-home"></div>
     <h2 class="section-title podium-title">Podium</h2>
     <div class="home-podium" id="home-podium"></div>
     <h2 class="section-title">Classement complet</h2>
@@ -1212,6 +1213,34 @@
     <div class="modal-actions" style="margin-top:12px">
       <button class="btn-cancel-m" onclick="downloadWrapped()">⬇️ Télécharger</button>
       <button class="btn-save-m"   onclick="shareWrapped()">📤 Partager</button>
+    </div>
+  </div>
+</div>
+
+<!-- Jeu du mois (admin) -->
+<div class="modal-overlay" id="modal-gotm" onclick="bgClose(event,'modal-gotm')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 class="modal-title">🎯 Jeu du mois</h2>
+      <button class="btn-close" onclick="closeModal('modal-gotm')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="form-row">
+      <label>Jeu <span class="req">*</span></label>
+      <select class="finput" id="gotm-game">
+        <option value="">— Choisir un jeu —</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Petit mot (optionnel)</label>
+      <textarea class="ftextarea" id="gotm-note" placeholder="Pourquoi ce jeu ce mois-ci ?" style="height:60px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="clearGameOfMonth()">Retirer</button>
+      <button class="btn-save-m"   onclick="saveGameOfMonth()">Mettre en avant</button>
     </div>
   </div>
 </div>
