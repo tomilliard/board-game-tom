@@ -1164,8 +1164,18 @@ const toastErr = (msg) => toast(msg, true);
 
 // ─── Modal helpers ───────────────────────────────────────────
 
-const openModal  = (id) => document.getElementById(id).classList.add('open');
-const closeModal = (id) => document.getElementById(id).classList.remove('open');
+const openModal = (id) => {
+  const ov = document.getElementById(id);
+  ov.classList.add('open');
+  const box = ov.querySelector('.modal');
+  if (box) box.scrollTop = 0;                       // repartir en haut du contenu
+  document.body.style.overflow = 'hidden';          // figer la page derrière
+};
+const closeModal = (id) => {
+  document.getElementById(id).classList.remove('open');
+  if (!document.querySelector('.modal-overlay.open'))
+    document.body.style.overflow = '';
+};
 
 const bgClose = (e, id) => {
   if (e.target === document.getElementById(id)) closeModal(id);
@@ -4813,6 +4823,9 @@ const buildMatchCard = (m) => {
   const delBtn = canDel
     ? `<button class="hist-del" onclick="delMatch(${m.id})">×</button>`
     : '';
+  const editBtn = isAdmin
+    ? `<button class="hist-del" title="Modifier" style="font-size:13px" onclick="openMatchEdit(${m.id})">✏️</button>`
+    : '';
 
   const playersHtml = (m.players || []).map((pp) => {
     const pl = players.find((x) => x.id === pp.id);
@@ -4867,7 +4880,7 @@ const buildMatchCard = (m) => {
           ${histDateLabel(m)}
           ${m.notes ? `<div class="hist-notes">${esc(m.notes)}</div>` : ''}
         </div>
-        ${delBtn}
+        ${editBtn}${delBtn}
       </div>
       <div class="hist-players">${playersHtml}</div>
       ${scoresHtml}
@@ -4887,7 +4900,7 @@ const buildMatchCard = (m) => {
         ${histDateLabel(m)}
         ${m.notes ? `<div class="hist-notes">${esc(m.notes)}</div>` : ''}
       </div>
-      ${delBtn}
+      ${editBtn}${delBtn}
     </div>
     <div class="hist-players">${playersHtml}</div>
     ${scoresHtml}
@@ -5202,6 +5215,8 @@ const openMatchModal = () => {
   document.getElementById('fm-notes').value = '';
   const search = document.getElementById('fm-player-search');
   if (search) search.value = '';
+  document.getElementById('modal-match').dataset.editId = '';
+  document.getElementById('modal-match-title').textContent = 'Enregistrer une partie';
   // Présents du soir : pré-cocher les participants définis dans 🌙 Soirées.
   const tonight = getTonight();
   if (tonight) {
@@ -5211,6 +5226,38 @@ const openMatchModal = () => {
     onMatchPlayersChange();
   }
   openModal('modal-match');
+};
+
+// ─── Édition d'une partie existante (admin) : réutilise le formulaire ───
+// Après modification, la saison est recalculée automatiquement pour que les
+// points de tout le monde restent exacts.
+const openMatchEdit = (id) => {
+  if (!isAdmin) return;
+  const m = matches.find((x) => x.id === id);
+  if (!m) return;
+  openMatchModal();   // reset complet du formulaire (mode création)
+  document.getElementById('modal-match-title').textContent = 'Modifier la partie';
+  document.getElementById('modal-match').dataset.editId = String(id);
+  // Jeu
+  document.getElementById('fm-game').value = m.game_id || '';
+  const g = games.find((x) => x.id === m.game_id);
+  document.getElementById('fm-game-search').value = g ? g.name : '';
+  // Date / heure / notes
+  document.getElementById('fm-date').value  = String(m.date || '').split('T')[0];
+  document.getElementById('fm-time').value  = m.time ? String(m.time).slice(0, 5) : '';
+  document.getElementById('fm-notes').value = m.notes || '';
+  // Participants : on repart de zéro (ignore les « présents du soir »)
+  const inMatch = new Set((m.players || []).map((pp) => pp.id));
+  const winners = new Set(m.winners || []);
+  document.querySelectorAll('#fm-players .mcb').forEach((c) => { c.checked = inMatch.has(parseInt(c.value)); });
+  document.querySelectorAll('#fm-players .wstar').forEach((b) => {
+    b.classList.toggle('active', winners.has(parseInt(b.dataset.pid)));
+  });
+  document.querySelectorAll('#fm-players .score-inp').forEach((inp) => {
+    const sc = (m.scores || {})[inp.dataset.pid];
+    inp.value = (sc === undefined || sc === null) ? '' : sc;
+  });
+  onMatchPlayersChange();
 };
 
 // Filtre de la liste des joueurs du formulaire (insensible aux accents).
@@ -5260,6 +5307,31 @@ const saveMatch = async () => {
     const mx = Math.max(...e.map(([, v]) => v));
     return e.filter(([, v]) => v === mx).map(([k]) => parseInt(k));
   })();
+  // ── Mode ÉDITION (admin) : on met à jour la partie puis on recalcule tout ──
+  const editId = parseInt(document.getElementById('modal-match').dataset.editId || '') || null;
+  if (editId) {
+    if (!isAdmin) return;
+    showLoading('Modification…');
+    try {
+      await sb.patch('matches', {
+        game_id: gid,
+        date:    document.getElementById('fm-date').value,
+        time:    document.getElementById('fm-time').value || null,
+        players: pids.map((id) => ({ id })),
+        winners: finW,
+        scores,
+        notes:   document.getElementById('fm-notes').value.trim(),
+      }, { id: editId });
+      await loadAll();
+      closeModal('modal-match');
+      renderHistory();
+      toast('Partie modifiée — recalcul des points… ♻️');
+      await recomputeSeason(true);   // rejeu silencieux : points/Elo exacts partout
+    } catch (e) { toastErr('Erreur : ' + e.message); }
+    finally { hideLoading(); }
+    return;
+  }
+
   const me     = players.find((p) => p.user_id === currentUser.id);
   const myPid  = me ? me.id : null;
   const others = pids.filter((id) => id !== myPid);
@@ -5636,14 +5708,14 @@ const exportBackup = async () => {
 
 // Rejoue TOUTE la saison depuis zéro avec la formule actuelle et réécrit
 // points / Elo / série / pics. Ordre chronologique (date, puis id).
-const recomputeSeason = async () => {
+const recomputeSeason = async (silent = false) => {
   if (!isAdmin) return;
   const list = [...seasonMatches()].sort((a, b) => {
     const da = String(a.date || ''), db = String(b.date || '');
     if (da !== db) return da < db ? -1 : 1;
     return (a.id || 0) - (b.id || 0);
   });
-  if (!confirm(
+  if (!silent && !confirm(
     `Recalculer la SAISON en cours ?\n\n` +
     `Les ${list.length} parties confirmées seront rejouées depuis zéro avec la ` +
     `formule actuelle (bonus d'exploit, malus de farm, plancher, etc.).\n` +
