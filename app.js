@@ -5527,16 +5527,51 @@ const renderClubStats = () => {
     weeks.push(col);
   }
   const maxD = Math.max(1, ...Object.values(byDay));
+  const CELL = 14, GAP = 3;
   const cell = (c) => {
-    if (c.future) return '<div style="width:11px;height:11px"></div>';
-    const op = c.n === 0 ? 0 : 0.25 + 0.75 * Math.min(1, c.n / maxD);
+    if (c.future) return `<div style="width:${CELL}px;height:${CELL}px"></div>`;
+    const op = c.n === 0 ? 0 : 0.3 + 0.7 * Math.min(1, c.n / maxD);
     return `<div title="${fmtDate(c.key)} — ${c.n} partie${c.n > 1 ? 's' : ''}"
-      style="width:11px;height:11px;border-radius:3px;background:${c.n === 0 ? 'var(--surface-2)' : `rgba(74,222,128,${op.toFixed(2)})`};
+      style="width:${CELL}px;height:${CELL}px;border-radius:3px;background:${c.n === 0 ? 'var(--surface-2)' : `rgba(74,222,128,${op.toFixed(2)})`};
              border:1px solid var(--border)"></div>`;
   };
-  const heatHtml = `<div style="display:flex;gap:3px;justify-content:center;overflow-x:auto;padding-bottom:4px">
-    ${weeks.map((col) => `<div style="display:flex;flex-direction:column;gap:3px">${col.map(cell).join('')}</div>`).join('')}
+  // Étiquettes de mois : affichées au-dessus de la 1re semaine de chaque mois.
+  const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+  let lastMonth = -1;
+  const monthLabels = weeks.map((col) => {
+    const mo = parseInt(col[0].key.slice(5, 7), 10) - 1;
+    const label = mo !== lastMonth ? MONTHS_SHORT[mo] : '';
+    lastMonth = mo;
+    return `<div style="width:${CELL}px;font-size:9.5px;color:var(--text-faint);overflow:visible;white-space:nowrap">${label}</div>`;
+  }).join('');
+  // Étiquettes des jours (lignes) : Lun / Mer / Ven / Dim pour aérer.
+  const DAY_LBL = ['Lun', '', 'Mer', '', 'Ven', '', 'Dim'];
+  const dayCol = `<div style="display:flex;flex-direction:column;gap:${GAP}px;margin-right:5px">
+    ${DAY_LBL.map((l) => `<div style="height:${CELL}px;font-size:9.5px;color:var(--text-faint);display:flex;align-items:center;justify-content:flex-end;width:26px">${l}</div>`).join('')}
   </div>`;
+  const legend = `<div style="display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:8px;font-size:10px;color:var(--text-faint)">
+    Moins
+    ${[0, 0.3, 0.55, 0.8, 1].map((v) => `<span style="width:11px;height:11px;border-radius:3px;border:1px solid var(--border);
+        background:${v === 0 ? 'var(--surface-2)' : `rgba(74,222,128,${v})`}"></span>`).join('')}
+    Plus
+  </div>`;
+  const total20w = weeks.flat().reduce((sum, c) => sum + c.n, 0);
+  const heatHtml = `
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
+      ${total20w} partie${total20w > 1 ? 's' : ''} ces 20 dernières semaines — chaque case est un jour, plus c'est vert, plus vous avez joué.
+    </div>
+    <div style="overflow-x:auto;padding-bottom:4px">
+      <div style="display:inline-flex;flex-direction:column;min-width:min-content">
+        <div style="display:flex;gap:${GAP}px;margin-left:31px;margin-bottom:3px">${monthLabels}</div>
+        <div style="display:flex">
+          ${dayCol}
+          <div style="display:flex;gap:${GAP}px">
+            ${weeks.map((col) => `<div style="display:flex;flex-direction:column;gap:${GAP}px">${col.map(cell).join('')}</div>`).join('')}
+          </div>
+        </div>
+        ${legend}
+      </div>
+    </div>`;
 
   // ── 3. Jeux en tendance (30 derniers jours) ──
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
